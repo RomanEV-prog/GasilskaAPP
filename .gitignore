@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+**/dist/
+frontend/dist/
+
+# Env & skrivnosti
+.env
+**/.env
+!**/.env.example
+*firebase*service-account*.json
+serviceAccountKey.json
+
+# Uploads (runtime datoteke)
+backend/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/ios/Pods/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

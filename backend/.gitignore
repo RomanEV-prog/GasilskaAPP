@@ -1,0 +1,23 @@
+/dist
+/node_modules
+/build
+
+# Env
+.env
+.env.local
+
+# Naložene datoteke (MVP lokalni storage)
+/uploads
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
