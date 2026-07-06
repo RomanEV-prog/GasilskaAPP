@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'models/equipment.dart';
 import 'models/event.dart';
 import 'providers/auth_provider.dart';
+import 'screens/equipment_detail_screen.dart';
 import 'screens/event_detail_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/scan_screen.dart';
 import 'services/fcm_service.dart';
 import 'theme.dart';
 
@@ -79,6 +82,17 @@ class GasilApp extends StatelessWidget {
           builder: (context, state) {
             final event = state.extra as Event;
             return EventDetailScreen(event: event);
+          },
+        ),
+        GoRoute(
+          path: '/scan',
+          builder: (_, __) => const ScanScreen(),
+        ),
+        GoRoute(
+          path: '/equipment/:id',
+          builder: (context, state) {
+            final equipment = state.extra as Equipment;
+            return EquipmentDetailScreen(equipment: equipment);
           },
         ),
       ],
