@@ -11,6 +11,7 @@ import { AuthService } from './auth.service';
 import {
   ForgotPasswordDto,
   LoginDto,
+  RefreshTokenDto,
   RegisterDto,
   ResetPasswordDto,
   UpdateFcmTokenDto,
@@ -29,6 +30,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Prijava uporabnika' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Zamenjaj refresh žeton za nov par žetonov' })
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto.refreshToken);
   }
 
   @Public()

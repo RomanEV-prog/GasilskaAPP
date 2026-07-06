@@ -221,7 +221,8 @@ curl http://localhost:4000/api/v1/users \
 13. ✅ Cron opomniki (vozila + usposabljanja, dnevno ob 08:00)
 14. ✅ Logo upload (`POST /organizations/me/logo`)
 15. ✅ Rate limiting (`@nestjs/throttler`): globalno 100/min, Auth 5/min (login/register), 3/min (forgot-password). Per-endpoint po IP. **Prod:** in-memory storage → za več instanc uporabi Redis storage.
-16. ✅ E2E testi (`npm run test:e2e`, Jest+supertest, `test/app.e2e-spec.ts`): auth, multi-tenant izolacija, RBAC, občutljiva polja, QR. Tečejo proti Docker Postgresu, svež tenant na zagon (unikaten slug iz `Date.now()`). Throttler se v `NODE_ENV=test` preskoči (`GasilThrottlerGuard.shouldSkip`).
+16. ✅ E2E testi (`npm run test:e2e`, Jest+supertest, `test/app.e2e-spec.ts`): auth, refresh, multi-tenant izolacija, RBAC, občutljiva polja, QR. Tečejo proti Docker Postgresu, svež tenant na zagon (unikaten slug iz `Date.now()`). Throttler se v `NODE_ENV=test` preskoči (`GasilThrottlerGuard.shouldSkip`).
+17. ✅ Refresh žetoni: dostopni žeton 1h (`JWT_ACCESS_EXPIRES`), refresh 30d (`JWT_REFRESH_EXPIRES`, ločena skrivnost `JWT_REFRESH_SECRET` — če ni, izpeljana iz `JWT_SECRET`). `POST /auth/refresh` rotira par. Refresh žeton nima vlog/org → ni uporaben kot access. Oba klienta (web `api/client.ts`, mobile `api/api_client.dart`) samodejno osvežita ob 401 (en refresh naenkrat, ponovijo originalni zahtevek). **Stateless** → za takojšen preklic rabi denylist (prihodnje).
 
 ## Gotchas (naučeno)
 

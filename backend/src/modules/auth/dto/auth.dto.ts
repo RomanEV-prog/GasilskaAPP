@@ -47,6 +47,12 @@ export class RegisterDto {
   password: string;
 }
 
+export class RefreshTokenDto {
+  @ApiProperty({ example: 'refresh-token-string' })
+  @IsString()
+  refreshToken: string;
+}
+
 export class UpdateFcmTokenDto {
   @ApiProperty({ example: 'fcm-token-string' })
   @IsString()

@@ -4,15 +4,17 @@ import 'api_client.dart';
 class AuthApi {
   final _client = ApiClient.instance;
 
-  /// Vrne (accessToken, AuthUser) ob uspešni prijavi.
-  Future<(String, AuthUser)> login(String email, String password) async {
+  /// Vrne (accessToken, refreshToken, AuthUser) ob uspešni prijavi.
+  Future<(String, String, AuthUser)> login(
+      String email, String password) async {
     final data = await _client.post('/auth/login', data: {
       'email': email,
       'password': password,
     });
-    final token = data['accessToken'] as String;
+    final accessToken = data['accessToken'] as String;
+    final refreshToken = data['refreshToken'] as String;
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
-    return (token, user);
+    return (accessToken, refreshToken, user);
   }
 
   /// Registrira FCM žeton na backendu (PATCH /auth/fcm-token).

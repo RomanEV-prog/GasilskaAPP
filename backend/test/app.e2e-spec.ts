@@ -36,6 +36,7 @@ describe('GasilApp E2E', () => {
 
   let tokenA = '';
   let tokenB = '';
+  let refreshA = '';
   let memberToken = '';
   let memberId = '';
 
@@ -97,12 +98,14 @@ describe('GasilApp E2E', () => {
         .expect(400);
     });
 
-    it('prijava s pravilnim geslom (200)', async () => {
+    it('prijava s pravilnim geslom vrne access + refresh (200)', async () => {
       const res = await request(http)
         .post('/api/v1/auth/login')
         .send({ email: orgA.email, password: pass })
         .expect(200);
       expect(res.body.data.accessToken).toBeDefined();
+      expect(res.body.data.refreshToken).toBeDefined();
+      refreshA = res.body.data.refreshToken;
     });
 
     it('zavrne napačno geslo (401)', async () => {
@@ -114,6 +117,36 @@ describe('GasilApp E2E', () => {
 
     it('zavrne zahtevo brez žetona (401)', async () => {
       await request(http).get('/api/v1/users').expect(401);
+    });
+  });
+
+  describe('Refresh žetoni', () => {
+    it('veljaven refresh žeton vrne nov par (200)', async () => {
+      const res = await request(http)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: refreshA })
+        .expect(200);
+      expect(res.body.data.accessToken).toBeDefined();
+      expect(res.body.data.refreshToken).toBeDefined();
+      // nov dostopni žeton deluje na zaščiteni poti
+      await request(http)
+        .get('/api/v1/users')
+        .set(auth(res.body.data.accessToken))
+        .expect(200);
+    });
+
+    it('dostopni žeton NE deluje kot refresh (401)', async () => {
+      await request(http)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: tokenA })
+        .expect(401);
+    });
+
+    it('zavrne zmazan refresh žeton (401)', async () => {
+      await request(http)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: 'ni.veljaven.zeton' })
+        .expect(401);
     });
   });
 

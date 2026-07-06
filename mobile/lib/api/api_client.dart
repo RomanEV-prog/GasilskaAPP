@@ -34,6 +34,25 @@ class ApiClient {
         }
         handler.next(options);
       },
+      onError: (e, handler) async {
+        final req = e.requestOptions;
+        final is401 = e.response?.statusCode == 401;
+        final isAuthCall = req.path.contains('/auth/');
+        final alreadyRetried = req.extra['_retried'] == true;
+
+        if (is401 && !isAuthCall && !alreadyRetried) {
+          try {
+            final newToken = await _refreshAccessToken();
+            req.extra['_retried'] = true;
+            req.headers['Authorization'] = 'Bearer $newToken';
+            final response = await _dio.fetch<dynamic>(req);
+            return handler.resolve(response);
+          } catch (_) {
+            await clearToken(); // refresh spodletel → seja poteče
+          }
+        }
+        handler.next(e);
+      },
     ));
   }
 
@@ -41,13 +60,46 @@ class ApiClient {
 
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
+  Future<String>? _refreshing;
 
-  Future<void> saveToken(String token) =>
-      _storage.write(key: 'accessToken', value: token);
+  Future<void> saveTokens(String accessToken, String refreshToken) async {
+    await _storage.write(key: 'accessToken', value: accessToken);
+    await _storage.write(key: 'refreshToken', value: refreshToken);
+  }
 
-  Future<void> clearToken() => _storage.delete(key: 'accessToken');
+  Future<void> clearToken() async {
+    await _storage.delete(key: 'accessToken');
+    await _storage.delete(key: 'refreshToken');
+  }
 
   Future<String?> get token => _storage.read(key: 'accessToken');
+
+  /// En sam refresh naenkrat — vzporedni 401-ji si delijo isti klic.
+  Future<String> _refreshAccessToken() {
+    return _refreshing ??= _doRefresh().whenComplete(() {
+      _refreshing = null;
+    });
+  }
+
+  Future<String> _doRefresh() async {
+    final refreshToken = await _storage.read(key: 'refreshToken');
+    if (refreshToken == null) {
+      throw ApiException('Ni refresh žetona.', 401);
+    }
+    // Ločen Dio (brez interceptorjev), da se izognemo rekurziji.
+    final bare = Dio(BaseOptions(baseUrl: kApiBaseUrl));
+    final res = await bare.post<dynamic>(
+      '/auth/refresh',
+      data: {'refreshToken': refreshToken},
+    );
+    final body = res.data;
+    final data = body is Map<String, dynamic> && body.containsKey('data')
+        ? body['data'] as Map<String, dynamic>
+        : body as Map<String, dynamic>;
+    final newAccess = data['accessToken'] as String;
+    await saveTokens(newAccess, data['refreshToken'] as String);
+    return newAccess;
+  }
 
   /// Izvleče `data` iz ovoja `{ success, data }`.
   dynamic _unwrap(Response response) {

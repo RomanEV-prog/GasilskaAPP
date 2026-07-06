@@ -31,19 +31,41 @@ export class AuthService {
     private readonly dataSource: DataSource,
   ) {}
 
-  private signToken(user: User, roles: string[]): string {
+  // Dostopni žeton je kratkoživ; refresh žeton dolgoživ in podpisan z ločeno skrivnostjo.
+  private get accessExpires(): string {
+    return this.config.get<string>('JWT_ACCESS_EXPIRES', '1h');
+  }
+  private get refreshExpires(): string {
+    return this.config.get<string>('JWT_REFRESH_EXPIRES', '30d');
+  }
+  private get refreshSecret(): string {
+    return (
+      this.config.get<string>('JWT_REFRESH_SECRET') ||
+      `${this.config.get<string>('JWT_SECRET')}-refresh`
+    );
+  }
+
+  private signAccessToken(user: User, roles: string[]): string {
     const payload: JwtPayload = {
       sub: user.id,
       organizationId: user.organizationId,
       email: user.email,
       roles,
     };
-    return this.jwtService.sign(payload);
+    return this.jwtService.sign(payload, { expiresIn: this.accessExpires });
+  }
+
+  private signRefreshToken(user: User): string {
+    return this.jwtService.sign(
+      { sub: user.id, type: 'refresh' },
+      { secret: this.refreshSecret, expiresIn: this.refreshExpires },
+    );
   }
 
   private buildAuthResponse(user: User, roles: string[]) {
     return {
-      accessToken: this.signToken(user, roles),
+      accessToken: this.signAccessToken(user, roles),
+      refreshToken: this.signRefreshToken(user),
       user: {
         id: user.id,
         email: user.email,
@@ -53,6 +75,40 @@ export class AuthService {
         roles,
       },
     };
+  }
+
+  /**
+   * Zamenja veljaven refresh žeton za nov par (rotacija).
+   * Refresh žeton je podpisan z ločeno skrivnostjo in nima vlog/organizacije,
+   * zato ga ni mogoče uporabiti kot dostopni žeton.
+   */
+  async refresh(refreshToken: string) {
+    let decoded: { sub?: string; type?: string };
+    try {
+      decoded = this.jwtService.verify(refreshToken, {
+        secret: this.refreshSecret,
+      });
+    } catch {
+      throw new UnauthorizedException(
+        'Refresh žeton je neveljaven ali je potekel.',
+      );
+    }
+    if (decoded.type !== 'refresh' || !decoded.sub) {
+      throw new UnauthorizedException('Neveljaven refresh žeton.');
+    }
+
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'role')
+      .where('user.id = :id', { id: decoded.sub })
+      .getOne();
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Uporabnik ni na voljo.');
+    }
+
+    const roles = (user.roles ?? []).map((r) => r.role);
+    return this.buildAuthResponse(user, roles);
   }
 
   /** Prijava — preveri geslo, posodobi last_login_at, vrne JWT. */
