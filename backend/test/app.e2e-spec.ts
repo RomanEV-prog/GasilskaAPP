@@ -37,6 +37,7 @@ describe('GasilApp E2E', () => {
   let tokenA = '';
   let tokenB = '';
   let refreshA = '';
+  let orgAId = '';
   let memberToken = '';
   let memberId = '';
 
@@ -73,7 +74,9 @@ describe('GasilApp E2E', () => {
         .expect(201);
       expect(res.body.data.accessToken).toBeDefined();
       expect(res.body.data.user.roles).toContain('org_admin');
+      expect(res.body.data.user.username).toBe('ana.admin');
       tokenA = res.body.data.accessToken;
+      orgAId = res.body.data.user.organizationId;
     });
 
     it('registrira društvo B', async () => {
@@ -101,7 +104,7 @@ describe('GasilApp E2E', () => {
     it('prijava s pravilnim geslom vrne access + refresh (200)', async () => {
       const res = await request(http)
         .post('/api/v1/auth/login')
-        .send({ email: orgA.email, password: pass })
+        .send({ username: orgA.email, password: pass })
         .expect(200);
       expect(res.body.data.accessToken).toBeDefined();
       expect(res.body.data.refreshToken).toBeDefined();
@@ -111,7 +114,7 @@ describe('GasilApp E2E', () => {
     it('zavrne napačno geslo (401)', async () => {
       await request(http)
         .post('/api/v1/auth/login')
-        .send({ email: orgA.email, password: 'napacno' })
+        .send({ username: orgA.email, password: 'napacno' })
         .expect(401);
     });
 
@@ -197,7 +200,7 @@ describe('GasilApp E2E', () => {
     beforeAll(async () => {
       const res = await request(http)
         .post('/api/v1/auth/login')
-        .send({ email: `clan@e2e-a-${stamp}.si`, password: pass })
+        .send({ username: `clan@e2e-a-${stamp}.si`, password: pass })
         .expect(200);
       memberToken = res.body.data.accessToken;
     });
@@ -236,7 +239,60 @@ describe('GasilApp E2E', () => {
     });
   });
 
-  describe('Oprema + QR koda', () => {
+  describe("Uporabnisko ime in gesla", () => {
+    it("javni seznam drustev vsebuje A", async () => {
+      const res = await request(http).get("/api/v1/auth/organizations").expect(200);
+      const names = res.body.data.map((o: { name: string }) => o.name);
+      expect(names).toContain("PGD E2E A");
+    });
+
+    it("prijava z uporabniskim imenom + organizationId (200)", async () => {
+      const res = await request(http)
+        .post("/api/v1/auth/login")
+        .send({ username: "miha.clan", organizationId: orgAId, password: pass })
+        .expect(200);
+      expect(res.body.data.user.username).toBe("miha.clan");
+    });
+
+    it("prijava z uporabniskim imenom brez drustva (400)", async () => {
+      await request(http)
+        .post("/api/v1/auth/login")
+        .send({ username: "miha.clan", password: pass })
+        .expect(400);
+    });
+
+    it("ustvari clana BREZ e-poste; username se generira", async () => {
+      const res = await request(http)
+        .post("/api/v1/users")
+        .set(auth(tokenA))
+        .send({ password: pass, firstName: "Brez", lastName: "Poste" })
+        .expect(201);
+      expect(res.body.data.username).toBe("brez.poste");
+      expect(res.body.data.email ?? null).toBeNull();
+    });
+
+    it("clan si spremeni geslo in se prijavi z novim", async () => {
+      await request(http)
+        .post("/api/v1/auth/change-password")
+        .set(auth(memberToken))
+        .send({ currentPassword: pass, newPassword: "NovoGeslo123!" })
+        .expect(200);
+      await request(http)
+        .post("/api/v1/auth/login")
+        .send({ username: "miha.clan", organizationId: orgAId, password: "NovoGeslo123!" })
+        .expect(200);
+    });
+
+    it("napacno trenutno geslo (401)", async () => {
+      await request(http)
+        .post("/api/v1/auth/change-password")
+        .set(auth(memberToken))
+        .send({ currentPassword: "narobe", newPassword: "NovoGeslo123!" })
+        .expect(401);
+    });
+  });
+
+  describe("Oprema + QR koda", () => {
     it('ustvari opremo z inventarno št. → QR se generira', async () => {
       const res = await request(http)
         .post('/api/v1/equipment')

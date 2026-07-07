@@ -56,6 +56,7 @@ async function seed() {
       usersRepo.create({
         organizationId: org.id,
         email,
+        username: 'admin.pekre',
         passwordHash: await bcrypt.hash('GasilApp123!', 12),
         firstName: 'Admin',
         lastName: 'Pekre',

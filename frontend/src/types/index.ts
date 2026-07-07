@@ -42,7 +42,8 @@ export type VehicleType = 'gvc' | 'gvgp' | 'ac' | 'pv' | 'van' | 'other';
 
 export interface AuthUser {
   id: string;
-  email: string;
+  username: string;
+  email?: string;
   firstName: string;
   lastName: string;
   organizationId: string;
@@ -58,7 +59,8 @@ export interface LoginResponse {
 export interface User {
   id: string;
   organizationId: string;
-  email: string;
+  username: string;
+  email?: string;
   firstName: string;
   lastName: string;
   phone?: string;

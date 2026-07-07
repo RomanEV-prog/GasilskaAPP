@@ -33,9 +33,13 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(
+    String username,
+    String password, {
+    String? organizationId,
+  }) async {
     final (accessToken, refreshToken, user) =
-        await _authApi.login(email, password);
+        await _authApi.login(username, password, organizationId: organizationId);
     await ApiClient.instance.saveTokens(accessToken, refreshToken);
     await _storage.write(key: 'user', value: jsonEncode(user.toJson()));
     _user = user;

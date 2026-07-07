@@ -1,20 +1,46 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MinLength,
 } from 'class-validator';
 
 export class LoginDto {
-  @ApiProperty({ example: 'admin@pgd-pekre.si' })
-  @IsEmail({}, { message: 'Vnesite veljaven e-poštni naslov.' })
-  email: string;
+  @ApiProperty({
+    example: 'janez.novak',
+    description: 'Uporabniško ime (znotraj društva) ali e-poštni naslov.',
+  })
+  @IsString()
+  @MinLength(1, { message: 'Vnesite uporabniško ime.' })
+  username: string;
+
+  @ApiPropertyOptional({
+    description:
+      'ID društva — obvezen pri prijavi z uporabniškim imenom (pri e-pošti ni potreben).',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'Neveljavno društvo.' })
+  organizationId?: string;
 
   @ApiProperty({ example: 'GasilApp123!' })
   @IsString()
   @MinLength(1, { message: 'Vnesite geslo.' })
   password: string;
+}
+
+export class ChangePasswordDto {
+  @ApiProperty({ example: 'StaroGeslo123!' })
+  @IsString()
+  @MinLength(1, { message: 'Vnesite trenutno geslo.' })
+  currentPassword: string;
+
+  @ApiProperty({ example: 'NovoGeslo123!', minLength: 8 })
+  @IsString()
+  @MinLength(8, { message: 'Novo geslo mora imeti vsaj 8 znakov.' })
+  newPassword: string;
 }
 
 export class RegisterDto {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/fcm_service.dart';
+import '../widgets/change_password_dialog.dart';
 import 'calendar_screen.dart';
 import 'dashboard_screen.dart';
 import 'events_screen.dart';
@@ -45,10 +46,34 @@ class _HomeShellState extends State<HomeShell> {
             tooltip: 'Skeniraj opremo',
             onPressed: () => context.push('/scan'),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Odjava',
-            onPressed: () => context.read<AuthProvider>().logout(),
+          PopupMenuButton<String>(
+            tooltip: 'Račun',
+            icon: const Icon(Icons.account_circle_outlined),
+            onSelected: (value) {
+              if (value == 'password') {
+                showChangePasswordDialog(context);
+              } else if (value == 'logout') {
+                context.read<AuthProvider>().logout();
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'password',
+                child: ListTile(
+                  leading: Icon(Icons.lock_outline),
+                  title: Text('Spremeni geslo'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'logout',
+                child: ListTile(
+                  leading: Icon(Icons.logout),
+                  title: Text('Odjava'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),

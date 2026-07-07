@@ -1,4 +1,5 @@
 import { Card } from '../../components/ui';
+import { ChangePasswordCard } from './ChangePasswordCard';
 import { useUi, type NavStyle } from '../../stores/ui.store';
 import { OrganizationSettings } from './OrganizationSettings';
 
@@ -87,6 +88,10 @@ export function SettingsPage() {
           Nastavitev se shrani v brskalnik in velja takoj.
         </p>
       </Card>
+
+      <div className="mt-6">
+        <ChangePasswordCard />
+      </div>
 
       <div className="mt-6">
         <OrganizationSettings />

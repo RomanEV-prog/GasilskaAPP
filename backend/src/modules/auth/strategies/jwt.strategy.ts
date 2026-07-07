@@ -8,7 +8,8 @@ import { AuthUser } from '../../../common/decorators/current-user.decorator';
 export interface JwtPayload {
   sub: string; // userId
   organizationId: string;
-  email: string;
+  username?: string;
+  email?: string;
   roles: string[];
 }
 

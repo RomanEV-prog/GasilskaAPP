@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -7,8 +15,10 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import {
+  ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
@@ -20,7 +30,17 @@ import {
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  @Public()
+  @Get('organizations')
+  @ApiOperation({ summary: 'Javni seznam društev (za izbiro ob prijavi)' })
+  publicOrganizations() {
+    return this.authService.publicOrganizations();
+  }
 
   // Stroge meje proti napadom z ugibanjem gesel: 5 poskusov / minuto po IP.
   @Public()
@@ -65,6 +85,24 @@ export class AuthController {
   @ApiOperation({ summary: 'Nastavi novo geslo' })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.password);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('change-password')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Prijavljeni uporabnik si spremeni geslo' })
+  changePassword(
+    @CurrentUser('userId') userId: string,
+    @CurrentUser('organizationId') organizationId: string,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.usersService.changePassword(
+      organizationId,
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   @Patch('fcm-token')

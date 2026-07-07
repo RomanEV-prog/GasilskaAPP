@@ -82,7 +82,8 @@ export function MemberDetailPage() {
       <div className="space-y-6">
         <Card title="Osnovni podatki">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            <Field label="E-pošta" value={user.email} />
+            <Field label="Uporabniško ime" value={user.username} />
+            <Field label="E-pošta" value={user.email ?? "—"} />
             <Field label="Telefon" value={user.phone} />
             <Field label="Naslov" value={user.address} />
             <Field label="Kraj" value={user.city} />

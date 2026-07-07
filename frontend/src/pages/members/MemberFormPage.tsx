@@ -17,7 +17,12 @@ import {
 const schema = z.object({
   firstName: z.string().min(1, 'Vnesite ime.'),
   lastName: z.string().min(1, 'Vnesite priimek.'),
-  email: z.string().email('Vnesite veljaven e-poštni naslov.'),
+  // Neobvezna — prijava poteka z uporabniškim imenom (ime.priimek).
+  email: z
+    .string()
+    .refine((v) => v === '' || z.string().email().safeParse(v).success, {
+      message: 'Vnesite veljaven e-poštni naslov.',
+    }),
   password: z
     .string()
     .refine((v) => v === '' || v.length >= 8, {
@@ -44,7 +49,7 @@ function toPayload(data: FormData, roles: SystemRole[]) {
   return {
     firstName: data.firstName,
     lastName: data.lastName,
-    email: data.email,
+    email: data.email || undefined,
     ...(data.password ? { password: data.password } : {}),
     phone: data.phone || undefined,
     address: data.address || undefined,
@@ -97,7 +102,7 @@ export function MemberFormPage() {
       reset({
         firstName: existing.firstName,
         lastName: existing.lastName,
-        email: existing.email,
+        email: existing.email ?? '',
         password: '',
         phone: existing.phone ?? '',
         address: existing.address ?? '',
@@ -164,7 +169,7 @@ export function MemberFormPage() {
               {...register('lastName')}
             />
             <Input
-              label="E-pošta *"
+              label="E-pošta (neobvezno)"
               type="email"
               error={errors.email?.message}
               {...register('email')}

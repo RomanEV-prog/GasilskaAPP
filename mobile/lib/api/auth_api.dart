@@ -1,20 +1,55 @@
 import '../models/user.dart';
 import 'api_client.dart';
 
+/// Javno dostopno društvo za izbiro ob prijavi.
+class PublicOrganization {
+  final String id;
+  final String name;
+  const PublicOrganization({required this.id, required this.name});
+
+  factory PublicOrganization.fromJson(Map<String, dynamic> json) =>
+      PublicOrganization(
+        id: json['id'] as String,
+        name: json['name'] as String,
+      );
+}
+
 class AuthApi {
   final _client = ApiClient.instance;
 
-  /// Vrne (accessToken, refreshToken, AuthUser) ob uspešni prijavi.
+  /// Javni seznam društev (brez prijave) — za izbiro ob prvi uporabi.
+  Future<List<PublicOrganization>> publicOrganizations() async {
+    final data = await _client.get('/auth/organizations') as List<dynamic>;
+    return data
+        .map((e) => PublicOrganization.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Prijava z uporabniškim imenom (ime.priimek) znotraj izbranega društva.
+  /// Vrne (accessToken, refreshToken, AuthUser).
   Future<(String, String, AuthUser)> login(
-      String email, String password) async {
+    String username,
+    String password, {
+    String? organizationId,
+  }) async {
     final data = await _client.post('/auth/login', data: {
-      'email': email,
+      'username': username,
       'password': password,
+      if (organizationId != null) 'organizationId': organizationId,
     });
     final accessToken = data['accessToken'] as String;
     final refreshToken = data['refreshToken'] as String;
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
     return (accessToken, refreshToken, user);
+  }
+
+  /// Prijavljeni uporabnik si spremeni geslo.
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    await _client.post('/auth/change-password', data: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
   }
 
   /// Registrira FCM žeton na backendu (PATCH /auth/fcm-token).

@@ -32,7 +32,9 @@ export function MembersPage() {
       if (status && u.membershipStatus !== status) return false;
       if (
         q &&
-        !`${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)
+        !`${u.firstName} ${u.lastName} ${u.username} ${u.email ?? ""}`
+          .toLowerCase()
+          .includes(q)
       )
         return false;
       return true;
@@ -88,7 +90,7 @@ export function MembersPage() {
             <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-4 py-3">Ime</th>
-                <th className="px-4 py-3">E-pošta</th>
+                <th className="px-4 py-3">Uporabniško ime</th>
                 <th className="px-4 py-3">Telefon</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3" />
@@ -110,7 +112,7 @@ export function MembersPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                  <td className="px-4 py-3 text-gray-600">{u.username}</td>
                   <td className="px-4 py-3 text-gray-600">{u.phone ?? '—'}</td>
                   <td className="px-4 py-3">
                     <Badge color="blue">

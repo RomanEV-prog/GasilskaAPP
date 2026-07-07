@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -11,6 +12,7 @@ import {
   MembershipStatus,
   SystemRole,
 } from '../../common/enums/roles.enum';
+import { usernameBase } from '../../common/utils/username.util';
 import { UserRole } from './user-role.entity';
 import { User } from './user.entity';
 import {
@@ -59,29 +61,58 @@ export class UsersService {
   }
 
   /**
+   * Generira prijavno ime, unikatno znotraj društva:
+   * "Janez Novak" → janez.novak (ob koliziji janez.novak2, janez.novak3 ...).
+   */
+  async generateUsername(
+    organizationId: string,
+    firstName: string,
+    lastName: string,
+  ): Promise<string> {
+    const base = usernameBase(firstName, lastName);
+    let candidate = base;
+    for (let i = 2; ; i++) {
+      const taken = await this.usersRepo.findOne({
+        where: { organizationId, username: candidate },
+      });
+      if (!taken) return candidate;
+      candidate = `${base}${i}`;
+    }
+  }
+
+  /**
    * Ustvari uporabnika + njegove vloge znotraj organizacije.
    * Uporabljeno tako iz AuthService.register kot iz UsersController.
+   * E-pošta je neobvezna; prijavno ime se generira samodejno.
    */
   async create(
     organizationId: string,
     dto: CreateUserDto,
   ): Promise<SafeUser> {
-    const exists = await this.usersRepo.findOne({
-      where: { organizationId, email: dto.email.toLowerCase() },
-    });
-    if (exists) {
-      throw new ConflictException(
-        'Uporabnik s tem e-poštnim naslovom že obstaja.',
-      );
+    if (dto.email) {
+      const exists = await this.usersRepo.findOne({
+        where: { organizationId, email: dto.email.toLowerCase() },
+      });
+      if (exists) {
+        throw new ConflictException(
+          'Uporabnik s tem e-poštnim naslovom že obstaja.',
+        );
+      }
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const roles = dto.roles?.length ? dto.roles : [SystemRole.MEMBER];
+    const username = await this.generateUsername(
+      organizationId,
+      dto.firstName,
+      dto.lastName,
+    );
 
     const user = await this.dataSource.transaction(async (manager) => {
       const created = manager.create(User, {
         organizationId,
-        email: dto.email.toLowerCase(),
+        username,
+        email: dto.email?.toLowerCase(),
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
@@ -220,6 +251,33 @@ export class UsersService {
     user.availability = availability;
     await this.usersRepo.save(user);
     return this.sanitize(user);
+  }
+
+  /** Član si sam spremeni geslo (zahteva trenutno geslo). */
+  async changePassword(
+    organizationId: string,
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.id = :userId AND user.organizationId = :organizationId', {
+        userId,
+        organizationId,
+      })
+      .getOne();
+    if (!user) {
+      throw new NotFoundException('Član ni bil najden.');
+    }
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Trenutno geslo ni pravilno.');
+    }
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.usersRepo.save(user);
+    return { message: 'Geslo je bilo uspešno spremenjeno.' };
   }
 
   /** Mehki izbris — deaktivira člana (ne izbriše podatkov). */

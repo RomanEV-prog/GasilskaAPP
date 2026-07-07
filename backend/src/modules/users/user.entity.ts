@@ -16,6 +16,7 @@ import { UserRole } from './user-role.entity';
 
 @Entity('users')
 @Unique(['organizationId', 'email'])
+@Unique(['organizationId', 'username'])
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -24,9 +25,14 @@ export class User {
   @Index()
   organizationId: string;
 
-  @Column({ length: 255 })
+  /** Prijavno ime (ime.priimek), unikatno znotraj društva — generira se samodejno. */
+  @Column({ length: 100 })
+  username: string;
+
+  /** Neobvezna — člani je nimajo nujno; obvezna le za admina društva. */
+  @Column({ nullable: true, length: 255 })
   @Index()
-  email: string;
+  email?: string;
 
   /** Nikoli ne serializiraj v API odgovorih — glej UsersService.sanitize(). */
   @Column({ name: 'password_hash', length: 255, select: false })

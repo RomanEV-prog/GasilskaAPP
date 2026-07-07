@@ -32,7 +32,8 @@ CREATE TYPE notification_target AS ENUM ('all','operative','youth','leadership',
 CREATE TABLE users (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id       UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  email                 VARCHAR(255) NOT NULL,
+  username              VARCHAR(100) NOT NULL,
+  email                 VARCHAR(255),
   password_hash         VARCHAR(255) NOT NULL,
   first_name            VARCHAR(100) NOT NULL,
   last_name             VARCHAR(100) NOT NULL,
@@ -54,7 +55,8 @@ CREATE TABLE users (
   password_reset_expires TIMESTAMPTZ,
   created_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_at            TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(organization_id, email)
+  UNIQUE(organization_id, email),
+  UNIQUE(organization_id, username)
 );
 
 CREATE TABLE user_roles (

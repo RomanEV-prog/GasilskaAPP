@@ -15,9 +15,13 @@ import {
 } from '../../../common/enums/roles.enum';
 
 export class CreateUserDto {
-  @ApiProperty({ example: 'janez@pgd-pekre.si' })
+  @ApiPropertyOptional({
+    example: 'janez@pgd-pekre.si',
+    description: 'Neobvezna — prijava poteka z uporabniškim imenom.',
+  })
+  @IsOptional()
   @IsEmail({}, { message: 'Vnesite veljaven e-poštni naslov.' })
-  email: string;
+  email?: string;
 
   @ApiProperty({ example: 'GasilApp123!', minLength: 8 })
   @IsString()

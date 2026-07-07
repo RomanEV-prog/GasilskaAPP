@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -9,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { DataSource, Repository } from 'typeorm';
 import { SystemRole } from '../../common/enums/roles.enum';
+import { usernameBase } from '../../common/utils/username.util';
 import { Organization } from '../organizations/organization.entity';
 import { UserRole } from '../users/user-role.entity';
 import { User } from '../users/user.entity';
@@ -49,6 +51,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       organizationId: user.organizationId,
+      username: user.username,
       email: user.email,
       roles,
     };
@@ -68,6 +71,7 @@ export class AuthService {
       refreshToken: this.signRefreshToken(user),
       user: {
         id: user.id,
+        username: user.username,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -111,18 +115,42 @@ export class AuthService {
     return this.buildAuthResponse(user, roles);
   }
 
-  /** Prijava — preveri geslo, posodobi last_login_at, vrne JWT. */
+  /** Javni seznam društev — za izbiro ob prijavi (samo id in ime). */
+  async publicOrganizations(): Promise<{ id: string; name: string }[]> {
+    const orgs = await this.orgsRepo.find({
+      select: ['id', 'name'],
+      order: { name: 'ASC' },
+    });
+    return orgs.map((o) => ({ id: o.id, name: o.name }));
+  }
+
+  /**
+   * Prijava — z uporabniškim imenom znotraj društva (username + organizationId)
+   * ali z e-pošto (vsebuje '@', globalno). Preveri geslo in vrne JWT.
+   */
   async login(dto: LoginDto) {
-    const email = dto.email.toLowerCase();
-    const user = await this.usersRepo
+    const identifier = dto.username.toLowerCase().trim();
+
+    const qb = this.usersRepo
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
-      .leftJoinAndSelect('user.roles', 'role')
-      .where('user.email = :email', { email })
-      .getOne();
+      .leftJoinAndSelect('user.roles', 'role');
+
+    if (identifier.includes('@')) {
+      qb.where('user.email = :identifier', { identifier });
+    } else {
+      if (!dto.organizationId) {
+        throw new BadRequestException('Izberite svoje društvo.');
+      }
+      qb.where(
+        'user.username = :identifier AND user.organizationId = :orgId',
+        { identifier, orgId: dto.organizationId },
+      );
+    }
+    const user = await qb.getOne();
 
     if (!user) {
-      throw new UnauthorizedException('Napačna e-pošta ali geslo.');
+      throw new UnauthorizedException('Napačno uporabniško ime ali geslo.');
     }
     if (!user.isActive) {
       throw new UnauthorizedException('Vaš račun je deaktiviran.');
@@ -130,7 +158,7 @@ export class AuthService {
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
-      throw new UnauthorizedException('Napačna e-pošta ali geslo.');
+      throw new UnauthorizedException('Napačno uporabniško ime ali geslo.');
     }
 
     user.lastLoginAt = new Date();
@@ -165,6 +193,8 @@ export class AuthService {
 
         const newUser = manager.create(User, {
           organizationId: savedOrg.id,
+          // Novo društvo → osnova imena je vedno prosta.
+          username: usernameBase(dto.firstName, dto.lastName),
           email,
           passwordHash,
           firstName: dto.firstName,

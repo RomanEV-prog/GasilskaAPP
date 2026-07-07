@@ -21,7 +21,11 @@ interface RegisterData {
 interface AuthContextValue {
   user: AuthUser | null;
   isLeadership: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    username: string,
+    password: string,
+    organizationId?: string,
+  ) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
 }
@@ -50,8 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      persistSession(await authApi.login(email, password));
+    async (username: string, password: string, organizationId?: string) => {
+      persistSession(await authApi.login(username, password, organizationId));
     },
     [persistSession],
   );

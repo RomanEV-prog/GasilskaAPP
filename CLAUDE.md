@@ -136,7 +136,7 @@ Glej `infra/INFRA.md` za celoten seznam.
 
 - **Baza:** `docker compose up -d db` (Postgres 15). Shema se ustvari iz `docs/schema.sql` prek initdb.
 - **Seed:** `cd backend && npm run seed` → ustvari test društvo + admina.
-- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (org_admin) · `janez@pgd-pekre.si` / `Geslo1234` (member).
+- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (org_admin) · `janez@pgd-pekre.si` / `Geslo1234` (member). **Prijava zdaj z uporabniškim imenom** (`admin.pekre`, `janez.novak` + organizationId) ali e-pošto; javni seznam društev: `GET /auth/organizations`.
 - **Zagon:** backend `npm run start:dev` (port 4000), frontend `npm run dev` (port 3000).
 - **Okolje:** Git Bash + PowerShell. `$TMPDIR` NI nastavljen — za log datoteke uporabi absolutno pot.
 - **Ustavi backend proces:** PowerShell `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*dist*main*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }` (vrne exit 255 tudi ob uspehu — kozmetično).

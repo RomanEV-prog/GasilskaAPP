@@ -1,16 +1,24 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
+import { authApi } from '../../api/auth.api';
 import { errorMessage } from '../../api/client';
-import { Button, Input } from '../../components/ui';
+import { Button, Input, Select } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 
-const schema = z.object({
-  email: z.string().email('Vnesite veljaven e-poštni naslov.'),
-  password: z.string().min(1, 'Vnesite geslo.'),
-});
+const schema = z
+  .object({
+    organizationId: z.string(),
+    username: z.string().min(1, 'Vnesite uporabniško ime.'),
+    password: z.string().min(1, 'Vnesite geslo.'),
+  })
+  .refine((d) => d.username.includes('@') || d.organizationId, {
+    path: ['organizationId'],
+    message: 'Izberite svoje društvo.',
+  });
 
 type FormData = z.infer<typeof schema>;
 
@@ -18,16 +26,35 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
+
+  // Javni seznam društev; zadnja izbira se zapomni za naslednjič.
+  const { data: organizations } = useQuery({
+    queryKey: ['public-organizations'],
+    queryFn: authApi.publicOrganizations,
+  });
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      organizationId: localStorage.getItem('lastOrganizationId') ?? '',
+    },
+  });
 
   const onSubmit = async (data: FormData) => {
     setServerError('');
     try {
-      await login(data.email, data.password);
+      await login(
+        data.username,
+        data.password,
+        data.organizationId || undefined,
+      );
+      if (data.organizationId) {
+        localStorage.setItem('lastOrganizationId', data.organizationId);
+      }
       navigate('/');
     } catch (err) {
       setServerError(errorMessage(err));
@@ -46,13 +73,24 @@ export function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Select
+            label="Društvo"
+            error={errors.organizationId?.message}
+            {...register('organizationId')}
+          >
+            <option value="">— izberite društvo —</option>
+            {organizations?.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </Select>
           <Input
-            label="E-pošta"
-            type="email"
-            autoComplete="email"
-            placeholder="ime@drustvo.si"
-            error={errors.email?.message}
-            {...register('email')}
+            label="Uporabniško ime"
+            autoComplete="username"
+            placeholder="ime.priimek"
+            error={errors.username?.message}
+            {...register('username')}
           />
           <Input
             label="Geslo"

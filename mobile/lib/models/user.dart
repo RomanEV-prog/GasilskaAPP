@@ -27,7 +27,8 @@ const membershipLabels = {
 
 class AuthUser {
   final String id;
-  final String email;
+  final String username;
+  final String? email; // neobvezna — člani je nimajo nujno
   final String firstName;
   final String lastName;
   final String organizationId;
@@ -35,7 +36,8 @@ class AuthUser {
 
   AuthUser({
     required this.id,
-    required this.email,
+    required this.username,
+    this.email,
     required this.firstName,
     required this.lastName,
     required this.organizationId,
@@ -46,7 +48,8 @@ class AuthUser {
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as String,
-        email: json['email'] as String,
+        username: json['username'] as String? ?? '',
+        email: json['email'] as String?,
         firstName: json['firstName'] as String,
         lastName: json['lastName'] as String,
         organizationId: json['organizationId'] as String? ?? '',
@@ -57,6 +60,7 @@ class AuthUser {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'username': username,
         'email': email,
         'firstName': firstName,
         'lastName': lastName,
