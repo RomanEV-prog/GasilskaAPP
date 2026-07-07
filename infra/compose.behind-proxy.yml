@@ -1,0 +1,23 @@
+# Override za strežnik, kjer 80/443 že zaseda ZUNANJI reverse proxy (npr. eversum Caddy).
+# Uporaba:
+#   docker compose -f docker-compose.prod.yml -f infra/compose.behind-proxy.yml \
+#     --env-file .env.prod up -d --build
+#
+# GasilApp web tu streže navaden HTTP na :80 ZNOTRAJ docker omrežja;
+# TLS terminira zunanji proxy, ki mora imeti site blok:
+#   gasilapp.eu { reverse_proxy gasilapp-web:80 }
+# in biti v istem omrežju (spodaj: eversum_default).
+services:
+  web:
+    container_name: gasilapp-web
+    ports: !reset []
+    environment:
+      DOMAIN: ":80"
+    networks:
+      - default
+      - edge
+
+networks:
+  edge:
+    name: eversum_default
+    external: true
