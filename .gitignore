@@ -13,6 +13,7 @@ frontend/dist/
 **/.env
 !**/.env.example
 *firebase*service-account*.json
+*firebase-adminsdk*.json
 serviceAccountKey.json
 
 # Uploads (runtime datoteke)
