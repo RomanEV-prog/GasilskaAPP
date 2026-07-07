@@ -1,4 +1,4 @@
-import type { AvailabilityStatus, User } from '../types';
+import type { User } from '../types';
 import api from './client';
 
 export const usersApi = {
@@ -16,10 +16,4 @@ export const usersApi = {
     api.patch(`/users/${id}`, data),
 
   deactivate: (id: string): Promise<User> => api.delete(`/users/${id}`),
-
-  updateMyAvailability: (availability: AvailabilityStatus): Promise<User> =>
-    api.patch('/users/me/availability', { availability }),
-
-  availabilityBreakdown: (): Promise<Record<string, number>> =>
-    api.get('/users/availability'),
 };

@@ -1,17 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { sl } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '../../api/dashboard.api';
-import { usersApi } from '../../api/users.api';
-import { Badge, Card, EmptyState, Select, Spinner } from '../../components/ui';
+import { Badge, Card, EmptyState, Spinner } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
-import {
-  AVAILABILITY_LABELS,
-  EVENT_TYPE_LABELS,
-  type AvailabilityStatus,
-  type Event,
-} from '../../types';
+import { EVENT_TYPE_LABELS, type Event } from '../../types';
 
 function formatDate(iso: string) {
   return format(new Date(iso), 'd. M. yyyy HH:mm', { locale: sl });
@@ -75,9 +69,9 @@ function AdminDashboardView() {
         <StatTile label="Aktivnih" value={data.members.active} />
         <StatTile label="Operativcev" value={data.members.operatives} />
         <StatTile
-          label="Trenutno dosegljivih"
-          value={data.members.availableNow}
-          to="/members?availability=available"
+          label="Prihajajočih dogodkov"
+          value={data.upcomingEvents.length}
+          to="/calendar"
         />
       </div>
 
@@ -88,19 +82,6 @@ function AdminDashboardView() {
           ) : (
             data.upcomingEvents.map((e) => <EventRow key={e.id} event={e} />)
           )}
-        </Card>
-
-        <Card title="Razpoložljivost članov">
-          <div className="space-y-2">
-            {Object.entries(data.availabilityBreakdown).map(([status, count]) => (
-              <div key={status} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">
-                  {AVAILABILITY_LABELS[status as AvailabilityStatus]}
-                </span>
-                <span className="text-sm font-semibold">{count}</span>
-              </div>
-            ))}
-          </div>
         </Card>
 
         <Card title="Potekajoča usposabljanja (60 dni)">
@@ -153,38 +134,15 @@ function AdminDashboardView() {
 }
 
 function MemberDashboardView() {
-  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'member'],
     queryFn: dashboardApi.member,
-  });
-
-  const availabilityMutation = useMutation({
-    mutationFn: usersApi.updateMyAvailability,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'member'] }),
   });
 
   if (isLoading || !data) return <Spinner />;
 
   return (
     <div className="space-y-6">
-      <Card title="Moja razpoložljivost">
-        <Select
-          value={data.myAvailability}
-          onChange={(e) =>
-            availabilityMutation.mutate(e.target.value as AvailabilityStatus)
-          }
-          className="max-w-xs"
-        >
-          {Object.entries(AVAILABILITY_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
-      </Card>
-
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Prihajajoči dogodki">
           {data.upcomingEvents.length === 0 ? (

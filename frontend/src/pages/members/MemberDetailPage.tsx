@@ -11,7 +11,6 @@ import {
 } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 import {
-  AVAILABILITY_LABELS,
   MEMBERSHIP_LABELS,
   ROLE_LABELS,
 } from '../../types';
@@ -100,7 +99,6 @@ export function MemberDetailPage() {
             <Badge color={user.isActive ? 'green' : 'red'}>
               {user.isActive ? 'Aktiven' : 'Neaktiven'}
             </Badge>
-            <Badge color="gray">{AVAILABILITY_LABELS[user.availability]}</Badge>
             {user.roles?.map((r) => (
               <Badge key={r} color="yellow">
                 {ROLE_LABELS[r]}

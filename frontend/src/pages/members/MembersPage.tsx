@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { usersApi } from '../../api/users.api';
 import {
   Badge,
@@ -11,41 +11,13 @@ import {
   Spinner,
 } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
-import {
-  AVAILABILITY_LABELS,
-  MEMBERSHIP_LABELS,
-  type MembershipStatus,
-} from '../../types';
-
-const availabilityColor: Record<string, 'green' | 'yellow' | 'red' | 'gray'> = {
-  available: 'green',
-  at_home: 'yellow',
-  at_work: 'yellow',
-  on_leave: 'gray',
-  sick: 'red',
-  unavailable: 'red',
-};
+import { MEMBERSHIP_LABELS, type MembershipStatus } from '../../types';
 
 export function MembersPage() {
   const { isLeadership } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [showInactive, setShowInactive] = useState(false);
-  // Razpoložljivostni filter se sinhronizira z URL (?availability=available),
-  // da lahko nanj kaže gumb "Trenutno dosegljivih" z nadzorne plošče.
-  const availability = searchParams.get('availability') ?? '';
-
-  const setAvailability = (value: string) => {
-    setSearchParams(
-      (prev) => {
-        if (value) prev.set('availability', value);
-        else prev.delete('availability');
-        return prev;
-      },
-      { replace: true },
-    );
-  };
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -58,7 +30,6 @@ export function MembersPage() {
     return users.filter((u) => {
       if (!showInactive && !u.isActive) return false;
       if (status && u.membershipStatus !== status) return false;
-      if (availability && u.availability !== availability) return false;
       if (
         q &&
         !`${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)
@@ -66,7 +37,7 @@ export function MembersPage() {
         return false;
       return true;
     });
-  }, [users, search, status, availability, showInactive]);
+  }, [users, search, status, showInactive]);
 
   return (
     <div>
@@ -97,19 +68,6 @@ export function MembersPage() {
             ))}
           </Select>
         </div>
-        <div className="w-48">
-          <Select
-            value={availability}
-            onChange={(e) => setAvailability(e.target.value)}
-          >
-            <option value="">Vsa razpoložljivost</option>
-            {Object.entries(AVAILABILITY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </div>
         <label className="flex items-center gap-2 pb-2 text-sm text-gray-600">
           <input
             type="checkbox"
@@ -133,7 +91,6 @@ export function MembersPage() {
                 <th className="px-4 py-3">E-pošta</th>
                 <th className="px-4 py-3">Telefon</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Razpoložljivost</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -158,11 +115,6 @@ export function MembersPage() {
                   <td className="px-4 py-3">
                     <Badge color="blue">
                       {MEMBERSHIP_LABELS[u.membershipStatus]}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge color={availabilityColor[u.availability] ?? 'gray'}>
-                      {AVAILABILITY_LABELS[u.availability]}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">

@@ -13,6 +13,7 @@ const navItems = [
   { to: '/', label: 'Nadzorna plošča', icon: '📊', end: true },
   { to: '/members', label: 'Člani', icon: '👥' },
   { to: '/events', label: 'Dogodki', icon: '📅' },
+  { to: '/calendar', label: 'Koledar', icon: '🗓️' },
   { to: '/vehicles', label: 'Vozila', icon: '🚒' },
   { to: '/equipment', label: 'Oprema', icon: '🧰' },
   { to: '/trainings', label: 'Usposabljanja', icon: '🎓' },

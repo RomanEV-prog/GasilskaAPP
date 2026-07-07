@@ -20,10 +20,10 @@ import {
   type RsvpStatus,
 } from '../../types';
 
+// Brez "Morda" — usklajeno z mobilno aplikacijo (stari 'maybe' zapisi se še prikažejo).
 const RSVP_OPTIONS: { value: RsvpStatus; label: string; color: string }[] = [
   { value: 'attending', label: 'Pridem', color: 'bg-green-600' },
   { value: 'late', label: 'Zamudim', color: 'bg-yellow-600' },
-  { value: 'maybe', label: 'Morda', color: 'bg-gray-500' },
   { value: 'not_attending', label: 'Ne pridem', color: 'bg-red-600' },
 ];
 

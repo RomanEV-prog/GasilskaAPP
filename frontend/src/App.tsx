@@ -4,6 +4,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { EventDetailPage } from './pages/events/EventDetailPage';
+import { CalendarPage } from './pages/calendar/CalendarPage';
 import { EventFormPage } from './pages/events/EventFormPage';
 import { EquipmentFormPage } from './pages/equipment/EquipmentFormPage';
 import { EquipmentPage } from './pages/equipment/EquipmentPage';
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/members/new" element={<MemberFormPage />} />
         <Route path="/members/:id" element={<MemberDetailPage />} />
         <Route path="/members/:id/edit" element={<MemberFormPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/new" element={<EventFormPage />} />
         <Route path="/events/:id" element={<EventDetailPage />} />
