@@ -36,3 +36,6 @@ mobile/ios/Pods/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Office začasne "lock" datoteke (~$Dokument.docx)
+~$*
