@@ -42,3 +42,11 @@ Thumbs.db
 
 # Office začasne "lock" datoteke (~$Dokument.docx)
 ~$*
+
+# Android release podpisovanje (skrivnosti)
+mobile/android/key.properties
+mobile/android/upload-keystore.jks
+*.jks
+*.keystore
+# Produkcijske skrivnosti
+.env.prod

@@ -1,0 +1,17 @@
+# Caddy streže web portal in preusmerja /api na backend.
+# DOMAIN pride iz okolja (docker-compose). HTTPS certifikat je samodejen (Let's Encrypt).
+{$DOMAIN} {
+	encode gzip
+
+	# API + Swagger → NestJS backend
+	handle /api/* {
+		reverse_proxy backend:4000
+	}
+
+	# React SPA (statika + fallback na index.html za client-side routing)
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

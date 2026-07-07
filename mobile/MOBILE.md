@@ -109,3 +109,15 @@ Set-Location 'C:\gasilapp_mobile'; flutter build apk --debug
 - QR skeniranje
 - Offline mode
 - Biometric login
+
+## Release (Google Play)
+
+- **Podpisovanje:** `android/key.properties` + `android/upload-keystore.jks` (oba **gitignorana** — geslo hrani lastnik projekta; brez njega ni posodobitev aplikacije!). `build.gradle.kts` ju samodejno uporabi; brez njiju pade nazaj na debug podpis (CI).
+- **Build** (PowerShell, iz junction mape):
+  ```powershell
+  cd C:\gasilapp_mobile
+  flutter build appbundle --release --dart-define=API_BASE_URL=https://<DOMENA>/api/v1
+  ```
+  Izhod: `build\app\outputs\bundle\release\app-release.aab`
+- **Play Console:** aplikacija `si.gasilapp.gasilapp_mobile` → Production/Internal testing → naloži `.aab`. Obvezno: URL zasebnostne politike `https://<DOMENA>/zasebnost.html`, obrazec Data safety (zbiramo: ime/e-pošto — račun; FCM žeton — obvestila; ni deljenja s tretjimi), posnetki zaslona + ikona 512×512.
+- **Verzija:** pred vsako objavo povečaj `version:` v `pubspec.yaml` (npr. `1.0.1+2` — `+N` je versionCode, mora biti vedno večji).
