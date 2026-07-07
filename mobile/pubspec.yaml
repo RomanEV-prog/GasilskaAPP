@@ -45,6 +45,7 @@ dependencies:
   firebase_core: ^3.6.0          # push obvestila (FCM)
   firebase_messaging: ^15.1.3
   mobile_scanner: ^7.2.0
+  table_calendar: ^3.2.0
   # FCM je aktiven šele, ko lib/firebase_options.dart vsebuje prave vrednosti
   # (ustvari z `flutterfire configure`). Do takrat se init gracefully preskoči.
 

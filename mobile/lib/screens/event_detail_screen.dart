@@ -1,48 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../api/api_client.dart';
-import '../api/events_api.dart';
 import '../models/event.dart';
 import '../theme.dart';
+import '../widgets/rsvp_buttons.dart';
 
-class EventDetailScreen extends StatefulWidget {
+class EventDetailScreen extends StatelessWidget {
   final Event event;
   const EventDetailScreen({required this.event, super.key});
 
   @override
-  State<EventDetailScreen> createState() => _EventDetailScreenState();
-}
-
-class _EventDetailScreenState extends State<EventDetailScreen> {
-  final _eventsApi = EventsApi();
-  String? _submittedStatus;
-  bool _submitting = false;
-
-  Future<void> _rsvp(String status) async {
-    setState(() => _submitting = true);
-    try {
-      await _eventsApi.rsvp(widget.event.id, status);
-      setState(() => _submittedStatus = status);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Prijava je zabeležena.')),
-        );
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final e = widget.event;
+    final e = event;
     final df = DateFormat('EEEE, d. MMMM yyyy · HH:mm', 'sl');
 
     return Scaffold(
@@ -98,31 +67,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _rsvpButton('attending', 'Pridem', GasilColors.success),
-                _rsvpButton('late', 'Zamudim', GasilColors.warning),
-                _rsvpButton('maybe', 'Morda', GasilColors.textMuted),
-                _rsvpButton('not_attending', 'Ne pridem', GasilColors.danger),
-              ],
-            ),
+            RsvpButtons(eventId: e.id),
           ],
         ],
       ),
-    );
-  }
-
-  Widget _rsvpButton(String status, String label, Color color) {
-    final selected = _submittedStatus == status;
-    return FilledButton(
-      onPressed: _submitting ? null : () => _rsvp(status),
-      style: FilledButton.styleFrom(
-        backgroundColor: selected ? color : color.withValues(alpha: 0.85),
-        foregroundColor: Colors.white,
-      ),
-      child: Text(selected ? '✓ $label' : label),
     );
   }
 }

@@ -7,7 +7,9 @@ import '../theme.dart';
 import '../widgets/event_card.dart';
 
 class EventsScreen extends StatefulWidget {
-  const EventsScreen({super.key});
+  /// Klic za preklop na zavihek Koledar (za dogodke naprej od enega meseca).
+  final VoidCallback? onOpenCalendar;
+  const EventsScreen({this.onOpenCalendar, super.key});
 
   @override
   State<EventsScreen> createState() => _EventsScreenState();
@@ -44,26 +46,52 @@ class _EventsScreenState extends State<EventsScreen> {
               Center(child: Text('Napaka: ${snapshot.error}')),
             ]);
           }
-          final events = snapshot.data!;
-          if (events.isEmpty) {
-            return ListView(children: const [
-              SizedBox(height: 120),
-              Center(
-                child: Text(
-                  'Ni dogodkov.',
-                  style: TextStyle(color: GasilColors.textMuted),
-                ),
-              ),
-            ]);
-          }
+
+          final now = DateTime.now();
+          final todayStart = DateTime(now.year, now.month, now.day);
+          // Mesec naprej: prikaži takoj le dogodke do enega meseca.
+          final cutoff = DateTime(now.year, now.month + 1, now.day);
+
+          final all = snapshot.data!;
+          final withinMonth = all
+              .where((e) =>
+                  !e.startsAt.isBefore(todayStart) &&
+                  e.startsAt.isBefore(cutoff))
+              .toList()
+            ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+          final hasLater = all.any((e) => !e.startsAt.isBefore(cutoff));
+
           return ListView(
             padding: const EdgeInsets.all(16),
-            children: events
-                .map((e) => EventCard(
+            children: [
+              if (withinMonth.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 80),
+                  child: Center(
+                    child: Text(
+                      'V naslednjem mesecu ni dogodkov.',
+                      style: TextStyle(color: GasilColors.textMuted),
+                    ),
+                  ),
+                )
+              else
+                ...withinMonth.map((e) => EventCard(
                       event: e,
                       onTap: () => context.push('/events/${e.id}', extra: e),
-                    ))
-                .toList(),
+                    )),
+
+              // Za dogodke dlje od enega meseca → Koledar.
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: widget.onOpenCalendar,
+                icon: const Icon(Icons.calendar_month),
+                label: Text(
+                  hasLater
+                      ? 'Več dogodkov v koledarju →'
+                      : 'Odpri koledar dogodkov',
+                ),
+              ),
+            ],
           );
         },
       ),

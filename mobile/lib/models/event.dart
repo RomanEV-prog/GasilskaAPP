@@ -12,7 +12,6 @@ const eventTypeLabels = {
 const rsvpLabels = {
   'attending': 'Pridem',
   'not_attending': 'Ne pridem',
-  'maybe': 'Morda',
   'late': 'Zamudim',
 };
 

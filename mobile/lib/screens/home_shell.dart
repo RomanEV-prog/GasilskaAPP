@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/fcm_service.dart';
-import 'availability_screen.dart';
+import 'calendar_screen.dart';
 import 'dashboard_screen.dart';
 import 'events_screen.dart';
 import 'notifications_screen.dart';
@@ -30,15 +30,8 @@ class _HomeShellState extends State<HomeShell> {
   static const _titles = [
     'Nadzorna plošča',
     'Dogodki',
-    'Razpoložljivost',
+    'Koledar',
     'Obvestila',
-  ];
-
-  final _screens = const [
-    DashboardScreen(),
-    EventsScreen(),
-    AvailabilityScreen(),
-    NotificationsScreen(),
   ];
 
   @override
@@ -59,7 +52,15 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(
+        index: _index,
+        children: [
+          const DashboardScreen(),
+          EventsScreen(onOpenCalendar: () => setState(() => _index = 2)),
+          const CalendarScreen(),
+          const NotificationsScreen(),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -75,9 +76,9 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Dogodki',
           ),
           NavigationDestination(
-            icon: Icon(Icons.check_circle_outline),
-            selectedIcon: Icon(Icons.check_circle),
-            label: 'Status',
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Koledar',
           ),
           NavigationDestination(
             icon: Icon(Icons.notifications_outlined),
