@@ -13,12 +13,12 @@ importScripts(
 );
 
 firebase.initializeApp({
-  apiKey: 'ZAMENJAJ',
-  authDomain: 'ZAMENJAJ.firebaseapp.com',
-  projectId: 'ZAMENJAJ',
-  storageBucket: 'ZAMENJAJ.appspot.com',
-  messagingSenderId: 'ZAMENJAJ',
-  appId: 'ZAMENJAJ',
+  apiKey: 'AIzaSyC7tiDewIFkLAYgpLmw8TbYQpd03NrYJGE',
+  authDomain: 'gasilapp.firebaseapp.com',
+  projectId: 'gasilapp',
+  storageBucket: 'gasilapp.firebasestorage.app',
+  messagingSenderId: '787182190075',
+  appId: '1:787182190075:web:ef6aecbee1e6bd7652df5e',
 });
 
 const messaging = firebase.messaging();
