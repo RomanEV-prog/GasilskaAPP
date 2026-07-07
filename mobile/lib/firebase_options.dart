@@ -27,11 +27,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'ZAMENJAJ',
-    appId: 'ZAMENJAJ',
-    messagingSenderId: 'ZAMENJAJ',
-    projectId: 'ZAMENJAJ',
-    storageBucket: 'ZAMENJAJ.appspot.com',
+    apiKey: 'AIzaSyAIdzkjeJ1fBUxweJi-2sJqTZt8s3uQpfw',
+    appId: '1:787182190075:android:dd0dd4b86c0863a352df5e',
+    messagingSenderId: '787182190075',
+    projectId: 'gasilapp',
+    storageBucket: 'gasilapp.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
