@@ -7,9 +7,17 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { Organization } from '../organizations/organization.entity';
 import { SpinIntervention } from './spin-intervention.entity';
 
+/**
+ * Bazni URL SPIN. SPIN (URSZR) geo-omejuje dostop na slovenske IP-je, zato
+ * strežnik v tujini (npr. Hetzner DE) portala ne doseže. V tem primeru nastavi
+ * `SPIN_BASE_URL` na slovenski reverse-proxy (relay), ki zrcali spin3.sos112.si.
+ */
+const SPIN_BASE_URL = (
+  process.env.SPIN_BASE_URL || 'https://spin3.sos112.si'
+).replace(/\/+$/, '');
 /** Javni RSS SPIN — "True" = takojšnji feed aktiviranih intervencij. */
-const SPIN_FEED_URL = 'https://spin3.sos112.si/Javno/ODApi/True';
-const SPIN_OBMOCJE_URL = 'https://spin3.sos112.si/api/javno/odObmocje';
+const SPIN_FEED_URL = `${SPIN_BASE_URL}/Javno/ODApi/True`;
+const SPIN_OBMOCJE_URL = `${SPIN_BASE_URL}/api/javno/odObmocje`;
 
 interface SpinItem {
   guid: string;
