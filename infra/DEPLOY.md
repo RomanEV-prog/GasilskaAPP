@@ -80,3 +80,23 @@ flutter build appbundle --release --dart-define=API_BASE_URL=https://<DOMAIN>/ap
 ```
 
 Podpisovanje in objava na Google Play: glej `mobile/MOBILE.md` → Release.
+
+## 9. Aktivacijske kode za nova društva
+
+Registracija društva zahteva aktivacijsko kodo. Izdaš jo z master ključem
+(`REGISTRATION_KEY` v `.env.prod`):
+
+```bash
+ssh root@<IP> 'KEY=$(grep REGISTRATION_KEY /opt/gasilapp/.env.prod | cut -d= -f2); \
+  curl -s https://gasilapp.eu/api/v1/auth/registration-codes -X POST \
+  -H "x-master-key: $KEY" -H "Content-Type: application/json" \
+  -d "{\"count\":1,\"note\":\"PGD Ime — kontaktna oseba\"}"'
+```
+
+Vrne `{"codes": ["GASIL-XXXX-XXXX"]}` — kodo pošlješ društvu; vsaka je enkratna.
+Pregled izdanih/porabljenih kod:
+
+```bash
+docker exec $(docker ps -qf name=gasilapp-db) psql -U postgres -d gasilapp \
+  -c "SELECT code, note, used_at FROM registration_codes ORDER BY created_at DESC;"
+```
