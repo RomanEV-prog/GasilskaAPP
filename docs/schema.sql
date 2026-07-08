@@ -14,6 +14,8 @@ CREATE TABLE organizations (
   email         VARCHAR(255),
   website       VARCHAR(255),
   logo_url      VARCHAR(500),
+  spin_obcina   VARCHAR(255),
+  spin_obcina_id BIGINT,
   settings      JSONB DEFAULT '{}',
   is_active     BOOLEAN DEFAULT true,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
@@ -226,6 +228,21 @@ CREATE TABLE audit_logs (
   ip_address      INET,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- SPIN intervencije (javni portal spin3.sos112.si) — deljen predpomnilnik za dedup + prikaz.
+CREATE TABLE spin_interventions (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  spin_guid     VARCHAR(500) UNIQUE NOT NULL,
+  spin_type     VARCHAR(255),
+  obcina        VARCHAR(255),
+  title         VARCHAR(500) NOT NULL,
+  description   TEXT,
+  link          VARCHAR(500),
+  occurred_at   TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_spin_obcina ON spin_interventions(obcina);
+CREATE INDEX idx_spin_occurred ON spin_interventions(occurred_at DESC);
 
 -- Indexes
 CREATE INDEX idx_users_org ON users(organization_id);

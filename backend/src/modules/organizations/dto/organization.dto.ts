@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class UpdateOrganizationDto {
   @ApiPropertyOptional()
@@ -36,4 +36,14 @@ export class UpdateOrganizationDto {
   @IsOptional()
   @IsString()
   website?: string;
+
+  @ApiPropertyOptional({ description: 'Občina za obveščanje o intervencijah SPIN' })
+  @IsOptional()
+  @IsString()
+  spinObcina?: string;
+
+  @ApiPropertyOptional({ description: 'ID občine v SPIN (odObmocje)' })
+  @IsOptional()
+  @IsInt()
+  spinObcinaId?: number;
 }

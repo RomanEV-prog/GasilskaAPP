@@ -38,6 +38,14 @@ export class Organization {
   @Column({ name: 'logo_url', nullable: true, length: 500 })
   logoUrl?: string;
 
+  /** Občina za obveščanje o intervencijah SPIN (ime iz odObmocje). */
+  @Column({ name: 'spin_obcina', nullable: true, length: 255 })
+  spinObcina?: string;
+
+  /** ID občine v SPIN (odObmocje) — za morebitno prihodnje filtriranje. */
+  @Column({ name: 'spin_obcina_id', type: 'bigint', nullable: true })
+  spinObcinaId?: number;
+
   @Column({ type: 'jsonb', default: {} })
   settings: Record<string, any>;
 

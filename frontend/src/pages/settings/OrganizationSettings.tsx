@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { errorMessage } from '../../api/client';
 import { organizationsApi } from '../../api/organizations.api';
-import { Button, Card, Input, Spinner } from '../../components/ui';
+import { spinApi } from '../../api/spin.api';
+import { Button, Card, Input, Select, Spinner } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 import type { Organization } from '../../types';
 
@@ -15,6 +16,7 @@ type FormData = {
   phone: string;
   email: string;
   website: string;
+  spinObcina: string;
 };
 
 function LogoBlock({ canEdit }: { canEdit: boolean }) {
@@ -93,6 +95,12 @@ export function OrganizationSettings() {
     queryFn: organizationsApi.getMine,
   });
 
+  const { data: obcine } = useQuery({
+    queryKey: ['spin', 'obcine'],
+    queryFn: spinApi.obcine,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+
   const {
     register,
     handleSubmit,
@@ -110,6 +118,7 @@ export function OrganizationSettings() {
         phone: org.phone ?? '',
         email: org.email ?? '',
         website: org.website ?? '',
+        spinObcina: org.spinObcina ?? '',
       });
     }
   }, [org, reset]);
@@ -144,7 +153,12 @@ export function OrganizationSettings() {
       <form
         onSubmit={handleSubmit((d) => {
           setServerError('');
-          mutation.mutate(d);
+          const match = obcine?.find((o) => o.naziv === d.spinObcina);
+          mutation.mutate({
+            ...d,
+            spinObcina: d.spinObcina || undefined,
+            spinObcinaId: match?.id,
+          });
         })}
         className="space-y-4"
       >
@@ -172,7 +186,23 @@ export function OrganizationSettings() {
             {...register('email')}
           />
           <Input label="Spletna stran" readOnly={readOnly} {...register('website')} />
+          <Select
+            label="Občina (obveščanje o intervencijah SPIN)"
+            disabled={readOnly}
+            {...register('spinObcina')}
+          >
+            <option value="">— brez obveščanja —</option>
+            {obcine?.map((o) => (
+              <option key={o.id} value={o.naziv}>
+                {o.naziv} ({o.regija})
+              </option>
+            ))}
+          </Select>
         </div>
+        <p className="-mt-2 text-xs text-gray-400">
+          Ob izbiri občine bodo operativni člani prejeli obvestilo ob vsaki novi
+          intervenciji SPIN v tej občini (vir: spin3.sos112.si).
+        </p>
 
         {serverError && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

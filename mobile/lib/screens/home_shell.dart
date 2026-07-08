@@ -8,6 +8,7 @@ import '../widgets/change_password_dialog.dart';
 import 'calendar_screen.dart';
 import 'dashboard_screen.dart';
 import 'events_screen.dart';
+import 'interventions_screen.dart';
 import 'notifications_screen.dart';
 
 /// Glavni okvir z zavihki (bottom navigation) po MVP zaslonih.
@@ -32,6 +33,7 @@ class _HomeShellState extends State<HomeShell> {
     'Nadzorna plošča',
     'Dogodki',
     'Koledar',
+    'Intervencije',
     'Obvestila',
   ];
 
@@ -83,6 +85,7 @@ class _HomeShellState extends State<HomeShell> {
           const DashboardScreen(),
           EventsScreen(onOpenCalendar: () => setState(() => _index = 2)),
           const CalendarScreen(),
+          const InterventionsScreen(),
           const NotificationsScreen(),
         ],
       ),
@@ -104,6 +107,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: 'Koledar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.local_fire_department_outlined),
+            selectedIcon: Icon(Icons.local_fire_department),
+            label: 'SPIN',
           ),
           NavigationDestination(
             icon: Icon(Icons.notifications_outlined),

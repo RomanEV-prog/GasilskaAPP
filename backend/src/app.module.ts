@@ -19,6 +19,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { TrainingsModule } from './modules/trainings/trainings.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
+import { SpinModule } from './modules/spin/spin.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 
@@ -55,6 +56,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     DocumentsModule,
     AuditModule,
     SchedulerModule,
+    SpinModule,
   ],
   providers: [
     // Vrstni red je pomemben: najprej rate limit, nato avtentikacija, nato vloge.

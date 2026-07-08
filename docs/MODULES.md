@@ -301,6 +301,32 @@ dashboard/
 
 ---
 
+## 9a. SPIN modul (`/modules/spin`)
+
+Integracija z javnim portalom **SPIN** (spin3.sos112.si, URSZR) za obveščanje
+članov o intervencijah v občini društva. NI alarmiranje (to pokriva Vulkan/GZS) —
+je informativno obveščanje z zamikom nekaj minut.
+
+### Vir podatkov
+- Javni RSS `https://spin3.sos112.si/Javno/ODApi/True` — takojšnji feed aktiviranih
+  intervencij. Sveže intervencije imajo v `<description>` **golo ime občine**
+  (opisno besedilo se doda pozneje) → zanesljivo ujemanje po imenu občine.
+- `GET /api/javno/odObmocje` — seznam občin (regija → občine).
+
+### Datoteke
+- `spin.service.ts` — `@Cron('*/2 * * * *')` poll: parsanje RSS, dedup po `spinGuid`,
+  ujemanje po občini (točno za golo ime, meja besede za narativ), obvestilo prek
+  `NotificationsService` (target `OPERATIVE`, type `spin`). `onModuleInit` ob prvem
+  zagonu napolni bazo obstoječih guid-ov **brez** obvestil (brez poplave).
+- `spin-intervention.entity.ts` — deljen predpomnilnik (brez `organization_id`),
+  unikaten `spin_guid`.
+- `spin.controller.ts` — `GET /spin/obcine` (javno), `GET /spin/interventions` (avtenticiran, po občini društva).
+
+### Nastavitev
+Društvo izbere občino v spletnem portalu (Nastavitve → Društvo → Občina).
+`organizations.spin_obcina` (ime) + `spin_obcina_id` (ID iz odObmocje).
+Prazna občina = brez obveščanja. V testih (`NODE_ENV=test`) je poll izklopljen.
+
 ## 10. Common (`/common`)
 
 ### Guards
