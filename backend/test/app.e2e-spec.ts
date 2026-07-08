@@ -1,5 +1,7 @@
 // Izklopi rate limiting za teste (guard bere NODE_ENV ob vsaki zahtevi).
 process.env.NODE_ENV = 'test';
+// Master ključ za izdajo aktivacijskih kod v testih.
+process.env.REGISTRATION_KEY = 'test-master-key';
 
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -60,6 +62,15 @@ describe('GasilApp E2E', () => {
     );
     await app.init();
     http = app.getHttpServer();
+
+    // Izdaj aktivacijski kodi za registraciji obeh testnih društev.
+    const res = await request(http)
+      .post('/api/v1/auth/registration-codes')
+      .set('x-master-key', 'test-master-key')
+      .send({ count: 2, note: 'e2e' })
+      .expect(201);
+    (orgA as Record<string, string>).activationCode = res.body.data.codes[0];
+    (orgB as Record<string, string>).activationCode = res.body.data.codes[1];
   });
 
   afterAll(async () => {
@@ -94,7 +105,33 @@ describe('GasilApp E2E', () => {
         .expect(409);
     });
 
-    it('zavrne neveljavno oznako (400)', async () => {
+    it("zavrne registracijo z neveljavno aktivacijsko kodo (401)", async () => {
+      await request(http)
+        .post("/api/v1/auth/register")
+        .send({
+          organizationName: "PGD Brez Kode",
+          organizationSlug: `e2e-nokod-${stamp}`,
+          firstName: "X",
+          lastName: "Y",
+          email: `x@e2e-nokod-${stamp}.si`,
+          password: pass,
+          activationCode: "GASIL-XXXX-0000",
+        })
+        .expect(401);
+    });
+
+    it("zavrne ponovno uporabo porabljene kode (401)", async () => {
+      await request(http)
+        .post("/api/v1/auth/register")
+        .send({
+          ...orgA,
+          organizationSlug: `e2e-reuse-${stamp}`,
+          email: `reuse@e2e-${stamp}.si`,
+        })
+        .expect(401);
+    });
+
+    it("zavrne neveljavno oznako (400)", async () => {
       await request(http)
         .post('/api/v1/auth/register')
         .send({ ...orgB, organizationSlug: 'Ne Veljaven', email: 'x@y.si' })

@@ -22,6 +22,7 @@ function slugify(input: string): string {
 }
 
 const schema = z.object({
+  activationCode: z.string().min(1, 'Vnesite aktivacijsko kodo.'),
   organizationName: z.string().min(1, 'Vnesite naziv društva.'),
   organizationSlug: z
     .string()
@@ -73,6 +74,22 @@ export function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input
+            label="Aktivacijska koda"
+            placeholder="GASIL-XXXX-XXXX"
+            error={errors.activationCode?.message}
+            {...register('activationCode')}
+          />
+          <p className="-mt-2 text-xs text-gray-400">
+            Za aktivacijsko kodo nam pišite na{' '}
+            <a
+              href="mailto:adlerrroman@gmail.com"
+              className="text-primary hover:underline"
+            >
+              adlerrroman@gmail.com
+            </a>
+            .
+          </p>
           <Input
             label="Naziv društva"
             placeholder="PGD Pekre"

@@ -19,6 +19,7 @@ export const authApi = {
     api.post('/auth/change-password', { currentPassword, newPassword }),
 
   register: (data: {
+    activationCode: string;
     organizationName: string;
     organizationSlug: string;
     firstName: string;

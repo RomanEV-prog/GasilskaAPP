@@ -15,8 +15,10 @@ import { Organization } from '../organizations/organization.entity';
 import { UserRole } from '../users/user-role.entity';
 import { User } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
+import { RegistrationCode } from './registration-code.entity';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { randomBytes } from 'crypto';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -27,6 +29,8 @@ export class AuthService {
     private readonly usersRepo: Repository<User>,
     @InjectRepository(Organization)
     private readonly orgsRepo: Repository<Organization>,
+    @InjectRepository(RegistrationCode)
+    private readonly codesRepo: Repository<RegistrationCode>,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
@@ -169,8 +173,31 @@ export class AuthService {
   }
 
   /**
-   * Registracija novega društva — ustvari organizacijo + org_admin uporabnika.
-   * Vse v eni transakciji.
+   * Izda nove aktivacijske kode za registracijo društev.
+   * Kliče se prek zaščitenega endpointa (master ključ) — glej AuthController.
+   */
+  async createRegistrationCodes(
+    count = 1,
+    note?: string,
+  ): Promise<string[]> {
+    const codes: string[] = [];
+    for (let i = 0; i < Math.min(count, 20); i++) {
+      // Berljiva oblika: GASIL-XXXX-XXXX (brez dvoumnih znakov).
+      const raw = randomBytes(8)
+        .toString('base64url')
+        .replace(/[-_]/g, '')
+        .toUpperCase()
+        .slice(0, 8);
+      const code = `GASIL-${raw.slice(0, 4)}-${raw.slice(4, 8)}`;
+      await this.codesRepo.save(this.codesRepo.create({ code, note }));
+      codes.push(code);
+    }
+    return codes;
+  }
+
+  /**
+   * Registracija novega društva — zahteva veljavno (še neporabljeno)
+   * aktivacijsko kodo; ustvari organizacijo + org_admin. Vse v eni transakciji.
    */
   async register(dto: RegisterDto) {
     const slug = dto.organizationSlug.toLowerCase();
@@ -179,6 +206,15 @@ export class AuthService {
     const slugTaken = await this.orgsRepo.findOne({ where: { slug } });
     if (slugTaken) {
       throw new ConflictException('Društvo s to oznako že obstaja.');
+    }
+
+    const code = await this.codesRepo.findOne({
+      where: { code: dto.activationCode.trim().toUpperCase() },
+    });
+    if (!code || code.usedAt) {
+      throw new UnauthorizedException(
+        'Aktivacijska koda je neveljavna ali že porabljena. Za kodo nas kontaktirajte.',
+      );
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
@@ -190,6 +226,12 @@ export class AuthService {
           slug,
         });
         const savedOrg = await manager.save(org);
+
+        // Porabi aktivacijsko kodo (znotraj iste transakcije).
+        await manager.update(RegistrationCode, code.id, {
+          usedAt: new Date(),
+          usedByOrganizationId: savedOrg.id,
+        });
 
         const newUser = manager.create(User, {
           organizationId: savedOrg.id,

@@ -10,6 +10,7 @@ import { authApi } from '../api/auth.api';
 import { LEADERSHIP_ROLES, type AuthUser, type LoginResponse } from '../types';
 
 interface RegisterData {
+  activationCode: string;
   organizationName: string;
   organizationSlug: string;
   firstName: string;

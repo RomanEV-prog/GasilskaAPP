@@ -59,6 +59,16 @@ CREATE TABLE users (
   UNIQUE(organization_id, username)
 );
 
+-- Aktivacijske kode za registracijo novih društev (izda upravitelj platforme).
+CREATE TABLE registration_codes (
+  id                       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code                     VARCHAR(32) UNIQUE NOT NULL,
+  note                     VARCHAR(255),
+  used_at                  TIMESTAMPTZ,
+  used_by_organization_id  UUID,
+  created_at               TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE user_roles (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

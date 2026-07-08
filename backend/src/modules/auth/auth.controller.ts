@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Patch,
   Post,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,6 +21,7 @@ import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
+  CreateRegistrationCodesDto,
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
@@ -67,6 +70,31 @@ export class AuthController {
   @ApiOperation({ summary: 'Registracija novega društva' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  /**
+   * Izdaja aktivacijskih kod — samo za upravitelja platforme.
+   * Zaščiteno z master ključem (env REGISTRATION_KEY) v glavi x-master-key;
+   * če ključ ni nastavljen, je endpoint izklopljen.
+   */
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('registration-codes')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Izdaj aktivacijske kode (master ključ)' })
+  async createRegistrationCodes(
+    @Headers('x-master-key') masterKey: string,
+    @Body() dto: CreateRegistrationCodesDto,
+  ) {
+    const expected = process.env.REGISTRATION_KEY;
+    if (!expected || masterKey !== expected) {
+      throw new UnauthorizedException('Neveljaven master ključ.');
+    }
+    const codes = await this.authService.createRegistrationCodes(
+      dto.count ?? 1,
+      dto.note,
+    );
+    return { codes };
   }
 
   @Public()

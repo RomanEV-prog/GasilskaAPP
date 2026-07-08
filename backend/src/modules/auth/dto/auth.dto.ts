@@ -44,6 +44,14 @@ export class ChangePasswordDto {
 }
 
 export class RegisterDto {
+  @ApiProperty({
+    example: 'GASIL-AB12-CD34',
+    description: 'Aktivacijska koda, ki jo izda upravitelj platforme.',
+  })
+  @IsString()
+  @MinLength(1, { message: 'Vnesite aktivacijsko kodo.' })
+  activationCode: string;
+
   @ApiProperty({ example: 'PGD Pekre' })
   @IsString()
   organizationName: string;
@@ -100,4 +108,15 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8, { message: 'Geslo mora imeti vsaj 8 znakov.' })
   password: string;
+}
+
+export class CreateRegistrationCodesDto {
+  @ApiPropertyOptional({ example: 1, description: 'Št. kod (največ 20).' })
+  @IsOptional()
+  count?: number;
+
+  @ApiPropertyOptional({ example: 'PGD Radvanje — g. Kovač' })
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
