@@ -111,3 +111,50 @@ Pregled izdanih/porabljenih kod:
 docker exec $(docker ps -qf name=gasilapp-db) psql -U postgres -d gasilapp \
   -c "SELECT code, note, used_at FROM registration_codes ORDER BY created_at DESC;"
 ```
+
+## 10. SPIN push obvestila — slovenski relay
+
+SPIN (spin3.sos112.si) pušča le **slovenske IP-je**, zato produkcijski strežnik
+(Hetzner DE) feeda ne doseže sam. Za takojšnja push obvestila operativcem
+postavi majhen **slovenski VPS** kot posrednik (nginx reverse-proxy).
+
+**Ponudniki SI VPS** (~2–5 €/mes): Hostko, Neoserv, DomKing, Domenca (izberi
+najmanjši paket; dovolj je 1 vCPU / 512 MB, Ubuntu/Debian).
+
+**Postavitev relaya** (na SI VPS):
+
+```bash
+apt update && apt install -y nginx
+# prekopiraj infra/spin-relay.nginx.conf na strežnik:
+scp infra/spin-relay.nginx.conf root@<IP_RELAYA>:/etc/nginx/sites-available/spin-relay
+ssh root@<IP_RELAYA> '
+  ln -sf /etc/nginx/sites-available/spin-relay /etc/nginx/sites-enabled/
+  rm -f /etc/nginx/sites-enabled/default
+  nginx -t && systemctl restart nginx'
+```
+
+(Config posreduje le `/Javno/ODApi/` in dovoli le IP produkcijskega strežnika.)
+
+**Vklop na produkciji** — dodaj v `/opt/gasilapp/.env.prod`:
+
+```
+SPIN_BASE_URL=http://<IP_RELAYA>
+```
+
+Nato redeploy backenda:
+
+```bash
+cd /opt/gasilapp && docker compose -f docker-compose.prod.yml \
+  -f infra/compose.behind-proxy.yml --env-file .env.prod up -d backend
+```
+
+**Preveri**, da relay deluje in poller bere feed:
+
+```bash
+docker logs $(docker ps -qf name=gasilapp-backend) 2>&1 | grep -i SPIN | tail
+# uspeh: "SPIN inicializacija: shranjenih N ..." (brez "fetch failed")
+```
+
+Odslej cron vsaki 2 min pošlje FCM push operativcem ob novi intervenciji v
+občini njihovega društva. Preizkus: v feedu se pojavi nova intervencija v
+nastavljeni občini → operativci s prijavljeno aplikacijo dobijo obvestilo.
