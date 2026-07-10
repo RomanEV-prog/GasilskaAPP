@@ -6,17 +6,7 @@ export interface Obcina {
   regija: string;
 }
 
-export interface SpinIntervention {
-  id: string;
-  spinType?: string;
-  obcina?: string;
-  title: string;
-  description?: string;
-  link?: string;
-  occurredAt?: string;
-}
-
 export const spinApi = {
+  /** Statični seznam občin (backend ga vrne brez klica na SPIN). */
   obcine: (): Promise<Obcina[]> => api.get('/spin/obcine'),
-  interventions: (): Promise<SpinIntervention[]> => api.get('/spin/interventions'),
 };

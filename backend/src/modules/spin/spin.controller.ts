@@ -16,9 +16,11 @@ export class SpinController {
     return this.spinService.listObcine();
   }
 
-  @Get('interventions')
-  @ApiOperation({ summary: 'Nedavne intervencije SPIN za občino društva' })
-  recent(@CurrentUser('organizationId') organizationId: string) {
-    return this.spinService.recentForOrg(organizationId);
+  @Get('settings')
+  @ApiOperation({
+    summary: 'Občina društva (mobilni prikaz bere SPIN neposredno)',
+  })
+  settings(@CurrentUser('organizationId') organizationId: string) {
+    return this.spinService.obcinaForOrg(organizationId);
   }
 }

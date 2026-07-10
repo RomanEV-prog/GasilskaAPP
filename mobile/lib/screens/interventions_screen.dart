@@ -53,9 +53,19 @@ class _InterventionsScreenState extends State<InterventionsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return ListView(children: [
-              const SizedBox(height: 120),
-              Center(child: Text('Napaka: ${snapshot.error}')),
+            return ListView(children: const [
+              SizedBox(height: 100),
+              Icon(Icons.wifi_off, size: 48, color: GasilColors.textMuted),
+              SizedBox(height: 12),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  'Portala SPIN trenutno ni mogoče doseči.\n'
+                  'Poskusite znova (povlecite navzdol za osvežitev).',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: GasilColors.textMuted),
+                ),
+              ),
             ]);
           }
           final items = snapshot.data!;

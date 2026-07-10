@@ -5,7 +5,10 @@ import { Repository } from 'typeorm';
 import { NotificationTarget } from '../notifications/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Organization } from '../organizations/organization.entity';
+import { OBCINE, Obcina } from './obcine.data';
 import { SpinIntervention } from './spin-intervention.entity';
+
+export { Obcina };
 
 /**
  * Bazni URL SPIN. SPIN (URSZR) geo-omejuje dostop na slovenske IP-je, zato
@@ -17,7 +20,6 @@ const SPIN_BASE_URL = (
 ).replace(/\/+$/, '');
 /** Javni RSS SPIN — "True" = takojšnji feed aktiviranih intervencij. */
 const SPIN_FEED_URL = `${SPIN_BASE_URL}/Javno/ODApi/True`;
-const SPIN_OBMOCJE_URL = `${SPIN_BASE_URL}/api/javno/odObmocje`;
 
 interface SpinItem {
   guid: string;
@@ -25,12 +27,6 @@ interface SpinItem {
   link?: string;
   description?: string;
   pubDate?: string;
-}
-
-export interface Obcina {
-  id: number;
-  naziv: string;
-  regija: string;
 }
 
 /** Odstrani šumnike + male črke — za robustno ujemanje imen občin. */
@@ -56,7 +52,6 @@ function decodeEntities(s: string): string {
 @Injectable()
 export class SpinService implements OnModuleInit {
   private readonly logger = new Logger(SpinService.name);
-  private obcineCache: { at: number; data: Obcina[] } | null = null;
 
   constructor(
     @InjectRepository(SpinIntervention)
@@ -216,27 +211,21 @@ export class SpinService implements OnModuleInit {
     return items;
   }
 
-  /** Seznam občin za nastavitve (predpomnjen 24 h). */
-  async listObcine(): Promise<Obcina[]> {
-    if (this.obcineCache && Date.now() - this.obcineCache.at < 86_400_000) {
-      return this.obcineCache.data;
-    }
-    const res = await fetch(SPIN_OBMOCJE_URL, {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) throw new Error(`SPIN občine HTTP ${res.status}`);
-    const json = (await res.json()) as {
-      value: { id: number; naziv: string; items: { id: number; naziv: string }[] }[];
-    };
-    const list: Obcina[] = [];
-    for (const regija of json.value ?? []) {
-      for (const o of regija.items ?? []) {
-        list.push({ id: o.id, naziv: o.naziv, regija: regija.naziv });
-      }
-    }
-    list.sort((a, b) => a.naziv.localeCompare(b.naziv, 'sl'));
-    this.obcineCache = { at: Date.now(), data: list };
-    return list;
+  /**
+   * Seznam občin za nastavitve. Vgrajen statični seznam (obcine.data.ts),
+   * ker SPIN geo-omejuje dostop in ga strežnik v tujini ne doseže; seznam
+   * občin se tako rekoč ne spreminja.
+   */
+  listObcine(): Obcina[] {
+    return OBCINE;
+  }
+
+  /** Občina društva (za mobilni prikaz, ki bere SPIN neposredno). */
+  async obcinaForOrg(
+    organizationId: string,
+  ): Promise<{ obcina: string | null }> {
+    const org = await this.orgsRepo.findOne({ where: { id: organizationId } });
+    return { obcina: org?.spinObcina ?? null };
   }
 
   /** Nedavne intervencije za občino društva. */
