@@ -53,9 +53,14 @@ Prvo društvo ustvari stranka prek `https://<DOMAIN>/register` (ali ti zanjo).
 
 ## 6. Posodobitev na novo verzijo
 
+Prod teče **za zunanjim eversum Caddy** (port 80/443 zaseda `eversum-caddy-1`),
+zato MORAŠ vedno navesti tudi override `infra/compose.behind-proxy.yml` — sicer
+`web` poskusi objaviti port 80 in odpove (`Bind for 0.0.0.0:80 failed`).
+
 ```bash
-cd gasilapp && git pull
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+cd /opt/gasilapp && git pull
+docker compose -f docker-compose.prod.yml -f infra/compose.behind-proxy.yml \
+  --env-file .env.prod up -d --build
 ```
 
 **Migracije sheme** (`DB_SYNCHRONIZE=false` → ročno na obstoječih bazah). Po `git pull`
