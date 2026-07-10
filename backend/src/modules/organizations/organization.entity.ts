@@ -38,13 +38,17 @@ export class Organization {
   @Column({ name: 'logo_url', nullable: true, length: 500 })
   logoUrl?: string;
 
-  /** Občina za obveščanje o intervencijah SPIN (ime iz odObmocje). */
+  /**
+   * Občine za obveščanje o intervencijah SPIN (imena iz odObmocje).
+   * Društvo lahko izbere več občin (svojo + sosednje, s katerimi sodeluje).
+   * Prazen seznam / null = brez obveščanja.
+   */
+  @Column({ name: 'spin_obcine', type: 'jsonb', nullable: true })
+  spinObcine?: string[] | null;
+
+  /** Zastarelo — enojna občina (nadomeščeno s spinObcine). Ohranjeno za migracijo. */
   @Column({ name: 'spin_obcina', nullable: true, length: 255 })
   spinObcina?: string;
-
-  /** ID občine v SPIN (odObmocje) — za morebitno prihodnje filtriranje. */
-  @Column({ name: 'spin_obcina_id', type: 'bigint', nullable: true })
-  spinObcinaId?: number;
 
   @Column({ type: 'jsonb', default: {} })
   settings: Record<string, any>;

@@ -17,17 +17,20 @@ class SpinApi {
     receiveTimeout: const Duration(seconds: 12),
   ));
 
-  /// Občina društva (nastavi jo admin v spletnem portalu). Null = brez.
-  Future<String?> myObcina() async {
+  /// Občine društva (nastavi jih admin v spletnem portalu). Prazno = brez.
+  Future<List<String>> myObcine() async {
     final data = await _client.get('/spin/settings') as Map<String, dynamic>;
-    final o = data['obcina'];
-    return (o is String && o.isNotEmpty) ? o : null;
+    final o = data['obcine'];
+    if (o is List) {
+      return o.whereType<String>().where((s) => s.isNotEmpty).toList();
+    }
+    return [];
   }
 
-  /// Nedavne intervencije SPIN za občino društva (feed prebran s telefona).
+  /// Nedavne intervencije SPIN za občine društva (feed prebran s telefona).
   Future<List<SpinIntervention>> interventions() async {
-    final obcina = await myObcina();
-    if (obcina == null) return [];
+    final obcine = await myObcine();
+    if (obcine.isEmpty) return [];
     final res = await _raw.get<String>(
       _feedUrl,
       options: Options(responseType: ResponseType.plain),
@@ -35,7 +38,7 @@ class SpinApi {
     final xml = res.data ?? '';
     return _parse(xml).where((it) {
       final desc = it.description ?? it.obcina ?? '';
-      return _matchesObcina(desc, obcina);
+      return obcine.any((o) => _matchesObcina(desc, o));
     }).toList();
   }
 

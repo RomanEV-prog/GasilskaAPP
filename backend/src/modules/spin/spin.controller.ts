@@ -18,9 +18,9 @@ export class SpinController {
 
   @Get('settings')
   @ApiOperation({
-    summary: 'Občina društva (mobilni prikaz bere SPIN neposredno)',
+    summary: 'Občine društva (mobilni prikaz bere SPIN neposredno)',
   })
   settings(@CurrentUser('organizationId') organizationId: string) {
-    return this.spinService.obcinaForOrg(organizationId);
+    return this.spinService.obcineForOrg(organizationId);
   }
 }

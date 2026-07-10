@@ -14,8 +14,9 @@ CREATE TABLE organizations (
   email         VARCHAR(255),
   website       VARCHAR(255),
   logo_url      VARCHAR(500),
-  spin_obcina   VARCHAR(255),
-  spin_obcina_id BIGINT,
+  spin_obcine   JSONB,
+  spin_obcina   VARCHAR(255),   -- zastarelo (nadomeščeno s spin_obcine)
+  spin_obcina_id BIGINT,        -- zastarelo
   settings      JSONB DEFAULT '{}',
   is_active     BOOLEAN DEFAULT true,
   created_at    TIMESTAMPTZ DEFAULT NOW(),

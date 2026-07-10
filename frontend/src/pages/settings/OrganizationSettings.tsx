@@ -23,7 +23,6 @@ type FormData = {
   phone: string;
   email: string;
   website: string;
-  spinObcina: string;
 };
 
 function LogoBlock({ canEdit }: { canEdit: boolean }) {
@@ -96,6 +95,8 @@ export function OrganizationSettings() {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState('');
   const [saved, setSaved] = useState(false);
+  // Izbrane občine za SPIN obveščanje (seznam — zunaj react-hook-form).
+  const [selectedObcine, setSelectedObcine] = useState<string[]>([]);
 
   const { data: org, isLoading, isError, refetch } = useQuery({
     queryKey: ['organization', 'me'],
@@ -125,8 +126,8 @@ export function OrganizationSettings() {
         phone: org.phone ?? '',
         email: org.email ?? '',
         website: org.website ?? '',
-        spinObcina: org.spinObcina ?? '',
       });
+      setSelectedObcine(org.spinObcine ?? []);
     }
   }, [org, reset]);
 
@@ -171,14 +172,9 @@ export function OrganizationSettings() {
       <form
         onSubmit={handleSubmit((d) => {
           setServerError('');
-          const match = obcine?.find((o) => o.naziv === d.spinObcina);
-          // Pošlji null (ne undefined) ob izbiri "brez obveščanja", da backend
-          // dejansko počisti občino (Object.assign preskoči izpuščene ključe).
-          mutation.mutate({
-            ...d,
-            spinObcina: d.spinObcina || null,
-            spinObcinaId: d.spinObcina ? match?.id ?? null : null,
-          });
+          // Vedno pošlji seznam (tudi prazen), da backend počisti občine ob
+          // odstranitvi zadnje (Object.assign preskoči izpuščene ključe).
+          mutation.mutate({ ...d, spinObcine: selectedObcine });
         })}
         className="space-y-4"
       >
@@ -206,23 +202,73 @@ export function OrganizationSettings() {
             {...register('email')}
           />
           <Input label="Spletna stran" readOnly={readOnly} {...register('website')} />
-          <Select
-            label="Občina (obveščanje o intervencijah SPIN)"
-            disabled={readOnly}
-            {...register('spinObcina')}
-          >
-            <option value="">— brez obveščanja —</option>
-            {obcine?.map((o) => (
-              <option key={o.id} value={o.naziv}>
-                {o.naziv} ({o.regija})
-              </option>
-            ))}
-          </Select>
         </div>
-        <p className="-mt-2 text-xs text-gray-400">
-          Ob izbiri občine bodo operativni člani prejeli obvestilo ob vsaki novi
-          intervenciji SPIN v tej občini (vir: spin3.sos112.si).
-        </p>
+
+        <div className="rounded-lg border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-700">
+            Občine za obveščanje o intervencijah (SPIN)
+          </h3>
+          <p className="mt-1 text-xs text-gray-400">
+            Izberi svojo občino in po želji sosednje občine, s katerimi društvo
+            sodeluje. Operativni člani prejmejo obvestilo ob vsaki novi
+            intervenciji SPIN v teh občinah (vir: spin3.sos112.si).
+          </p>
+
+          {selectedObcine.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {selectedObcine.map((naziv) => (
+                <span
+                  key={naziv}
+                  className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-sm text-red-700"
+                >
+                  {naziv}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      aria-label={`Odstrani ${naziv}`}
+                      className="ml-0.5 text-red-500 hover:text-red-800"
+                      onClick={() =>
+                        setSelectedObcine((prev) =>
+                          prev.filter((n) => n !== naziv),
+                        )
+                      }
+                    >
+                      ✕
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-gray-400">
+              Ni izbranih občin — obveščanje je izklopljeno.
+            </p>
+          )}
+
+          {!readOnly && (
+            <div className="mt-3 max-w-xs">
+              <Select
+                label="Dodaj občino"
+                value=""
+                onChange={(e) => {
+                  const naziv = e.target.value;
+                  if (naziv && !selectedObcine.includes(naziv)) {
+                    setSelectedObcine((prev) => [...prev, naziv]);
+                  }
+                }}
+              >
+                <option value="">— izberi občino —</option>
+                {obcine
+                  ?.filter((o) => !selectedObcine.includes(o.naziv))
+                  .map((o) => (
+                    <option key={o.id} value={o.naziv}>
+                      {o.naziv} ({o.regija})
+                    </option>
+                  ))}
+              </Select>
+            </div>
+          )}
+        </div>
 
         {serverError && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

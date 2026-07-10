@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { NotificationTarget } from '../notifications/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Organization } from '../organizations/organization.entity';
@@ -126,19 +126,18 @@ export class SpinService implements OnModuleInit {
         return;
       }
 
-      // Društva z nastavljeno občino (filtrirano v SQL).
-      const orgs = await this.orgsRepo.find({
-        where: { isActive: true, spinObcina: Not(IsNull()) },
-      });
+      // Društva z vsaj eno izbrano občino (jsonb → filtriramo v JS).
+      const orgs = (await this.orgsRepo.find({ where: { isActive: true } })).filter(
+        (o) => o.spinObcine && o.spinObcine.length > 0,
+      );
       for (const entity of saved) {
         for (const org of orgs) {
-          if (
-            this.itemMatchesObcina(
-              { guid: entity.spinGuid, title: entity.title, description: entity.description },
-              org.spinObcina as string,
-            )
-          ) {
-            await this.notifyOrg(org, entity).catch((err) =>
+          const matched = this.matchedObcina(
+            { guid: entity.spinGuid, title: entity.title, description: entity.description },
+            org.spinObcine as string[],
+          );
+          if (matched) {
+            await this.notifyOrg(org, entity, matched).catch((err) =>
               this.logger.error(
                 `SPIN obvestilo za ${org.slug} ni uspelo: ${(err as Error).message}`,
               ),
@@ -172,9 +171,10 @@ export class SpinService implements OnModuleInit {
   private async notifyOrg(
     org: Organization,
     it: SpinIntervention,
+    matchedObcina?: string,
   ): Promise<void> {
     const type = it.spinType ?? 'Intervencija';
-    const kraj = it.obcina ?? org.spinObcina;
+    const kraj = it.obcina ?? matchedObcina;
     await this.notificationsService.create(org.id, null, {
       title: `🚨 SPIN: ${type}`,
       body: kraj ? `${type} — ${kraj}` : type,
@@ -191,7 +191,7 @@ export class SpinService implements OnModuleInit {
   }
 
   /**
-   * Ali intervencija spada v občino društva.
+   * Vrne prvo izbrano občino društva, v katero spada intervencija (ali null).
    * Sveže intervencije (na katere alarmiramo) imajo v opisu GOLO ime občine →
    * točno ujemanje. Za opisno besedilo ujamemo ime kot celo besedo (npr.
    * "občina Ljubljana"). Zavestno NE ujemamo sklonjenih oblik ("v Ljubljani"):
@@ -199,16 +199,20 @@ export class SpinService implements OnModuleInit {
    * (npr. "Kranj" ↔ "Kranjska Gora"), kar je pri alarmiranju hujše od zgrešitve.
    * Ker alarmiramo na sveže (golo ime), je to v praksi zanesljivo.
    */
-  private itemMatchesObcina(item: SpinItem, obcina: string): boolean {
-    const target = normalize(obcina);
-    if (!target) return false;
+  private matchedObcina(item: SpinItem, obcine: string[]): string | null {
     const desc = normalize(item.description ?? '');
-    if (!desc) return false;
-    if (desc === target) return true; // golo ime — sveža intervencija
-    // Opisno besedilo: ime občine kot cela beseda ("obcina Ljubljana", ...).
-    return new RegExp(`\\b${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(
-      desc,
-    );
+    if (!desc) return null;
+    for (const obcina of obcine) {
+      const target = normalize(obcina);
+      if (!target) continue;
+      if (desc === target) return obcina; // golo ime — sveža intervencija
+      // Opisno besedilo: ime občine kot cela beseda ("obcina Ljubljana", ...).
+      const re = new RegExp(
+        `\\b${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+      );
+      if (re.test(desc)) return obcina;
+    }
+    return null;
   }
 
   private toEntity(item: SpinItem): SpinIntervention {
@@ -278,11 +282,11 @@ export class SpinService implements OnModuleInit {
     return OBCINE;
   }
 
-  /** Občina društva (za mobilni prikaz, ki bere SPIN neposredno). */
-  async obcinaForOrg(
+  /** Občine društva (za mobilni prikaz, ki bere SPIN neposredno). */
+  async obcineForOrg(
     organizationId: string,
-  ): Promise<{ obcina: string | null }> {
+  ): Promise<{ obcine: string[] }> {
     const org = await this.orgsRepo.findOne({ where: { id: organizationId } });
-    return { obcina: org?.spinObcina ?? null };
+    return { obcine: org?.spinObcine ?? [] };
   }
 }

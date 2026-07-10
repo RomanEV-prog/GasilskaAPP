@@ -6,7 +6,7 @@ import '../models/spin_intervention.dart';
 import '../theme.dart';
 
 /// Nedavne intervencije iz javnega portala SPIN (spin3.sos112.si)
-/// za občino društva. Operativni člani prejmejo ob novih tudi push obvestilo.
+/// za občine društva. Operativni člani prejmejo ob novih tudi push obvestilo.
 class InterventionsScreen extends StatefulWidget {
   const InterventionsScreen({super.key});
 
@@ -78,9 +78,9 @@ class _InterventionsScreenState extends State<InterventionsScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 32),
                 child: Text(
-                  'Ni nedavnih intervencij za vašo občino.\n'
+                  'Ni nedavnih intervencij za vaše občine.\n'
                   'Če seznam ostaja prazen, naj administrator društva '
-                  'v spletnem portalu (Nastavitve → Društvo) izbere občino.',
+                  'v spletnem portalu (Nastavitve → Društvo) izbere občine.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: GasilColors.textMuted),
                 ),

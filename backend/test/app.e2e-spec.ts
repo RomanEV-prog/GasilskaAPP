@@ -387,46 +387,46 @@ describe('GasilApp E2E', () => {
       await request(http).get('/api/v1/spin/settings').expect(401);
     });
 
-    it('občina je privzeto nenastavljena (null)', async () => {
+    it('občine so privzeto nenastavljene (prazen seznam)', async () => {
       const res = await request(http)
         .get('/api/v1/spin/settings')
         .set(auth(tokenA))
         .expect(200);
-      expect(res.body.data.obcina).toBeNull();
+      expect(res.body.data.obcine).toEqual([]);
     });
 
-    it('nastavitev občine se odraža v /spin/settings', async () => {
+    it('nastavitev več občin se odraža v /spin/settings', async () => {
       await request(http)
         .patch('/api/v1/organizations/me')
         .set(auth(tokenA))
-        .send({ spinObcina: 'Ljubljana', spinObcinaId: 11027849 })
+        .send({ spinObcine: ['Ljubljana', 'Kamnik'] })
         .expect(200);
       const res = await request(http)
         .get('/api/v1/spin/settings')
         .set(auth(tokenA))
         .expect(200);
-      expect(res.body.data.obcina).toBe('Ljubljana');
+      expect(res.body.data.obcine).toEqual(['Ljubljana', 'Kamnik']);
     });
 
-    it('SPIN občina je izolirana med društvi (B ne vidi občine A)', async () => {
+    it('SPIN občine so izolirane med društvi (B ne vidi občin A)', async () => {
       const res = await request(http)
         .get('/api/v1/spin/settings')
         .set(auth(tokenB))
         .expect(200);
-      expect(res.body.data.obcina).toBeNull();
+      expect(res.body.data.obcine).toEqual([]);
     });
 
-    it('občino je mogoče izklopiti (null počisti nastavljeno)', async () => {
+    it('občine je mogoče izklopiti (prazen seznam počisti nastavljeno)', async () => {
       await request(http)
         .patch('/api/v1/organizations/me')
         .set(auth(tokenA))
-        .send({ spinObcina: null, spinObcinaId: null })
+        .send({ spinObcine: [] })
         .expect(200);
       const res = await request(http)
         .get('/api/v1/spin/settings')
         .set(auth(tokenA))
         .expect(200);
-      expect(res.body.data.obcina).toBeNull();
+      expect(res.body.data.obcine).toEqual([]);
     });
   });
 });
