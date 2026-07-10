@@ -62,6 +62,9 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      # Beta APK + prenosna stran (gasilapp.eu/beta). Datoteke se položijo ročno
+      # na strežnik (scp), niso v git repozitoriju.
+      - ./downloads:/downloads:ro
 
 volumes:
   pgdata:

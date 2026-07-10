@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GasilApp — beta namestitev</title>
+  <style>
+    :root { --rdeca: #c62828; --temna: #1f2937; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7; color: var(--temna); line-height: 1.55;
+      -webkit-text-size-adjust: 100%;
+    }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 24px 20px 48px; }
+    header { text-align: center; padding: 28px 0 8px; }
+    .logo { font-size: 56px; line-height: 1; }
+    h1 { font-size: 1.6rem; margin: 12px 0 4px; }
+    .sub { color: #6b7280; margin: 0; font-size: 0.95rem; }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+      padding: 20px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+    .btn {
+      display: block; text-align: center; text-decoration: none;
+      background: var(--rdeca); color: #fff; font-weight: 700; font-size: 1.15rem;
+      padding: 16px; border-radius: 12px; margin: 4px 0 8px;
+    }
+    .btn:active { opacity: .9; }
+    .ver { text-align: center; color: #9ca3af; font-size: 0.85rem; margin-top: 4px; }
+    ol { padding-left: 20px; margin: 8px 0 0; }
+    li { margin-bottom: 10px; }
+    .opomba {
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px;
+      padding: 14px 16px; margin-top: 16px; font-size: 0.9rem; color: #9a3412;
+    }
+    h2 { font-size: 1.05rem; margin: 4px 0 10px; }
+    footer { text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 28px; }
+    code { background: #eef2ff; padding: 1px 6px; border-radius: 5px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">🚒</div>
+      <h1>GasilApp</h1>
+      <p class="sub">Testna različica za Android</p>
+    </header>
+
+    <div class="card">
+      <a class="btn" href="gasilapp.apk">⬇ Prenesi in namesti</a>
+      <p class="ver">Različica 1.0.2 · samo Android</p>
+    </div>
+
+    <div class="card">
+      <h2>Kako namestim?</h2>
+      <ol>
+        <li>Pritisni <strong>Prenesi in namesti</strong> zgoraj.</li>
+        <li>Ko se datoteka prenese, jo odpri (obvestilo o prenosu ali mapa <em>Prenosi/Downloads</em>).</li>
+        <li>Android bo opozoril na namestitev iz neznanega vira — izberi
+          <strong>Nastavitve → Dovoli iz tega vira</strong> in se vrni nazaj.</li>
+        <li>Pritisni <strong>Namesti</strong>, nato <strong>Odpri</strong>.</li>
+        <li>Prijavi se s podatki, ki si jih prejel od društva.</li>
+      </ol>
+    </div>
+
+    <div class="opomba">
+      ⚠️ To je testna različica. Prijava deluje z računom tvojega društva.
+      Če se pri prijavi pojavi napaka ali kaj ne dela, javi administratorju.
+    </div>
+
+    <footer>
+      GasilApp · interna organizacijska aplikacija za gasilska društva
+    </footer>
+  </div>
+</body>
+</html>
