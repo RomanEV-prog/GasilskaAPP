@@ -41,6 +41,9 @@ CREATE TABLE organizations (
   email         VARCHAR(255),
   website       VARCHAR(255),
   logo_url      VARCHAR(500),
+  spin_obcine   JSONB,                  -- SPIN: seznam občin za obveščanje o intervencijah
+  spin_obcina   VARCHAR(255),           -- zastarelo (nadomeščeno s spin_obcine)
+  spin_obcina_id BIGINT,                -- zastarelo
   settings      JSONB DEFAULT '{}',
   is_active     BOOLEAN DEFAULT true,
   created_at    TIMESTAMPTZ DEFAULT NOW(),

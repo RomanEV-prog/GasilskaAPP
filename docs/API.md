@@ -250,8 +250,23 @@ Vrne vozila, kjer registration_expires, insurance_expires ali service_due pade v
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
 | GET | `/organizations/me` | Podatki o mojem društvu | vsi |
-| PATCH | `/organizations/me` | Uredi društvo | admin, president |
+| PATCH | `/organizations/me` | Uredi društvo (vklj. `spinObcine: string[]`) | admin, president |
 | POST | `/organizations/me/logo` | Naloži logotip | admin, president |
+
+---
+
+## SPIN `/spin`
+
+Obveščanje o intervencijah (glej `docs/MODULES.md §9a`).
+
+| Metoda | Pot | Opis | Vloge |
+|--------|-----|------|-------|
+| GET | `/spin/obcine` | Statični seznam občin (`{ id, naziv, regija }[]`) | javno |
+| GET | `/spin/settings` | Občine mojega društva (`{ obcine: string[] }`) | vsi |
+
+Občine se nastavijo prek `PATCH /organizations/me` s poljem `spinObcine` (seznam
+imen; prazen seznam = brez obveščanja). Mobilna aplikacija bere SPIN feed
+neposredno s telefona in filtrira po teh občinah.
 
 ---
 

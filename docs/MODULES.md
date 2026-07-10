@@ -305,8 +305,9 @@ dashboard/
 ## 9a. SPIN modul (`/modules/spin`)
 
 Integracija z javnim portalom **SPIN** (spin3.sos112.si, URSZR) za obveščanje
-članov o intervencijah v občini društva. NI alarmiranje (to pokriva Vulkan/GZS) —
-je informativno obveščanje z zamikom nekaj minut.
+članov o intervencijah v občinah društva. NI alarmiranje (to pokriva Vulkan/GZS) —
+je informativno obveščanje z zamikom nekaj minut. Društvo lahko spremlja **več
+občin** (svojo + sosednje, s katerimi sodeluje).
 
 ### Vir podatkov
 - Javni RSS `https://spin3.sos112.si/Javno/ODApi/True` — takojšnji feed aktiviranih
@@ -319,19 +320,23 @@ je informativno obveščanje z zamikom nekaj minut.
 
 ### Datoteke
 - `spin.service.ts` — `@Cron('*/2 * * * *')` poll (z overlap-guardom): parsanje RSS,
-  bulk dedup po `spinGuid`, ujemanje po občini (točno za golo ime, meja besede za
-  narativ), obvestilo prek `NotificationsService` (target `OPERATIVE`, type `spin`).
+  bulk dedup po `spinGuid`, ujemanje po **katerikoli** izbrani občini društva (točno
+  za golo ime, meja besede za narativ; `matchedObcina()` vrne ujeto ime), obvestilo
+  prek `NotificationsService` (target `OPERATIVE`, type `spin`).
   `onModuleInit`/prvi uspešni poll napolni bazo guid-ov **brez** obvestil — dokler
   `primed=false` se ne pošilja (prepreči poplavo, tudi če je feed ob zagonu nedosegljiv).
 - `spin-intervention.entity.ts` — deljen predpomnilnik (brez `organization_id`),
   unikaten `spin_guid`. Piše ga le poller (dedup); HTTP endpoint ga ne bere.
 - `spin.controller.ts` — `GET /spin/obcine` (javno, statični seznam),
-  `GET /spin/settings` (avtenticiran → ime občine društva za mobilni prikaz).
+  `GET /spin/settings` (avtenticiran → `{ obcine: string[] }` za mobilni prikaz).
 
 ### Nastavitev
-Društvo izbere občino v spletnem portalu (Nastavitve → Društvo → Občina).
-`organizations.spin_obcina` (ime; ujemanje teče po imenu).
-Prazna občina = brez obveščanja (počisti se s `null`). V testih (`NODE_ENV=test`) je poll izklopljen.
+Društvo izbere **eno ali več občin** v spletnem portalu (Nastavitve → Društvo →
+Občine za obveščanje; večizbor s čipi). `organizations.spin_obcine` (jsonb seznam
+imen; ujemanje teče po imenu za vsako v seznamu). Prazen seznam = brez obveščanja.
+Stara `spin_obcina`/`spin_obcina_id` sta zastareli (ohranjeni za migracijo —
+`docs/migrations/2026-07-10-spin-obcine.sql` prenese enojno v seznam).
+V testih (`NODE_ENV=test`) je poll izklopljen.
 
 ## 10. Common (`/common`)
 

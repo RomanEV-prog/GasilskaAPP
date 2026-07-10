@@ -38,12 +38,10 @@ gasilapp-frontend/
 │   ├── types/
 │   │   └── index.ts           ← TypeScript tipi (user, event, vehicle...)
 │   ├── components/
-│   │   ├── ui/                ← base komponente (Button, Input, Modal...)
+│   │   ├── ui/                ← base komponente (Button, Input, Card, ErrorState...)
 │   │   ├── layout/
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── Header.tsx
-│   │   │   └── AppLayout.tsx
-│   │   └── shared/            ← shared med stranmi
+│   │   │   └── AppLayout.tsx  ← sidebar + vsebina + uvodni vodič
+│   │   └── OnboardingTour.tsx ← pozdravni vodič ob prvi prijavi (gumb "❓ Vodič")
 │   └── pages/
 │       ├── auth/
 │       │   └── LoginPage.tsx
