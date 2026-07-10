@@ -344,4 +344,47 @@ describe('GasilApp E2E', () => {
       expect(res.body.data.qrCode).toContain(`E2E-${stamp}`);
     });
   });
+
+  describe('SPIN integracija', () => {
+    it('GET /spin/obcine je javen in vrne statični seznam občin', async () => {
+      const res = await request(http).get('/api/v1/spin/obcine').expect(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(200);
+      expect(res.body.data[0]).toHaveProperty('naziv');
+      expect(res.body.data[0]).toHaveProperty('regija');
+    });
+
+    it('GET /spin/settings brez avtentikacije → 401', async () => {
+      await request(http).get('/api/v1/spin/settings').expect(401);
+    });
+
+    it('občina je privzeto nenastavljena (null)', async () => {
+      const res = await request(http)
+        .get('/api/v1/spin/settings')
+        .set(auth(tokenA))
+        .expect(200);
+      expect(res.body.data.obcina).toBeNull();
+    });
+
+    it('nastavitev občine se odraža v /spin/settings', async () => {
+      await request(http)
+        .patch('/api/v1/organizations/me')
+        .set(auth(tokenA))
+        .send({ spinObcina: 'Ljubljana', spinObcinaId: 11027849 })
+        .expect(200);
+      const res = await request(http)
+        .get('/api/v1/spin/settings')
+        .set(auth(tokenA))
+        .expect(200);
+      expect(res.body.data.obcina).toBe('Ljubljana');
+    });
+
+    it('SPIN občina je izolirana med društvi (B ne vidi občine A)', async () => {
+      const res = await request(http)
+        .get('/api/v1/spin/settings')
+        .set(auth(tokenB))
+        .expect(200);
+      expect(res.body.data.obcina).toBeNull();
+    });
+  });
 });
