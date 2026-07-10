@@ -253,8 +253,8 @@ export interface Organization {
   email?: string;
   website?: string;
   logoUrl?: string;
-  spinObcina?: string;
-  spinObcinaId?: number;
+  spinObcina?: string | null;
+  spinObcinaId?: number | null;
   isActive: boolean;
 }
 

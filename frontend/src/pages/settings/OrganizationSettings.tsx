@@ -154,10 +154,12 @@ export function OrganizationSettings() {
         onSubmit={handleSubmit((d) => {
           setServerError('');
           const match = obcine?.find((o) => o.naziv === d.spinObcina);
+          // Pošlji null (ne undefined) ob izbiri "brez obveščanja", da backend
+          // dejansko počisti občino (Object.assign preskoči izpuščene ključe).
           mutation.mutate({
             ...d,
-            spinObcina: d.spinObcina || undefined,
-            spinObcinaId: match?.id,
+            spinObcina: d.spinObcina || null,
+            spinObcinaId: d.spinObcina ? match?.id ?? null : null,
           });
         })}
         className="space-y-4"

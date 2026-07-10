@@ -386,5 +386,18 @@ describe('GasilApp E2E', () => {
         .expect(200);
       expect(res.body.data.obcina).toBeNull();
     });
+
+    it('občino je mogoče izklopiti (null počisti nastavljeno)', async () => {
+      await request(http)
+        .patch('/api/v1/organizations/me')
+        .set(auth(tokenA))
+        .send({ spinObcina: null, spinObcinaId: null })
+        .expect(200);
+      const res = await request(http)
+        .get('/api/v1/spin/settings')
+        .set(auth(tokenA))
+        .expect(200);
+      expect(res.body.data.obcina).toBeNull();
+    });
   });
 });

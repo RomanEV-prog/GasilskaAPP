@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { NotificationTarget } from '../notifications/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Organization } from '../organizations/organization.entity';
@@ -38,6 +38,13 @@ function normalize(s: string): string {
     .trim();
 }
 
+/** Varno razčleni RFC 1123 datum; neveljaven → undefined (ne Invalid Date). */
+function parseDate(s?: string): Date | undefined {
+  if (!s) return undefined;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 function decodeEntities(s: string): string {
   return s
     .replace(/&lt;/g, '<')
@@ -52,6 +59,10 @@ function decodeEntities(s: string): string {
 @Injectable()
 export class SpinService implements OnModuleInit {
   private readonly logger = new Logger(SpinService.name);
+  /** Tabela dedup guid-ov je napolnjena → od zdaj naprej pošiljamo obvestila. */
+  private primed = false;
+  /** Preprečuje prekrivanje cron ciklov (če je feed počasen). */
+  private polling = false;
 
   constructor(
     @InjectRepository(SpinIntervention)
@@ -62,20 +73,21 @@ export class SpinService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    // Ob zagonu "napolni" bazo obstoječih guid-ov, da ob prvem zagonu
-    // ne pošljemo poplave obvestil za stare intervencije.
+    // Ob zagonu napolni bazo obstoječih guid-ov, da prvi poll ne pošlje
+    // poplave obvestil za stare intervencije. Če feed ob zagonu ni dosegljiv,
+    // ostane `primed=false` in prvi uspešni poll napolni bazo TIHO (brez obvestil).
     if (process.env.NODE_ENV === 'test') return;
     try {
-      const existing = await this.interventionsRepo.count();
-      if (existing === 0) {
-        const items = await this.fetchFeed();
-        for (const it of items) {
-          await this.interventionsRepo.save(this.toEntity(it));
-        }
-        this.logger.log(
-          `SPIN inicializacija: shranjenih ${items.length} obstoječih intervencij (brez obvestil).`,
-        );
+      if ((await this.interventionsRepo.count()) > 0) {
+        this.primed = true;
+        return;
       }
+      const items = await this.fetchFeed();
+      await this.saveNew(items);
+      this.primed = true;
+      this.logger.log(
+        `SPIN inicializacija: shranjenih ${items.length} obstoječih intervencij (brez obvestil).`,
+      );
     } catch (err) {
       this.logger.warn(`SPIN inicializacija ni uspela: ${(err as Error).message}`);
     }
@@ -85,37 +97,76 @@ export class SpinService implements OnModuleInit {
   @Cron('*/2 * * * *')
   async pollInterventions(): Promise<void> {
     if (process.env.NODE_ENV === 'test') return;
-    let items: SpinItem[];
+    if (this.polling) return; // ne prekrivaj ciklov ob počasnem feedu
+    this.polling = true;
     try {
-      items = await this.fetchFeed();
-    } catch (err) {
-      this.logger.warn(`SPIN feed nedosegljiv: ${(err as Error).message}`);
-      return;
-    }
+      const items = await this.fetchFeed();
+      if (items.length === 0) return;
 
-    // Društva, ki imajo nastavljeno občino (za obveščanje).
-    const orgs = await this.orgsRepo.find({ where: { isActive: true } });
-    const orgsWithObcina = orgs.filter((o) => !!o.spinObcina);
+      // Bulk dedup: v eni poizvedbi ugotovi, kateri guid-i so že znani.
+      const known = new Set(
+        (
+          await this.interventionsRepo.find({
+            where: { spinGuid: In(items.map((i) => i.guid)) },
+            select: ['spinGuid'],
+          })
+        ).map((r) => r.spinGuid),
+      );
+      const fresh = items.filter((i) => !known.has(i.guid));
+      if (fresh.length === 0) return;
 
-    for (const item of items) {
-      const exists = await this.interventionsRepo.findOne({
-        where: { spinGuid: item.guid },
+      const saved = await this.saveNew(fresh);
+
+      // Prvi uspešni poll po neuspeli inicializaciji: samo napolni, brez obvestil.
+      if (!this.primed) {
+        this.primed = true;
+        this.logger.log(
+          `SPIN inicializacija (poll): shranjenih ${saved.length} intervencij (brez obvestil).`,
+        );
+        return;
+      }
+
+      // Društva z nastavljeno občino (filtrirano v SQL).
+      const orgs = await this.orgsRepo.find({
+        where: { isActive: true, spinObcina: Not(IsNull()) },
       });
-      if (exists) continue;
-
-      const entity = this.toEntity(item);
-      await this.interventionsRepo.save(entity);
-
-      for (const org of orgsWithObcina) {
-        if (this.itemMatchesObcina(item, org.spinObcina as string)) {
-          await this.notifyOrg(org, entity).catch((err) =>
-            this.logger.error(
-              `SPIN obvestilo za ${org.slug} ni uspelo: ${(err as Error).message}`,
-            ),
-          );
+      for (const entity of saved) {
+        for (const org of orgs) {
+          if (
+            this.itemMatchesObcina(
+              { guid: entity.spinGuid, title: entity.title, description: entity.description },
+              org.spinObcina as string,
+            )
+          ) {
+            await this.notifyOrg(org, entity).catch((err) =>
+              this.logger.error(
+                `SPIN obvestilo za ${org.slug} ni uspelo: ${(err as Error).message}`,
+              ),
+            );
+          }
         }
       }
+    } catch (err) {
+      this.logger.warn(`SPIN poll ni uspel: ${(err as Error).message}`);
+    } finally {
+      this.polling = false;
     }
+  }
+
+  /** Shrani nove intervencije (varno ob morebitni tekmi na unikatnem guid-u). */
+  private async saveNew(items: SpinItem[]): Promise<SpinIntervention[]> {
+    const saved: SpinIntervention[] = [];
+    for (const item of items) {
+      try {
+        saved.push(await this.interventionsRepo.save(this.toEntity(item)));
+      } catch (err) {
+        // Npr. unikatna kršitev ob vzporednem zagonu — preskoči, ne prekini serije.
+        this.logger.warn(
+          `SPIN shranjevanje ${item.guid} preskočeno: ${(err as Error).message}`,
+        );
+      }
+    }
+    return saved;
   }
 
   private async notifyOrg(
@@ -141,8 +192,12 @@ export class SpinService implements OnModuleInit {
 
   /**
    * Ali intervencija spada v občino društva.
-   * Sveže intervencije imajo v opisu golo ime občine (točno ujemanje);
-   * pozneje se opis nadomesti z opisnim besedilom (podniz kot rezerva).
+   * Sveže intervencije (na katere alarmiramo) imajo v opisu GOLO ime občine →
+   * točno ujemanje. Za opisno besedilo ujamemo ime kot celo besedo (npr.
+   * "občina Ljubljana"). Zavestno NE ujemamo sklonjenih oblik ("v Ljubljani"):
+   * stemanje bi povzročilo lažno-pozitivna obvestila med sosednjimi občinami
+   * (npr. "Kranj" ↔ "Kranjska Gora"), kar je pri alarmiranju hujše od zgrešitve.
+   * Ker alarmiramo na sveže (golo ime), je to v praksi zanesljivo.
    */
   private itemMatchesObcina(item: SpinItem, obcina: string): boolean {
     const target = normalize(obcina);
@@ -169,14 +224,17 @@ export class SpinService implements OnModuleInit {
       title: item.title.slice(0, 500),
       description: descRaw || undefined,
       link: item.link?.slice(0, 500),
-      occurredAt: item.pubDate ? new Date(item.pubDate) : undefined,
+      occurredAt: parseDate(item.pubDate),
     });
   }
 
   private async fetchFeed(): Promise<SpinItem[]> {
+    // Timeout obvezen: brez njega bi viseča povezava na relay lahko blokirala
+    // zagon (onModuleInit) ali cron cikel.
     const res = await fetch(SPIN_FEED_URL, {
       headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
       redirect: 'follow',
+      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
@@ -226,23 +284,5 @@ export class SpinService implements OnModuleInit {
   ): Promise<{ obcina: string | null }> {
     const org = await this.orgsRepo.findOne({ where: { id: organizationId } });
     return { obcina: org?.spinObcina ?? null };
-  }
-
-  /** Nedavne intervencije za občino društva. */
-  async recentForOrg(organizationId: string, limit = 30): Promise<SpinIntervention[]> {
-    const org = await this.orgsRepo.findOne({ where: { id: organizationId } });
-    if (!org?.spinObcina) return [];
-    const rows = await this.interventionsRepo.find({
-      order: { occurredAt: 'DESC' },
-      take: 300,
-    });
-    return rows
-      .filter((r) =>
-        this.itemMatchesObcina(
-          { guid: r.spinGuid, title: r.title, description: r.description },
-          org.spinObcina as string,
-        ),
-      )
-      .slice(0, limit);
   }
 }

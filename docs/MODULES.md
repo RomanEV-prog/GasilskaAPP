@@ -311,21 +311,26 @@ je informativno obveščanje z zamikom nekaj minut.
 - Javni RSS `https://spin3.sos112.si/Javno/ODApi/True` — takojšnji feed aktiviranih
   intervencij. Sveže intervencije imajo v `<description>` **golo ime občine**
   (opisno besedilo se doda pozneje) → zanesljivo ujemanje po imenu občine.
-- `GET /api/javno/odObmocje` — seznam občin (regija → občine).
+  **SPIN geo-omejuje na SI IP** → prod (tuji strežnik) bere prek relaya (`SPIN_BASE_URL`,
+  glej `infra/DEPLOY.md §10`); mobilni zavihek SPIN bere feed neposredno s telefona.
+- Seznam občin je **vgrajen statično** (`spin/obcine.data.ts`), ne kliče se več
+  `odObmocje` v živo (ker je geo-omejen).
 
 ### Datoteke
-- `spin.service.ts` — `@Cron('*/2 * * * *')` poll: parsanje RSS, dedup po `spinGuid`,
-  ujemanje po občini (točno za golo ime, meja besede za narativ), obvestilo prek
-  `NotificationsService` (target `OPERATIVE`, type `spin`). `onModuleInit` ob prvem
-  zagonu napolni bazo obstoječih guid-ov **brez** obvestil (brez poplave).
+- `spin.service.ts` — `@Cron('*/2 * * * *')` poll (z overlap-guardom): parsanje RSS,
+  bulk dedup po `spinGuid`, ujemanje po občini (točno za golo ime, meja besede za
+  narativ), obvestilo prek `NotificationsService` (target `OPERATIVE`, type `spin`).
+  `onModuleInit`/prvi uspešni poll napolni bazo guid-ov **brez** obvestil — dokler
+  `primed=false` se ne pošilja (prepreči poplavo, tudi če je feed ob zagonu nedosegljiv).
 - `spin-intervention.entity.ts` — deljen predpomnilnik (brez `organization_id`),
-  unikaten `spin_guid`.
-- `spin.controller.ts` — `GET /spin/obcine` (javno), `GET /spin/interventions` (avtenticiran, po občini društva).
+  unikaten `spin_guid`. Piše ga le poller (dedup); HTTP endpoint ga ne bere.
+- `spin.controller.ts` — `GET /spin/obcine` (javno, statični seznam),
+  `GET /spin/settings` (avtenticiran → ime občine društva za mobilni prikaz).
 
 ### Nastavitev
 Društvo izbere občino v spletnem portalu (Nastavitve → Društvo → Občina).
-`organizations.spin_obcina` (ime) + `spin_obcina_id` (ID iz odObmocje).
-Prazna občina = brez obveščanja. V testih (`NODE_ENV=test`) je poll izklopljen.
+`organizations.spin_obcina` (ime; ujemanje teče po imenu).
+Prazna občina = brez obveščanja (počisti se s `null`). V testih (`NODE_ENV=test`) je poll izklopljen.
 
 ## 10. Common (`/common`)
 
