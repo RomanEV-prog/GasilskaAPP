@@ -4,10 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { MembershipStatus } from '../../common/enums/roles.enum';
 import { NotificationTarget } from '../notifications/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { User } from '../users/user.entity';
 import { EventAttendance } from './event-attendance.entity';
 import { EventRsvp } from './event-rsvp.entity';
 import { Event } from './event.entity';
@@ -28,6 +29,8 @@ export class EventsService {
     private readonly rsvpsRepo: Repository<EventRsvp>,
     @InjectRepository(EventAttendance)
     private readonly attendanceRepo: Repository<EventAttendance>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -216,6 +219,20 @@ export class EventsService {
     dto: MarkAttendanceDto,
   ) {
     await this.findOne(organizationId, eventId);
+
+    // Preveri, da vsi navedeni člani pripadajo temu društvu (prepreči
+    // vpis prisotnosti za uporabnika drugega društva prek ponarejenega userId).
+    const userIds = [...new Set(dto.entries.map((e) => e.userId))];
+    if (userIds.length > 0) {
+      const validCount = await this.usersRepo.count({
+        where: { id: In(userIds), organizationId },
+      });
+      if (validCount !== userIds.length) {
+        throw new BadRequestException(
+          'Nekateri člani ne pripadajo temu društvu.',
+        );
+      }
+    }
 
     const results: EventAttendance[] = [];
     for (const entry of dto.entries) {

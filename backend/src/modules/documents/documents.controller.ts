@@ -78,7 +78,12 @@ export class DocumentsController {
 
   @Post()
   @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.SECRETARY)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      // Omeji velikost naložene datoteke (prepreči izčrpanje pomnilnika/diska).
+      limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

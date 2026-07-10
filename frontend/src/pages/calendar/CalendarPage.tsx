@@ -15,7 +15,13 @@ import { sl } from 'date-fns/locale';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { eventsApi } from '../../api/events.api';
-import { Badge, Card, EmptyState, Spinner } from '../../components/ui';
+import {
+  Badge,
+  Card,
+  EmptyState,
+  ErrorState,
+  Spinner,
+} from '../../components/ui';
 import {
   EVENT_TYPE_LABELS,
   type Event,
@@ -71,7 +77,7 @@ export function CalendarPage() {
   const gridStart = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
   const gridEnd = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
 
-  const { data: events, isLoading } = useQuery({
+  const { data: events, isLoading, isError, refetch } = useQuery({
     queryKey: ['events', 'calendar', format(month, 'yyyy-MM')],
     queryFn: () =>
       eventsApi.list({
@@ -130,6 +136,11 @@ export function CalendarPage() {
 
           {isLoading ? (
             <Spinner />
+          ) : isError ? (
+            <ErrorState
+              message="Koledarja ni bilo mogoče naložiti."
+              onRetry={() => refetch()}
+            />
           ) : (
             <div className="grid grid-cols-7 gap-1">
               {days.map((day) => {

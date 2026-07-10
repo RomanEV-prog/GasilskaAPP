@@ -3,7 +3,13 @@ import { format } from 'date-fns';
 import { sl } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '../../api/dashboard.api';
-import { Badge, Card, EmptyState, Spinner } from '../../components/ui';
+import {
+  Badge,
+  Card,
+  EmptyState,
+  ErrorState,
+  Spinner,
+} from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 import { EVENT_TYPE_LABELS, type Event } from '../../types';
 
@@ -55,11 +61,18 @@ function StatTile({
 }
 
 function AdminDashboardView() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['dashboard', 'admin'],
     queryFn: dashboardApi.admin,
   });
 
+  if (isError)
+    return (
+      <ErrorState
+        message="Nadzorne plošče ni bilo mogoče naložiti."
+        onRetry={() => refetch()}
+      />
+    );
   if (isLoading || !data) return <Spinner />;
 
   return (
@@ -134,11 +147,18 @@ function AdminDashboardView() {
 }
 
 function MemberDashboardView() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['dashboard', 'member'],
     queryFn: dashboardApi.member,
   });
 
+  if (isError)
+    return (
+      <ErrorState
+        message="Nadzorne plošče ni bilo mogoče naložiti."
+        onRetry={() => refetch()}
+      />
+    );
   if (isLoading || !data) return <Spinner />;
 
   return (

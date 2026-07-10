@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  ErrorState,
   Input,
   Select,
   Spinner,
@@ -50,7 +51,7 @@ export function EquipmentPage() {
   const [condition, setCondition] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
-  const { data: equipment, isLoading } = useQuery({
+  const { data: equipment, isLoading, isError, refetch } = useQuery({
     queryKey: ['equipment'],
     queryFn: () => equipmentApi.list(),
   });
@@ -116,6 +117,11 @@ export function EquipmentPage() {
 
       {isLoading ? (
         <Spinner />
+      ) : isError ? (
+        <ErrorState
+          message="Seznama opreme ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState message="Ni opreme, ki bi ustrezala filtrom." />
       ) : (

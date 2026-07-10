@@ -4,7 +4,14 @@ import { useForm } from 'react-hook-form';
 import { errorMessage } from '../../api/client';
 import { organizationsApi } from '../../api/organizations.api';
 import { spinApi } from '../../api/spin.api';
-import { Button, Card, Input, Select, Spinner } from '../../components/ui';
+import {
+  Button,
+  Card,
+  ErrorState,
+  Input,
+  Select,
+  Spinner,
+} from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 import type { Organization } from '../../types';
 
@@ -90,7 +97,7 @@ export function OrganizationSettings() {
   const [serverError, setServerError] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const { data: org, isLoading } = useQuery({
+  const { data: org, isLoading, isError, refetch } = useQuery({
     queryKey: ['organization', 'me'],
     queryFn: organizationsApi.getMine,
   });
@@ -133,6 +140,17 @@ export function OrganizationSettings() {
     },
     onError: (err) => setServerError(errorMessage(err)),
   });
+
+  if (isError) {
+    return (
+      <Card title="Društvo">
+        <ErrorState
+          message="Podatkov o društvu ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
+      </Card>
+    );
+  }
 
   if (isLoading || !org) {
     return (

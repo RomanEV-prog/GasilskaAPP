@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  ErrorState,
   Input,
   Select,
   Spinner,
@@ -19,7 +20,7 @@ export function MembersPage() {
   const [status, setStatus] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, isError, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: () => usersApi.list(),
   });
@@ -82,6 +83,11 @@ export function MembersPage() {
 
       {isLoading ? (
         <Spinner />
+      ) : isError ? (
+        <ErrorState
+          message="Seznama članov ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState message="Ni članov, ki bi ustrezali filtrom." />
       ) : (

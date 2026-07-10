@@ -33,13 +33,28 @@ Future<void> main() async {
   );
 }
 
-class GasilApp extends StatelessWidget {
+class GasilApp extends StatefulWidget {
   const GasilApp({super.key});
 
   @override
+  State<GasilApp> createState() => _GasilAppState();
+}
+
+class _GasilAppState extends State<GasilApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    // Router zgradimo ENKRAT. Na spremembe prijave reagira prek
+    // refreshListenable (auth), zato ga ni treba graditi znova ob vsakem
+    // notifyListeners — sicer bi izgubili navigacijsko stanje.
+    _router = _buildRouter(context.read<AuthProvider>());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final router = _buildRouter(auth);
+    final router = _router;
 
     return MaterialApp.router(
       title: 'GasilApp',

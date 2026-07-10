@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Spinner,
 } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
@@ -30,7 +31,12 @@ export function MemberDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading } = useQuery({
+  const {
+    data: user,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['users', id],
     queryFn: () => usersApi.get(id!),
     enabled: !!id,
@@ -50,6 +56,15 @@ export function MemberDetailPage() {
     },
   });
 
+  if (isError)
+    return (
+      <Card title="Član">
+        <ErrorState
+          message="Podatkov o članu ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
+      </Card>
+    );
   if (isLoading || !user) return <Spinner />;
 
   return (

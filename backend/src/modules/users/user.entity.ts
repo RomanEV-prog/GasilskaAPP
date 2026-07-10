@@ -87,8 +87,14 @@ export class User {
   availability: AvailabilityStatus;
 
   /** Nikoli ne serializiraj v API odgovorih. */
-  @Column({ name: 'fcm_token', nullable: true, length: 500, select: false })
-  fcmToken?: string;
+  @Column({
+    name: 'fcm_token',
+    type: 'varchar',
+    nullable: true,
+    length: 500,
+    select: false,
+  })
+  fcmToken?: string | null;
 
   @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
   lastLoginAt?: Date;

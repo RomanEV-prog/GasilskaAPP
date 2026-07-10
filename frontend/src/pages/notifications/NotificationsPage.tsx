@@ -12,6 +12,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Input,
   Select,
   Spinner,
@@ -131,7 +132,7 @@ export function NotificationsPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
 
-  const { data: notifications, isLoading } = useQuery({
+  const { data: notifications, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications', 'mine'],
     queryFn: notificationsApi.mine,
   });
@@ -170,6 +171,11 @@ export function NotificationsPage() {
 
       {isLoading ? (
         <Spinner />
+      ) : isError ? (
+        <ErrorState
+          message="Obvestil ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
       ) : !notifications || notifications.length === 0 ? (
         <EmptyState message="Ni obvestil." />
       ) : (

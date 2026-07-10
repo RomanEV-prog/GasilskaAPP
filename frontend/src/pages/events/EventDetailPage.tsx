@@ -11,6 +11,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Spinner,
 } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
@@ -49,7 +50,12 @@ export function EventDetailPage() {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [showAttendance, setShowAttendance] = useState(false);
 
-  const { data: event, isLoading } = useQuery({
+  const {
+    data: event,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['events', id],
     queryFn: () => eventsApi.get(id!),
     enabled: !!id,
@@ -100,6 +106,13 @@ export function EventDetailPage() {
     onError: (err) => setActionError(errorMessage(err)),
   });
 
+  if (isError)
+    return (
+      <ErrorState
+        message="Dogodka ni bilo mogoče naložiti."
+        onRetry={() => refetch()}
+      />
+    );
   if (isLoading || !event) return <Spinner />;
 
   return (

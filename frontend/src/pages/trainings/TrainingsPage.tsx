@@ -12,6 +12,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Input,
   Select,
   Spinner,
@@ -216,7 +217,7 @@ export function TrainingsPage() {
   const [showForm, setShowForm] = useState(false);
   const isAdmin = user?.roles.includes('org_admin') ?? false;
 
-  const { data: trainings, isLoading } = useQuery({
+  const { data: trainings, isLoading, isError, refetch } = useQuery({
     queryKey: ['trainings', isLeadership ? 'all' : 'mine'],
     queryFn: () => (isLeadership ? trainingsApi.list() : trainingsApi.mine()),
   });
@@ -242,6 +243,11 @@ export function TrainingsPage() {
 
       {isLoading ? (
         <Spinner />
+      ) : isError ? (
+        <ErrorState
+          message="Usposabljanj ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
       ) : !trainings || trainings.length === 0 ? (
         <EmptyState message="Ni evidentiranih usposabljanj." />
       ) : (

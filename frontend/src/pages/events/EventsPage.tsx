@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  ErrorState,
   Select,
   Spinner,
 } from '../../components/ui';
@@ -61,7 +62,7 @@ export function EventsPage() {
   const [type, setType] = useState('');
   const [showPast, setShowPast] = useState(false);
 
-  const { data: events, isLoading } = useQuery({
+  const { data: events, isLoading, isError, refetch } = useQuery({
     queryKey: ['events', { includeCancelled: true }],
     queryFn: () => eventsApi.list({ includeCancelled: 'true' }),
   });
@@ -118,6 +119,11 @@ export function EventsPage() {
 
       {isLoading ? (
         <Spinner />
+      ) : isError ? (
+        <ErrorState
+          message="Dogodkov ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
       ) : groups.length === 0 ? (
         <EmptyState message="Ni dogodkov." />
       ) : (

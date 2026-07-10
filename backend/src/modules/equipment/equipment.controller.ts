@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../../common/enums/roles.enum';
 import {
@@ -48,12 +47,19 @@ export class EquipmentController {
     return this.equipmentService.findInspectionsDue(orgId, query.days ?? 30);
   }
 
-  /** Javno — QR skeniranje brez prijave (po MODULES.md spec). */
-  @Public()
+  /**
+   * QR skeniranje — samo za prijavljene člane, omejeno na lastno društvo.
+   * (Prej javno: omogočalo je anonimno naštevanje in razkritje podatkov vozila
+   * drugih društev — glej varnostni pregled.)
+   */
   @Get('qr/:qrCode')
-  @ApiOperation({ summary: 'Podatki o opremi preko QR kode (javno)' })
-  findByQrCode(@Param('qrCode') qrCode: string) {
-    return this.equipmentService.findByQrCode(qrCode);
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Podatki o opremi preko QR kode' })
+  findByQrCode(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('qrCode') qrCode: string,
+  ) {
+    return this.equipmentService.findByQrCode(orgId, qrCode);
   }
 
   @Get(':id')

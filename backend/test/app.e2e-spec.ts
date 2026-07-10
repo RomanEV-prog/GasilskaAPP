@@ -276,6 +276,35 @@ describe('GasilApp E2E', () => {
     });
   });
 
+  describe('Varnostni popravki', () => {
+    it('org_admin NE more dodeliti vloge super_admin (403)', async () => {
+      await request(http)
+        .post('/api/v1/users')
+        .set(auth(tokenA))
+        .send({
+          email: `esc@e2e-a-${stamp}.si`,
+          password: pass,
+          firstName: 'Esk',
+          lastName: 'Alacija',
+          roles: ['super_admin'],
+        })
+        .expect(403);
+    });
+
+    it('QR endpoint zahteva prijavo (401 brez žetona)', async () => {
+      await request(http)
+        .get('/api/v1/equipment/qr/GASILAPP-NEOBSTOJ-0001')
+        .expect(401);
+    });
+
+    it('QR z veljavno prijavo vrne 404 za neobstoječo kodo (ne 401)', async () => {
+      await request(http)
+        .get('/api/v1/equipment/qr/GASILAPP-NEOBSTOJ-0001')
+        .set(auth(tokenA))
+        .expect(404);
+    });
+  });
+
   describe("Uporabnisko ime in gesla", () => {
     it("javni seznam drustev vsebuje A", async () => {
       const res = await request(http).get("/api/v1/auth/organizations").expect(200);

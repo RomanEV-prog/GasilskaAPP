@@ -20,6 +20,18 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _loading;
   bool get isAuthenticated => _user != null;
 
+  AuthProvider() {
+    // Ko refresh dokončno spodleti (potekla seja), ApiClient nas obvesti →
+    // počistimo uporabnika, GoRouter preusmeri na prijavo.
+    ApiClient.instance.onSessionExpired = _onSessionExpired;
+  }
+
+  void _onSessionExpired() {
+    if (_user == null) return;
+    _user = null;
+    notifyListeners();
+  }
+
   /// Ob zagonu preveri, ali obstaja shranjena seja.
   Future<void> loadSession() async {
     final token = await ApiClient.instance.token;
@@ -47,6 +59,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Počisti FCM žeton na strežniku (dokler smo še avtenticirani), da naprava
+    // po odjavi ne prejema več push obvestil. Napaka tu ne sme preprečiti odjave.
+    try {
+      await _authApi.updateFcmToken('');
+    } catch (_) {
+      // Brez povezave / že potekla seja — odjava se vseeno izvede lokalno.
+    }
     await ApiClient.instance.clearToken();
     await _storage.delete(key: 'user');
     _user = null;

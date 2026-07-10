@@ -149,3 +149,24 @@ export function EmptyState({ message }: { message: string }) {
     <p className="py-8 text-center text-sm text-gray-400">{message}</p>
   );
 }
+
+// ─── ErrorState ──────────────────────────────────────────
+/** Prikaz ob neuspelem nalaganju podatkov (namesto večnega spinnerja). */
+export function ErrorState({
+  message = 'Podatkov ni bilo mogoče naložiti. Poskusite znova.',
+  onRetry,
+}: {
+  message?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-8 text-center">
+      <p className="text-sm text-red-600">{message}</p>
+      {onRetry && (
+        <Button type="button" variant="secondary" onClick={onRetry}>
+          Poskusi znova
+        </Button>
+      )}
+    </div>
+  );
+}

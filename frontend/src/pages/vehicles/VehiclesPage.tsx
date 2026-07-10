@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  ErrorState,
   Spinner,
 } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
@@ -72,7 +73,7 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 
 export function VehiclesPage() {
   const { isLeadership } = useAuth();
-  const { data: vehicles, isLoading } = useQuery({
+  const { data: vehicles, isLoading, isError, refetch } = useQuery({
     queryKey: ['vehicles'],
     queryFn: vehiclesApi.list,
   });
@@ -90,6 +91,11 @@ export function VehiclesPage() {
 
       {isLoading ? (
         <Spinner />
+      ) : isError ? (
+        <ErrorState
+          message="Seznama vozil ni bilo mogoče naložiti."
+          onRetry={() => refetch()}
+        />
       ) : !vehicles || vehicles.length === 0 ? (
         <EmptyState message="Ni vozil. Dodaj prvo vozilo." />
       ) : (

@@ -48,7 +48,12 @@ export class OrganizationsController {
 
   @Post('me/logo')
   @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      // Logotip: največ 2 MB, ena datoteka (prepreči izčrpanje pomnilnika).
+      limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

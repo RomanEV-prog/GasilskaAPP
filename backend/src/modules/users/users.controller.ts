@@ -80,9 +80,10 @@ export class UsersController {
   @ApiOperation({ summary: 'Dodaj novega člana' })
   create(
     @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('roles') actorRoles: SystemRole[],
     @Body() dto: CreateUserDto,
   ) {
-    return this.usersService.create(orgId, dto);
+    return this.usersService.create(orgId, dto, actorRoles);
   }
 
   @Patch(':id')
@@ -90,10 +91,11 @@ export class UsersController {
   @ApiOperation({ summary: 'Uredi člana' })
   update(
     @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('roles') actorRoles: SystemRole[],
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
   ) {
-    return this.usersService.update(orgId, id, dto);
+    return this.usersService.update(orgId, id, dto, actorRoles);
   }
 
   @Delete(':id')

@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -81,6 +82,38 @@ export class UsersService {
   }
 
   /**
+   * Prepreči stopnjevanje pravic. Vlogo super_admin (platformska) ni mogoče
+   * dodeliti prek uporabniškega vmesnika društva; vlogi org_admin in predsednik
+   * lahko dodeli le administrator društva (ali super_admin). Ostale vloge lahko
+   * dodeli vsak, ki doseže endpoint (že omejen z @Roles na vodstvo).
+   *
+   * `actorRoles === undefined` pomeni sistemski kontekst (npr. registracija,
+   * seed) → brez preverjanja. Controller vedno posreduje vloge klicatelja.
+   */
+  private assertCanAssignRoles(
+    actorRoles: SystemRole[] | undefined,
+    requested: SystemRole[],
+  ): void {
+    if (actorRoles === undefined) return;
+    const isSuperAdmin = actorRoles.includes(SystemRole.SUPER_ADMIN);
+    const isOrgAdmin = isSuperAdmin || actorRoles.includes(SystemRole.ORG_ADMIN);
+    const adminOnly: SystemRole[] = [
+      SystemRole.ORG_ADMIN,
+      SystemRole.PRESIDENT,
+    ];
+    for (const role of requested) {
+      if (role === SystemRole.SUPER_ADMIN && !isSuperAdmin) {
+        throw new ForbiddenException('Vloge super_admin ni mogoče dodeliti.');
+      }
+      if (adminOnly.includes(role) && !isOrgAdmin) {
+        throw new ForbiddenException(
+          'Vlogi administrator društva in predsednik lahko dodeli le administrator društva.',
+        );
+      }
+    }
+  }
+
+  /**
    * Ustvari uporabnika + njegove vloge znotraj organizacije.
    * Uporabljeno tako iz AuthService.register kot iz UsersController.
    * E-pošta je neobvezna; prijavno ime se generira samodejno.
@@ -88,6 +121,7 @@ export class UsersService {
   async create(
     organizationId: string,
     dto: CreateUserDto,
+    actorRoles?: SystemRole[],
   ): Promise<SafeUser> {
     if (dto.email) {
       const exists = await this.usersRepo.findOne({
@@ -102,6 +136,7 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const roles = dto.roles?.length ? dto.roles : [SystemRole.MEMBER];
+    this.assertCanAssignRoles(actorRoles, roles);
     const username = await this.generateUsername(
       organizationId,
       dto.firstName,
@@ -190,8 +225,12 @@ export class UsersService {
     organizationId: string,
     id: string,
     dto: UpdateUserDto,
+    actorRoles?: SystemRole[],
   ): Promise<SafeUser> {
     const user = await this.findEntity(organizationId, id);
+    if (dto.roles) {
+      this.assertCanAssignRoles(actorRoles, dto.roles);
+    }
 
     if (dto.email && dto.email.toLowerCase() !== user.email) {
       const clash = await this.usersRepo.findOne({

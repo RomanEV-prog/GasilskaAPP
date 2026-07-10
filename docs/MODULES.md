@@ -190,7 +190,8 @@ equipment/
 
 ### QR koda
 - Ob kreaciji opreme se generira unikaten QR string: `GASILAPP-{org_slug}-{inventory_number}`
-- Endpoint `GET /equipment/qr/:qrCode` vrne podatke o opremi (javno za skeniranje)
+- Endpoint `GET /equipment/qr/:qrCode` vrne **varna** polja opreme (avtenticiran,
+  omejen na društvo skenerja in aktivno opremo — brez občutljivih podatkov vozila)
 
 ---
 

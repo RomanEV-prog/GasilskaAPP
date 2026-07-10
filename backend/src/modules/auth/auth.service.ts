@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import { SystemRole } from '../../common/enums/roles.enum';
 import { usernameBase } from '../../common/utils/username.util';
 import { Organization } from '../organizations/organization.entity';
@@ -221,15 +221,28 @@ export class AuthService {
 
     const { user, roles } = await this.dataSource.transaction(
       async (manager) => {
+        // Atomarno porabi aktivacijsko kodo: pogojni UPDATE uspe le, če koda
+        // še ni bila porabljena. Prepreči TOCTOU dirko (dve hkratni
+        // registraciji z isto kodo). Ob izgubljeni dirki transakcija pade in
+        // se organizacija ne ustvari.
+        const consumed = await manager.update(
+          RegistrationCode,
+          { id: code.id, usedAt: IsNull() },
+          { usedAt: new Date() },
+        );
+        if (consumed.affected !== 1) {
+          throw new UnauthorizedException(
+            'Aktivacijska koda je neveljavna ali že porabljena. Za kodo nas kontaktirajte.',
+          );
+        }
+
         const org = manager.create(Organization, {
           name: dto.organizationName,
           slug,
         });
         const savedOrg = await manager.save(org);
 
-        // Porabi aktivacijsko kodo (znotraj iste transakcije).
         await manager.update(RegistrationCode, code.id, {
-          usedAt: new Date(),
           usedByOrganizationId: savedOrg.id,
         });
 
@@ -259,9 +272,12 @@ export class AuthService {
     return this.buildAuthResponse(user, roles);
   }
 
-  /** Posodobi FCM žeton prijavljenega uporabnika. */
+  /**
+   * Posodobi FCM žeton prijavljenega uporabnika. Prazen niz (npr. ob odjavi)
+   * shrani kot NULL, da naprava po odjavi ne prejema več push obvestil.
+   */
   async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
-    await this.usersRepo.update(userId, { fcmToken });
+    await this.usersRepo.update(userId, { fcmToken: fcmToken || null });
   }
 
   /**

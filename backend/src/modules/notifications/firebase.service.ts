@@ -57,30 +57,53 @@ export class FirebaseService implements OnModuleInit {
       return { successCount: 0, invalidTokens: [] };
     }
 
-    const response = await admin.messaging().sendEachForMulticast({
-      tokens,
-      notification: { title, body },
-      data,
-    });
-
-    // Zberi žetone, ki jih je FCM zavrnil kot neveljavne/odjavljene.
+    // FCM sendEachForMulticast dovoli največ 500 žetonov na klic → razdeli.
     const invalidTokens: string[] = [];
-    response.responses.forEach((res, i) => {
-      const code = res.error?.code;
-      if (
-        code === 'messaging/registration-token-not-registered' ||
-        code === 'messaging/invalid-registration-token' ||
-        code === 'messaging/invalid-argument'
-      ) {
-        invalidTokens.push(tokens[i]);
-      }
-    });
+    let successCount = 0;
+    let failureCount = 0;
 
-    if (response.failureCount > 0) {
+    for (let i = 0; i < tokens.length; i += FCM_BATCH_SIZE) {
+      const batch = tokens.slice(i, i + FCM_BATCH_SIZE);
+      try {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens: batch,
+          notification: { title, body },
+          data,
+        });
+        successCount += response.successCount;
+        failureCount += response.failureCount;
+
+        // Zberi žetone, ki jih je FCM zavrnil kot neveljavne/odjavljene.
+        response.responses.forEach((res, j) => {
+          const code = res.error?.code;
+          if (
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token' ||
+            code === 'messaging/invalid-argument'
+          ) {
+            invalidTokens.push(batch[j]);
+          }
+        });
+      } catch (err) {
+        // Napaka celega paketa (npr. izpad FCM) ne sme sesuti obveščanja —
+        // ostali paketi se še vedno pošljejo.
+        failureCount += batch.length;
+        this.logger.error(
+          `FCM: paket ${i / FCM_BATCH_SIZE} ni bil poslan: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
+    if (failureCount > 0) {
       this.logger.warn(
-        `FCM: ${response.failureCount}/${tokens.length} pošiljanj neuspešnih, ${invalidTokens.length} neveljavnih žetonov.`,
+        `FCM: ${failureCount}/${tokens.length} pošiljanj neuspešnih, ${invalidTokens.length} neveljavnih žetonov.`,
       );
     }
-    return { successCount: response.successCount, invalidTokens };
+    return { successCount, invalidTokens };
   }
 }
+
+/** FCM sendEachForMulticast dovoli največ 500 žetonov na klic. */
+const FCM_BATCH_SIZE = 500;

@@ -48,7 +48,11 @@ class ApiClient {
             final response = await _dio.fetch<dynamic>(req);
             return handler.resolve(response);
           } catch (_) {
-            await clearToken(); // refresh spodletel → seja poteče
+            // Refresh spodletel → seja poteče. Počisti žeton in obvesti
+            // aplikacijo (AuthProvider), da preusmeri na prijavo — sicer bi
+            // uporabnik obtičal na avtenticiranem zaslonu s failajočimi klici.
+            await clearToken();
+            onSessionExpired?.call();
           }
         }
         handler.next(e);
@@ -61,6 +65,10 @@ class ApiClient {
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
   Future<String>? _refreshing;
+
+  /// Kliče se, ko refresh dokončno spodleti (seja je potekla). AuthProvider
+  /// to nastavi na svoj logout, da se UI preusmeri na prijavni zaslon.
+  void Function()? onSessionExpired;
 
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     await _storage.write(key: 'accessToken', value: accessToken);

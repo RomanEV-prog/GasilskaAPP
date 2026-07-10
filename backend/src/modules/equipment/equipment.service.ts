@@ -99,16 +99,38 @@ export class EquipmentService {
     return equipment;
   }
 
-  /** Iskanje po QR kodi — za skeniranje z mobilno app (javno). */
-  async findByQrCode(qrCode: string): Promise<Equipment> {
+  /**
+   * Iskanje po QR kodi — za skeniranje z mobilno app. Omejeno na društvo
+   * skenerja in aktivno opremo; vrne le varna polja (brez občutljivih podatkov
+   * vozila, npr. VIN/registrska tablica/zavarovanje).
+   */
+  async findByQrCode(
+    organizationId: string,
+    qrCode: string,
+  ): Promise<Record<string, unknown>> {
     const equipment = await this.equipmentRepo.findOne({
-      where: { qrCode },
+      where: { qrCode, organizationId, isActive: true },
       relations: { vehicle: true },
     });
     if (!equipment) {
       throw new NotFoundException('Oprema s to QR kodo ni bila najdena.');
     }
-    return equipment;
+    return {
+      id: equipment.id,
+      name: equipment.name,
+      category: equipment.category,
+      inventoryNumber: equipment.inventoryNumber,
+      location: equipment.location,
+      condition: equipment.condition,
+      lastInspection: equipment.lastInspection,
+      nextInspection: equipment.nextInspection,
+      notes: equipment.notes,
+      qrCode: equipment.qrCode,
+      isActive: equipment.isActive,
+      vehicle: equipment.vehicle
+        ? { id: equipment.vehicle.id, name: equipment.vehicle.name }
+        : null,
+    };
   }
 
   /** Oprema s pregledom v naslednjih N dneh — za opomnike/dashboard. */
