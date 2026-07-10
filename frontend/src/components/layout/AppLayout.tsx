@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   NavLink,
   Outlet,
@@ -8,6 +9,7 @@ import { useFcm } from '../../hooks/useFcm';
 import { useAuth } from '../../stores/auth.store';
 import { useUi } from '../../stores/ui.store';
 import { ROLE_LABELS } from '../../types';
+import { OnboardingTour, tourStorageKey } from '../OnboardingTour';
 
 const navItems = [
   { to: '/', label: 'Nadzorna plošča', icon: '📊', end: true },
@@ -72,11 +74,33 @@ function NavIcons() {
 }
 
 export function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, isLeadership, logout } = useAuth();
   const { navStyle } = useUi();
   const navigate = useNavigate();
   const location = useLocation();
   useFcm(); // registrira FCM žeton ob prijavi (no-op brez konfiguracije)
+
+  // Uvodni vodič: samodejno ob prvi prijavi (dokler ni viden), kasneje ročno.
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      if (!localStorage.getItem(tourStorageKey(user.id))) setTourOpen(true);
+    } catch {
+      /* localStorage nedosegljiv — vodič preprosto preskočimo */
+    }
+  }, [user]);
+
+  const closeTour = () => {
+    setTourOpen(false);
+    if (user) {
+      try {
+        localStorage.setItem(tourStorageKey(user.id), 'done');
+      } catch {
+        /* ignoriraj */
+      }
+    }
+  };
 
   // Gumb "Nazaj" prikaži samo na podstraneh (npr. /members/:id, /events/new),
   // ne na glavnih menijskih straneh.
@@ -100,17 +124,33 @@ export function AppLayout() {
           <p className="mb-3 text-xs text-gray-400">
             {user?.roles.map((r) => ROLE_LABELS[r]).join(', ')}
           </p>
-          <button
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            className="text-xs text-gray-400 underline hover:text-white"
-          >
-            Odjava
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setTourOpen(true)}
+              className="text-xs text-gray-400 hover:text-white"
+            >
+              ❓ Vodič
+            </button>
+            <span className="text-gray-600">·</span>
+            <button
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="text-xs text-gray-400 underline hover:text-white"
+            >
+              Odjava
+            </button>
+          </div>
         </div>
       </aside>
+
+      <OnboardingTour
+        open={tourOpen}
+        isLeadership={isLeadership}
+        firstName={user?.firstName}
+        onClose={closeTour}
+      />
 
       {/* Vsebina */}
       <main className="flex-1 p-8">
