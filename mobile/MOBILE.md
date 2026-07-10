@@ -116,7 +116,7 @@ Set-Location 'C:\gasilapp_mobile'; flutter build apk --debug
 - **Build** (PowerShell, iz junction mape):
   ```powershell
   cd C:\gasilapp_mobile
-  flutter build appbundle --release --dart-define=API_BASE_URL=https://<DOMENA>/api/v1
+  flutter build appbundle --release --dart-define=API_URL=https://<DOMENA>/api/v1
   ```
   Izhod: `build\app\outputs\bundle\release\app-release.aab`
 - **Play Console:** aplikacija `si.gasilapp.gasilapp_mobile` → Production/Internal testing → naloži `.aab`. Obvezno: URL zasebnostne politike `https://<DOMENA>/zasebnost.html`, obrazec Data safety (zbiramo: ime/e-pošto — račun; FCM žeton — obvestila; ni deljenja s tretjimi), posnetki zaslona + ikona 512×512.

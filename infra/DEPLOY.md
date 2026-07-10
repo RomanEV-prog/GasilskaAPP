@@ -58,6 +58,17 @@ cd gasilapp && git pull
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
 
+**Migracije sheme** (`DB_SYNCHRONIZE=false` → ročno na obstoječih bazah). Po `git pull`
+zaženi nove datoteke iz `docs/migrations/` (idempotentne):
+
+```bash
+for f in docs/migrations/*.sql; do
+  docker exec -i $(docker ps -qf name=gasilapp-db) psql -U postgres -d gasilapp < "$f"
+done
+```
+
+(npr. `2026-07-08-spin.sql` doda SPIN občino + tabelo intervencij.)
+
 ## 7. Backup baze (dnevno, cron)
 
 ```bash
@@ -76,7 +87,7 @@ Build mora kazati na produkcijski API:
 
 ```powershell
 cd C:\gasilapp_mobile
-flutter build appbundle --release --dart-define=API_BASE_URL=https://<DOMAIN>/api/v1
+flutter build appbundle --release --dart-define=API_URL=https://<DOMAIN>/api/v1
 ```
 
 Podpisovanje in objava na Google Play: glej `mobile/MOBILE.md` → Release.
