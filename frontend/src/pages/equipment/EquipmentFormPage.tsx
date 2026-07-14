@@ -11,6 +11,7 @@ import { QrCode } from '../../components/QrCode';
 import { Button, Card, Input, Select, Spinner } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 import {
+  EQUIPMENT_CATEGORY_SUGGESTIONS,
   EQUIPMENT_CONDITION_LABELS,
   type Equipment,
 } from '../../types';
@@ -143,8 +144,14 @@ export function EquipmentFormPage() {
             <Input
               label="Kategorija"
               placeholder="Zaščitna oprema"
+              list="kategorije-opreme"
               {...register('category')}
             />
+            <datalist id="kategorije-opreme">
+              {EQUIPMENT_CATEGORY_SUGGESTIONS.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
             <Input
               label="Inventarna številka"
               placeholder="IDA-001"

@@ -88,8 +88,10 @@ CREATE TABLE users (
 
 -- ─── USER ROLES ──────────────────────────────────────────
 CREATE TYPE system_role AS ENUM (
-  'super_admin','org_admin','president','commander',
-  'secretary','treasurer','youth_mentor','member'
+  'super_admin','org_admin','president','commander','deputy_commander',
+  'secretary','treasurer','youth_mentor','chief_machinist','toolkeeper',
+  'board_member','supervisory_board_member','assistant_breathing_apparatus',
+  'assistant_communications','assistant_first_aid','member'
 );
 
 CREATE TABLE user_roles (

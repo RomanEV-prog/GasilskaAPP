@@ -25,7 +25,7 @@ CREATE TABLE organizations (
 
 CREATE TYPE membership_status AS ENUM ('operative','veteran','youth','trainee','support','honorary');
 CREATE TYPE availability_status AS ENUM ('available','at_home','at_work','on_leave','sick','unavailable');
-CREATE TYPE system_role AS ENUM ('super_admin','org_admin','president','commander','secretary','treasurer','youth_mentor','member');
+CREATE TYPE system_role AS ENUM ('super_admin','org_admin','president','commander','deputy_commander','secretary','treasurer','youth_mentor','chief_machinist','toolkeeper','board_member','supervisory_board_member','assistant_breathing_apparatus','assistant_communications','assistant_first_aid','member');
 CREATE TYPE event_type AS ENUM ('drill','meeting','competition','intervention','cleanup','celebration','assembly','other');
 CREATE TYPE rsvp_status AS ENUM ('attending','not_attending','maybe','late');
 CREATE TYPE vehicle_type AS ENUM ('gvc','gvgp','ac','pv','van','other');

@@ -10,7 +10,11 @@ import {
   Spinner,
 } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
-import { VEHICLE_TYPE_LABELS, type Vehicle } from '../../types';
+import {
+  VEHICLE_MANAGE_ROLES,
+  VEHICLE_TYPE_LABELS,
+  type Vehicle,
+} from '../../types';
 
 /** Barva glede na oddaljenost roka: rdeča ≤ 7 dni / potekel, rumena ≤ 30, zelena sicer. */
 function deadlineBadge(label: string, date?: string) {
@@ -72,7 +76,9 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 }
 
 export function VehiclesPage() {
-  const { isLeadership } = useAuth();
+  const { user } = useAuth();
+  const canManage =
+    user?.roles.some((r) => VEHICLE_MANAGE_ROLES.includes(r)) ?? false;
   const { data: vehicles, isLoading, isError, refetch } = useQuery({
     queryKey: ['vehicles'],
     queryFn: vehiclesApi.list,
@@ -82,7 +88,7 @@ export function VehiclesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Vozila</h1>
-        {isLeadership && (
+        {canManage && (
           <Link to="/vehicles/new">
             <Button>+ Dodaj vozilo</Button>
           </Link>

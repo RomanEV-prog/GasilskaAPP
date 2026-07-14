@@ -16,6 +16,7 @@ export class DashboardController {
     SystemRole.ORG_ADMIN,
     SystemRole.PRESIDENT,
     SystemRole.COMMANDER,
+    SystemRole.DEPUTY_COMMANDER,
     SystemRole.SECRETARY,
   )
   @ApiOperation({ summary: 'Dashboard za vodstvo' })

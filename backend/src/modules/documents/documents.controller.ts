@@ -34,6 +34,7 @@ const LEADERSHIP: string[] = [
   SystemRole.ORG_ADMIN,
   SystemRole.PRESIDENT,
   SystemRole.COMMANDER,
+  SystemRole.DEPUTY_COMMANDER,
   SystemRole.SECRETARY,
   SystemRole.TREASURER,
 ];

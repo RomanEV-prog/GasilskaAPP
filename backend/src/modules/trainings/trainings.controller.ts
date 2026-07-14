@@ -31,6 +31,7 @@ export class TrainingsController {
     SystemRole.ORG_ADMIN,
     SystemRole.PRESIDENT,
     SystemRole.COMMANDER,
+    SystemRole.DEPUTY_COMMANDER,
     SystemRole.SECRETARY,
   )
   @ApiOperation({ summary: 'Vsa usposabljanja društva' })
@@ -48,7 +49,7 @@ export class TrainingsController {
   }
 
   @Get('expiring')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
   @ApiOperation({ summary: 'Potekajoča usposabljanja' })
   findExpiring(
     @CurrentUser('organizationId') orgId: string,
@@ -58,7 +59,7 @@ export class TrainingsController {
   }
 
   @Get('user/:userId')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
   @ApiOperation({ summary: 'Usposabljanja člana' })
   findByUser(
     @CurrentUser('organizationId') orgId: string,

@@ -41,6 +41,7 @@ export class NotificationsController {
     SystemRole.ORG_ADMIN,
     SystemRole.PRESIDENT,
     SystemRole.COMMANDER,
+    SystemRole.DEPUTY_COMMANDER,
     SystemRole.SECRETARY,
   )
   @ApiOperation({ summary: 'Pošlji obvestilo' })

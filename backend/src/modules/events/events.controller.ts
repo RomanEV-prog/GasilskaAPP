@@ -56,6 +56,7 @@ export class EventsController {
     SystemRole.ORG_ADMIN,
     SystemRole.PRESIDENT,
     SystemRole.COMMANDER,
+    SystemRole.DEPUTY_COMMANDER,
     SystemRole.SECRETARY,
   )
   @ApiOperation({ summary: 'Ustvari dogodek' })
@@ -72,6 +73,7 @@ export class EventsController {
     SystemRole.ORG_ADMIN,
     SystemRole.PRESIDENT,
     SystemRole.COMMANDER,
+    SystemRole.DEPUTY_COMMANDER,
     SystemRole.SECRETARY,
   )
   @ApiOperation({ summary: 'Uredi dogodek' })
@@ -84,7 +86,7 @@ export class EventsController {
   }
 
   @Patch(':id/cancel')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
   @ApiOperation({ summary: 'Odpovej dogodek' })
   cancel(
     @CurrentUser('organizationId') orgId: string,
@@ -109,6 +111,7 @@ export class EventsController {
     SystemRole.ORG_ADMIN,
     SystemRole.PRESIDENT,
     SystemRole.COMMANDER,
+    SystemRole.DEPUTY_COMMANDER,
     SystemRole.SECRETARY,
   )
   @ApiOperation({ summary: 'Odzivi na dogodek' })
@@ -120,7 +123,7 @@ export class EventsController {
   }
 
   @Post(':id/attendance')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.PRESIDENT)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.PRESIDENT)
   @ApiOperation({ summary: 'Označi prisotnost' })
   markAttendance(
     @CurrentUser('organizationId') orgId: string,

@@ -16,6 +16,7 @@ const LEADERSHIP_ROLES: SystemRole[] = [
   SystemRole.ORG_ADMIN,
   SystemRole.PRESIDENT,
   SystemRole.COMMANDER,
+  SystemRole.DEPUTY_COMMANDER,
   SystemRole.SECRETARY,
   SystemRole.TREASURER,
   SystemRole.YOUTH_MENTOR,
@@ -112,6 +113,30 @@ export class NotificationsService {
 
     notification.sentAt = new Date();
     return this.notificationsRepo.save(notification);
+  }
+
+  /**
+   * Ustvari obvestilo, ciljano na aktivne člane z navedenimi vlogami
+   * (npr. opomniki o rokih → administratorji + glavni strojnik).
+   * Brez prejemnikov ne ustvari ničesar in vrne null.
+   */
+  async createForRoles(
+    organizationId: string,
+    roles: SystemRole[],
+    dto: Omit<CreateNotificationDto, 'target' | 'targetUserIds'>,
+  ): Promise<Notification | null> {
+    const users = await this.usersRepo
+      .createQueryBuilder('user')
+      .innerJoin('user.roles', 'role', 'role.role IN (:...roles)', { roles })
+      .where('user.organizationId = :organizationId', { organizationId })
+      .andWhere('user.isActive = true')
+      .getMany();
+    if (users.length === 0) return null;
+    return this.create(organizationId, null, {
+      ...dto,
+      target: NotificationTarget.SPECIFIC,
+      targetUserIds: [...new Set(users.map((u) => u.id))],
+    });
   }
 
   /** Moja obvestila — filtrirana po ciljni skupini + status prebranosti. */

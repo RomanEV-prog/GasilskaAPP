@@ -5,9 +5,17 @@ export type SystemRole =
   | 'org_admin'
   | 'president'
   | 'commander'
+  | 'deputy_commander'
   | 'secretary'
   | 'treasurer'
   | 'youth_mentor'
+  | 'chief_machinist'
+  | 'toolkeeper'
+  | 'board_member'
+  | 'supervisory_board_member'
+  | 'assistant_breathing_apparatus'
+  | 'assistant_communications'
+  | 'assistant_first_aid'
   | 'member';
 
 export type MembershipStatus =
@@ -262,7 +270,39 @@ export const LEADERSHIP_ROLES: SystemRole[] = [
   'org_admin',
   'president',
   'commander',
+  'deputy_commander',
   'secretary',
+];
+
+/** Vloge, ki smejo urejati vozila (zrcali backend @Roles). */
+export const VEHICLE_MANAGE_ROLES: SystemRole[] = [
+  'org_admin',
+  'commander',
+  'deputy_commander',
+  'chief_machinist',
+];
+
+/** Vloge, ki smejo urejati opremo (zrcali backend @Roles). */
+export const EQUIPMENT_MANAGE_ROLES: SystemRole[] = [
+  'org_admin',
+  'commander',
+  'deputy_commander',
+  'chief_machinist',
+  'toolkeeper',
+  'assistant_breathing_apparatus',
+];
+
+/** Predlagane kategorije opreme (prosto besedilo, to so le predlogi). */
+export const EQUIPMENT_CATEGORY_SUGGESTIONS = [
+  'IDA — izolirni dihalni aparat',
+  'Vrvna tehnika',
+  'Gasilni aparat',
+  'Cevi in armature',
+  'Črpalke',
+  'Zaščitna oprema',
+  'Zveze',
+  'Prva pomoč',
+  'Orodje',
 ];
 
 export const AVAILABILITY_LABELS: Record<AvailabilityStatus, string> = {
@@ -308,8 +348,16 @@ export const ROLE_LABELS: Record<SystemRole, string> = {
   org_admin: 'Administrator',
   president: 'Predsednik',
   commander: 'Poveljnik',
+  deputy_commander: 'Podpoveljnik',
   secretary: 'Tajnik',
   treasurer: 'Blagajnik',
   youth_mentor: 'Mentor mladine',
+  chief_machinist: 'Glavni strojnik',
+  toolkeeper: 'Orodjar',
+  board_member: 'Član upravnega odbora',
+  supervisory_board_member: 'Član nadzornega odbora',
+  assistant_breathing_apparatus: 'Pomočnik podpoveljnika za zaščito dihal',
+  assistant_communications: 'Pomočnik podpoveljnika za zveze',
+  assistant_first_aid: 'Pomočnik podpoveljnika za prvo pomoč',
   member: 'Član',
 };

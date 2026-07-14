@@ -74,6 +74,13 @@ secretary     → tajnik
 treasurer     → blagajnik
 youth_mentor  → mentor mladine
 member        → navaden član
+
+# funkcije brez posebnih pravic: board_member (član UO),
+# supervisory_board_member (član NO), assistant_communications,
+# assistant_first_aid
+# funkcije s pravicami: deputy_commander (= commander povsod),
+# chief_machinist (vozila+oprema), toolkeeper (oprema),
+# assistant_breathing_apparatus (oprema)
 ```
 
 Navaden `member` vidi samo:

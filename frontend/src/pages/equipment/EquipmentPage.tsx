@@ -3,6 +3,7 @@ import { differenceInDays } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { equipmentApi } from '../../api/equipment.api';
+import { vehiclesApi } from '../../api/vehicles.api';
 import {
   Badge,
   Button,
@@ -15,6 +16,7 @@ import {
 import { useAuth } from '../../stores/auth.store';
 import {
   EQUIPMENT_CONDITION_LABELS,
+  EQUIPMENT_MANAGE_ROLES,
   type EquipmentCondition,
 } from '../../types';
 
@@ -45,16 +47,30 @@ function inspectionBadge(date?: string) {
 export function EquipmentPage() {
   const { user } = useAuth();
   const canManage =
-    user?.roles.some((r) => r === 'org_admin' || r === 'commander') ?? false;
+    user?.roles.some((r) => EQUIPMENT_MANAGE_ROLES.includes(r)) ?? false;
 
   const [search, setSearch] = useState('');
   const [condition, setCondition] = useState('');
+  const [category, setCategory] = useState('');
+  const [vehicleId, setVehicleId] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
   const { data: equipment, isLoading, isError, refetch } = useQuery({
     queryKey: ['equipment'],
     queryFn: () => equipmentApi.list(),
   });
+  const { data: vehicles } = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: vehiclesApi.list,
+  });
+
+  // Kategorije, ki se dejansko uporabljajo — za spustni filter.
+  const categories = useMemo(
+    () =>
+      [...new Set((equipment ?? []).map((e) => e.category).filter(Boolean))]
+        .sort((a, b) => a!.localeCompare(b!, 'sl')) as string[],
+    [equipment],
+  );
 
   const filtered = useMemo(() => {
     if (!equipment) return [];
@@ -62,6 +78,8 @@ export function EquipmentPage() {
     return equipment.filter((e) => {
       if (!showInactive && !e.isActive) return false;
       if (condition && e.condition !== condition) return false;
+      if (category && e.category !== category) return false;
+      if (vehicleId && e.vehicleId !== vehicleId) return false;
       if (
         q &&
         !`${e.name} ${e.category ?? ''} ${e.inventoryNumber ?? ''}`
@@ -71,7 +89,7 @@ export function EquipmentPage() {
         return false;
       return true;
     });
-  }, [equipment, search, condition, showInactive]);
+  }, [equipment, search, condition, category, vehicleId, showInactive]);
 
   return (
     <div>
@@ -101,6 +119,29 @@ export function EquipmentPage() {
             {Object.entries(EQUIPMENT_CONDITION_LABELS).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="w-48">
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Vse kategorije</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="w-48">
+          <Select
+            value={vehicleId}
+            onChange={(e) => setVehicleId(e.target.value)}
+          >
+            <option value="">Vsa vozila</option>
+            {vehicles?.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
               </option>
             ))}
           </Select>

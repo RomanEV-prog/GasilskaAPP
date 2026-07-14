@@ -4,6 +4,7 @@ const leadershipRoles = [
   'org_admin',
   'president',
   'commander',
+  'deputy_commander',
   'secretary',
 ];
 
