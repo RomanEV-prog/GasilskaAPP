@@ -193,24 +193,41 @@ export class SpinService implements OnModuleInit {
   /**
    * Vrne prvo izbrano občino društva, v katero spada intervencija (ali null).
    * Sveže intervencije (na katere alarmiramo) imajo v opisu GOLO ime občine →
-   * točno ujemanje. Za opisno besedilo ujamemo ime kot celo besedo (npr.
-   * "občina Ljubljana"). Zavestno NE ujemamo sklonjenih oblik ("v Ljubljani"):
-   * stemanje bi povzročilo lažno-pozitivna obvestila med sosednjimi občinami
-   * (npr. "Kranj" ↔ "Kranjska Gora"), kar je pri alarmiranju hujše od zgrešitve.
-   * Ker alarmiramo na sveže (golo ime), je to v praksi zanesljivo.
+   * točno ujemanje. Opisna poročila lokacijo skoraj vedno navedejo kot
+   * "občina X" → verjamemo IZKLJUČNO temu (poročila pogosto omenjajo enote iz
+   * drugih občin — "GB Maribor", "UKC Maribor" — kar je prej ustvarjalo lažne
+   * zadetke). Če besede "občina" ni, ujamemo sklonjeno obliko za krajevnim
+   * predlogom ("v Mariboru", "na Ptuju"); pripona je omejena na 2 znaka, da
+   * "Kranj" ne ujame "v Kranjski Gori".
    */
   private matchedObcina(item: SpinItem, obcine: string[]): string | null {
     const desc = normalize(item.description ?? '');
     if (!desc) return null;
+    const hasObcinaWord = /\bobcin/.test(desc);
     for (const obcina of obcine) {
       const target = normalize(obcina);
       if (!target) continue;
       if (desc === target) return obcina; // golo ime — sveža intervencija
-      // Opisno besedilo: ime občine kot cela beseda ("obcina Ljubljana", ...).
-      const re = new RegExp(
-        `\\b${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
-      );
-      if (re.test(desc)) return obcina;
+      const esc = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (hasObcinaWord) {
+        // "obcina X" / "obcini X" — edini zanesljivi vir lokacije v poročilu.
+        if (new RegExp(`\\bobcin\\w{0,3}\\s+${esc}\\b`).test(desc)) {
+          return obcina;
+        }
+        continue; // občina je izrecno navedena in ni naša → ne ugibaj naprej
+      }
+      // Brez "občina": sklonjena oblika za predlogom, po besedah (brez končnega
+      // samoglasnika + do 2 znaka pripone): "Ruše" → "v Rušah", "Celje" → "v Celju".
+      const stemmed = target
+        .split(/\s+/)
+        .map(
+          (w) =>
+            `${w.replace(/[aeiou]$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\w{0,2}`,
+        )
+        .join('\\s+');
+      if (new RegExp(`\\b(v|na|pri)\\s+${stemmed}\\b`).test(desc)) {
+        return obcina;
+      }
     }
     return null;
   }

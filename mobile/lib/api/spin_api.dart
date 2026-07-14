@@ -107,11 +107,24 @@ class SpinApi {
       .replaceAll('đ', 'd')
       .trim();
 
+  /// Sveže intervencije imajo golo ime občine → točno ujemanje. Opisna
+  /// poročila lokacijo navedejo kot "občina X" → verjamemo izključno temu
+  /// (omembe enot, npr. "GB Maribor", so prej ustvarjale lažne zadetke).
+  /// Brez besede "občina" ujamemo sklonjeno obliko za predlogom
+  /// ("v Mariboru"); pripona ≤2 znaka, da "Kranj" ne ujame "v Kranjski Gori".
   bool _matchesObcina(String desc, String obcina) {
     final t = _norm(obcina);
     final d = _norm(desc);
     if (t.isEmpty || d.isEmpty) return false;
     if (d == t) return true; // golo ime — sveža intervencija
-    return RegExp('\\b${RegExp.escape(t)}\\b').hasMatch(d);
+    if (RegExp(r'\bobcin').hasMatch(d)) {
+      return RegExp('\\bobcin\\w{0,3}\\s+${RegExp.escape(t)}\\b').hasMatch(d);
+    }
+    final stemmed = t
+        .split(RegExp(r'\s+'))
+        .map((w) =>
+            '${RegExp.escape(w.replaceFirst(RegExp(r'[aeiou]$'), ''))}\\w{0,2}')
+        .join('\\s+');
+    return RegExp('\\b(v|na|pri)\\s+$stemmed\\b').hasMatch(d);
   }
 }
