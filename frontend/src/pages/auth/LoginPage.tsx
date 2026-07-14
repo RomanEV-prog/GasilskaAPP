@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { authApi } from '../../api/auth.api';
 import { errorMessage } from '../../api/client';
+import { IosInstallHint } from '../../components/IosInstallHint';
 import { Button, Input, Select } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 
@@ -62,8 +63,8 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8F8F8]">
-      <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-md">
+    <div className="flex min-h-screen items-center justify-center bg-[#F8F8F8] p-4">
+      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-md sm:p-8">
         <div className="mb-6 text-center">
           <span className="text-4xl">🔥</span>
           <h1 className="mt-2 text-2xl font-bold">GasilApp</h1>
@@ -117,6 +118,8 @@ export function LoginPage() {
             Registrirajte društvo
           </Link>
         </p>
+
+        <IosInstallHint />
       </div>
     </div>
   );

@@ -172,7 +172,7 @@ export function VehicleFormPage() {
         className="space-y-6"
       >
         <Card title="Osnovni podatki">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Naziv *"
               placeholder="GVC 16/25"
@@ -202,7 +202,7 @@ export function VehicleFormPage() {
         </Card>
 
         <Card title="Roki (za opomnike)">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Registracija poteče"
               type="date"

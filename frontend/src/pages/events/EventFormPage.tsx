@@ -147,7 +147,7 @@ export function EventFormPage() {
                 {...register('description')}
               />
             </label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <Input label="Lokacija" {...register('location')} />
               <Select label="Tip dogodka" {...register('eventType')}>
                 {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
@@ -187,7 +187,7 @@ export function EventFormPage() {
               </label>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" {...register('requiresRsvp')} />
               Zahtevaj prijavo (RSVP)

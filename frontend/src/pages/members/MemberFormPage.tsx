@@ -157,7 +157,7 @@ export function MemberFormPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card title="Osnovni podatki">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Ime *"
               error={errors.firstName?.message}
@@ -193,7 +193,7 @@ export function MemberFormPage() {
         </Card>
 
         <Card title="Članstvo">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Status članstva" {...register('membershipStatus')}>
               {Object.entries(MEMBERSHIP_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>

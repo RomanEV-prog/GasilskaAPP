@@ -9,6 +9,7 @@ import { useFcm } from '../../hooks/useFcm';
 import { useAuth } from '../../stores/auth.store';
 import { useUi } from '../../stores/ui.store';
 import { ROLE_LABELS } from '../../types';
+import { NotificationsBanner } from '../NotificationsBanner';
 import { OnboardingTour, tourStorageKey } from '../OnboardingTour';
 
 const navItems = [
@@ -33,7 +34,7 @@ function NavList() {
           to={item.to}
           end={item.end}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
               isActive
                 ? 'bg-primary text-white'
                 : 'text-gray-300 hover:bg-white/10'
@@ -73,12 +74,69 @@ function NavIcons() {
   );
 }
 
-export function AppLayout() {
-  const { user, isLeadership, logout } = useAuth();
+/** Notranjost menija — skupna stranski vrstici (desktop) in predalu (telefon). */
+function SidebarContent({
+  onOpenTour,
+  showLogo = true,
+}: {
+  onOpenTour: () => void;
+  showLogo?: boolean;
+}) {
+  const { user } = useAuth();
   const { navStyle } = useUi();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  return (
+    <>
+      {showLogo && (
+        <div className="flex items-center gap-2 px-5 py-5">
+          <span className="text-2xl">🔥</span>
+          <span className="text-lg font-bold">GasilApp</span>
+        </div>
+      )}
+
+      {navStyle === 'icons' ? <NavIcons /> : <NavList />}
+
+      <div className="border-t border-white/10 p-4">
+        <p className="text-sm font-medium">
+          {user?.firstName} {user?.lastName}
+        </p>
+        <p className="mb-3 text-xs text-gray-400">
+          {user?.roles.map((r) => ROLE_LABELS[r]).join(', ')}
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenTour}
+            className="text-xs text-gray-400 hover:text-white"
+          >
+            ❓ Vodič
+          </button>
+          <span className="text-gray-600">·</span>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="text-xs text-gray-400 underline hover:text-white"
+          >
+            Odjava
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export function AppLayout() {
+  const { user, isLeadership } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   useFcm(); // registrira FCM žeton ob prijavi (no-op brez konfiguracije)
+
+  // Predal z menijem na telefonu; ob vsaki navigaciji se zapre.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => setDrawerOpen(false), [location.pathname]);
 
   // Uvodni vodič: samodejno ob prvi prijavi (dokler ni viden), kasneje ročno.
   const [tourOpen, setTourOpen] = useState(false);
@@ -102,48 +160,48 @@ export function AppLayout() {
     }
   };
 
+  const openTour = () => {
+    setDrawerOpen(false);
+    setTourOpen(true);
+  };
+
   // Gumb "Nazaj" prikaži samo na podstraneh (npr. /members/:id, /events/new),
   // ne na glavnih menijskih straneh.
   const isTopLevel = navItems.some((item) => item.to === location.pathname);
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="flex w-60 flex-col bg-[#2D2D2D] text-white">
-        <div className="flex items-center gap-2 px-5 py-5">
-          <span className="text-2xl">🔥</span>
-          <span className="text-lg font-bold">GasilApp</span>
-        </div>
-
-        {navStyle === 'icons' ? <NavIcons /> : <NavList />}
-
-        <div className="border-t border-white/10 p-4">
-          <p className="text-sm font-medium">
-            {user?.firstName} {user?.lastName}
-          </p>
-          <p className="mb-3 text-xs text-gray-400">
-            {user?.roles.map((r) => ROLE_LABELS[r]).join(', ')}
-          </p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setTourOpen(true)}
-              className="text-xs text-gray-400 hover:text-white"
-            >
-              ❓ Vodič
-            </button>
-            <span className="text-gray-600">·</span>
-            <button
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
-              className="text-xs text-gray-400 underline hover:text-white"
-            >
-              Odjava
-            </button>
-          </div>
-        </div>
+      {/* Stranski meni — samo na širših zaslonih */}
+      <aside className="hidden w-60 flex-col bg-[#2D2D2D] text-white md:flex">
+        <SidebarContent onOpenTour={openTour} />
       </aside>
+
+      {/* Predal (drawer) — meni na telefonu */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setDrawerOpen(false)}
+            aria-hidden
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[#2D2D2D] pt-[env(safe-area-inset-top)] text-white shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🔥</span>
+                <span className="text-lg font-bold">GasilApp</span>
+              </div>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="rounded-lg p-2 text-2xl leading-none text-gray-300 hover:bg-white/10"
+                aria-label="Zapri meni"
+              >
+                ×
+              </button>
+            </div>
+            <SidebarContent onOpenTour={openTour} showLogo={false} />
+          </aside>
+        </div>
+      )}
 
       <OnboardingTour
         open={tourOpen}
@@ -153,17 +211,40 @@ export function AppLayout() {
       />
 
       {/* Vsebina */}
-      <main className="flex-1 p-8">
-        {!isTopLevel && (
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Zgornja vrstica — samo na telefonu */}
+        <header className="sticky top-0 z-30 flex items-center gap-3 bg-[#2D2D2D] px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] text-white md:hidden">
           <button
-            onClick={() => navigate(-1)}
-            className="mb-4 flex items-center gap-1.5 text-sm text-gray-600 hover:text-primary"
+            onClick={() => setDrawerOpen(true)}
+            className="rounded-lg p-2 hover:bg-white/10"
+            aria-label="Odpri meni"
           >
-            <span aria-hidden>←</span> Nazaj
+            <span className="block h-0.5 w-5 bg-white" />
+            <span className="mt-1 block h-0.5 w-5 bg-white" />
+            <span className="mt-1 block h-0.5 w-5 bg-white" />
           </button>
-        )}
-        <Outlet />
-      </main>
+          <span className="text-base font-bold">
+            {navItems.find(
+              (i) =>
+                i.to === location.pathname ||
+                (i.to !== '/' && location.pathname.startsWith(i.to)),
+            )?.label ?? 'GasilApp'}
+          </span>
+        </header>
+
+        <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-8">
+          <NotificationsBanner />
+          {!isTopLevel && (
+            <button
+              onClick={() => navigate(-1)}
+              className="mb-4 flex items-center gap-1.5 text-sm text-gray-600 hover:text-primary"
+            >
+              <span aria-hidden>←</span> Nazaj
+            </button>
+          )}
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
