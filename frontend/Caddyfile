@@ -10,6 +10,8 @@
 
 	# Beta prenos Android APK (test pri uporabnikih pred Google Play).
 	# Datoteke iz host mape /downloads (glej docker-compose.prod.yml).
+	# Stare različice beta strani so imele relativno povezavo, ki je padla na koren.
+	redir /gasilapp.apk /beta/gasilapp.apk permanent
 	handle_path /beta* {
 		root * /downloads
 		@apk path *.apk
@@ -17,6 +19,9 @@
 			Content-Type application/vnd.android.package-archive
 			Content-Disposition "attachment; filename=gasilapp.apk"
 		}
+		# Beta stran se ne sme predpomniti — povezava/verzija se spreminjata.
+		@html not path *.apk
+		header @html Cache-Control "no-cache"
 		file_server
 	}
 
