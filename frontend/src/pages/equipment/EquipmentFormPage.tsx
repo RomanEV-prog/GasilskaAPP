@@ -25,6 +25,7 @@ const schema = z.object({
   condition: z.string(),
   lastInspection: z.string(),
   nextInspection: z.string(),
+  expiryDate: z.string(),
   notes: z.string(),
 });
 
@@ -65,6 +66,7 @@ export function EquipmentFormPage() {
       condition: 'good',
       lastInspection: '',
       nextInspection: '',
+      expiryDate: '',
       notes: '',
     },
   });
@@ -80,6 +82,7 @@ export function EquipmentFormPage() {
         condition: existing.condition,
         lastInspection: existing.lastInspection ?? '',
         nextInspection: existing.nextInspection ?? '',
+        expiryDate: existing.expiryDate ?? '',
         notes: existing.notes ?? '',
       });
     }
@@ -96,6 +99,7 @@ export function EquipmentFormPage() {
         condition: data.condition as Equipment['condition'],
         lastInspection: data.lastInspection || undefined,
         nextInspection: data.nextInspection || undefined,
+        expiryDate: data.expiryDate || undefined,
         notes: data.notes || undefined,
       };
       return isEdit
@@ -186,6 +190,11 @@ export function EquipmentFormPage() {
               label="Naslednji pregled"
               type="date"
               {...register('nextInspection')}
+            />
+            <Input
+              label="Rok veljave"
+              type="date"
+              {...register('expiryDate')}
             />
           </div>
           <label className="mt-4 block">

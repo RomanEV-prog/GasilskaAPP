@@ -28,7 +28,6 @@ CREATE TYPE availability_status AS ENUM ('available','at_home','at_work','on_lea
 CREATE TYPE system_role AS ENUM ('super_admin','org_admin','president','commander','deputy_commander','secretary','treasurer','youth_mentor','chief_machinist','toolkeeper','board_member','supervisory_board_member','assistant_breathing_apparatus','assistant_communications','assistant_first_aid','member');
 CREATE TYPE event_type AS ENUM ('drill','meeting','competition','intervention','cleanup','celebration','assembly','other');
 CREATE TYPE rsvp_status AS ENUM ('attending','not_attending','maybe','late');
-CREATE TYPE vehicle_type AS ENUM ('gvc','gvgp','ac','pv','van','other');
 CREATE TYPE equipment_condition AS ENUM ('excellent','good','fair','poor','out_of_service');
 CREATE TYPE notification_target AS ENUM ('all','operative','youth','leadership','specific');
 
@@ -51,6 +50,7 @@ CREATE TABLE users (
   joined_at             DATE,
   is_active             BOOLEAN DEFAULT true,
   availability          availability_status DEFAULT 'available',
+  spin_notifications    BOOLEAN NOT NULL DEFAULT true,
   fcm_token             VARCHAR(500),
   last_login_at         TIMESTAMPTZ,
   email_verified_at     TIMESTAMPTZ,
@@ -125,7 +125,8 @@ CREATE TABLE vehicles (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id       UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name                  VARCHAR(255) NOT NULL,
-  vehicle_type          vehicle_type NOT NULL,
+  -- Oznaka po tipizaciji GZS (GVC-1, GVV-2, PV-1 ...) ali stara vrednost/other.
+  vehicle_type          VARCHAR(50) NOT NULL,
   license_plate         VARCHAR(20),
   vin                   VARCHAR(50),
   year                  INTEGER,
@@ -159,6 +160,7 @@ CREATE TABLE equipment (
   condition           equipment_condition DEFAULT 'good',
   last_inspection     DATE,
   next_inspection     DATE,
+  expiry_date         DATE,           -- rok veljave/trajanja (zaščitna oprema)
   notes               TEXT,
   qr_code             VARCHAR(255) UNIQUE,
   is_active           BOOLEAN DEFAULT true,

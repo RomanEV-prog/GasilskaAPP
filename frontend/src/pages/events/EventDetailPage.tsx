@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { sl } from 'date-fns/locale';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../../api/client';
 import { eventsApi } from '../../api/events.api';
 import { usersApi } from '../../api/users.api';
@@ -45,6 +45,7 @@ const rsvpLabel: Record<RsvpStatus, string> = {
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { isLeadership } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState('');
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
@@ -87,6 +88,15 @@ export function EventDetailPage() {
   const cancelMutation = useMutation({
     mutationFn: () => eventsApi.cancel(id!),
     onSuccess: invalidate,
+    onError: (err) => setActionError(errorMessage(err)),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => eventsApi.remove(id!),
+    onSuccess: () => {
+      invalidate();
+      navigate('/events');
+    },
     onError: (err) => setActionError(errorMessage(err)),
   });
 
@@ -297,23 +307,47 @@ export function EventDetailPage() {
         )}
 
         {/* Akcije vodstva */}
-        {isLeadership && !event.isCancelled && (
+        {isLeadership && (
           <div className="flex gap-3">
-            <Link to={`/events/${event.id}/edit`}>
-              <Button variant="secondary">Uredi</Button>
-            </Link>
-            <Button
-              variant="danger"
-              onClick={() => {
-                if (confirm('Res želiš odpovedati dogodek?')) {
-                  setActionError('');
-                  cancelMutation.mutate();
-                }
-              }}
-              disabled={cancelMutation.isPending}
-            >
-              Odpovej dogodek
-            </Button>
+            {!event.isCancelled && (
+              <>
+                <Link to={`/events/${event.id}/edit`}>
+                  <Button variant="secondary">Uredi</Button>
+                </Link>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    if (confirm('Res želiš odpovedati dogodek?')) {
+                      setActionError('');
+                      cancelMutation.mutate();
+                    }
+                  }}
+                  disabled={cancelMutation.isPending}
+                >
+                  Odpovej dogodek
+                </Button>
+              </>
+            )}
+            {/* Brisanje — samo pretekli ali odpovedani dogodki (zrcali backend). */}
+            {(event.isCancelled ||
+              new Date(event.endsAt ?? event.startsAt) < new Date()) && (
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (
+                    confirm(
+                      'Res želiš trajno izbrisati dogodek? Izbrišejo se tudi odzivi in evidenca prisotnosti.',
+                    )
+                  ) {
+                    setActionError('');
+                    deleteMutation.mutate();
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                Izbriši dogodek
+              </Button>
+            )}
           </div>
         )}
       </div>

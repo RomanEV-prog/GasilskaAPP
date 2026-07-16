@@ -124,6 +124,7 @@ export class EquipmentService {
       condition: equipment.condition,
       lastInspection: equipment.lastInspection,
       nextInspection: equipment.nextInspection,
+      expiryDate: equipment.expiryDate,
       notes: equipment.notes,
       qrCode: equipment.qrCode,
       isActive: equipment.isActive,
@@ -140,6 +141,7 @@ export class EquipmentService {
   ): Promise<Equipment[]> {
     return this.equipmentRepo
       .createQueryBuilder('equipment')
+      .leftJoinAndSelect('equipment.vehicle', 'vehicle')
       .where('equipment.organizationId = :organizationId', { organizationId })
       .andWhere('equipment.isActive = true')
       .andWhere('equipment.next_inspection IS NOT NULL')
@@ -147,6 +149,19 @@ export class EquipmentService {
         days,
       })
       .orderBy('equipment.next_inspection', 'ASC')
+      .getMany();
+  }
+
+  /** Oprema z rokom veljave v naslednjih N dneh — za opomnike. */
+  async findExpiring(organizationId: string, days = 30): Promise<Equipment[]> {
+    return this.equipmentRepo
+      .createQueryBuilder('equipment')
+      .leftJoinAndSelect('equipment.vehicle', 'vehicle')
+      .where('equipment.organizationId = :organizationId', { organizationId })
+      .andWhere('equipment.isActive = true')
+      .andWhere('equipment.expiry_date IS NOT NULL')
+      .andWhere('equipment.expiry_date <= CURRENT_DATE + :days::int', { days })
+      .orderBy('equipment.expiry_date', 'ASC')
       .getMany();
   }
 

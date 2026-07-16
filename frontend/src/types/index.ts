@@ -46,7 +46,8 @@ export type EventType =
 
 export type RsvpStatus = 'attending' | 'not_attending' | 'maybe' | 'late';
 
-export type VehicleType = 'gvc' | 'gvgp' | 'ac' | 'pv' | 'van' | 'other';
+/** Oznaka vozila po tipizaciji GZS (GVC-1, PV-1 ...) ali stara vrednost. */
+export type VehicleType = string;
 
 export interface AuthUser {
   id: string;
@@ -82,6 +83,7 @@ export interface User {
   joinedAt?: string;
   isActive: boolean;
   availability: AvailabilityStatus;
+  spinNotifications: boolean;
   lastLoginAt?: string;
   roles?: SystemRole[];
   createdAt: string;
@@ -234,6 +236,7 @@ export interface Equipment {
   condition: EquipmentCondition;
   lastInspection?: string;
   nextInspection?: string;
+  expiryDate?: string;
   notes?: string;
   qrCode?: string;
   isActive: boolean;
@@ -334,14 +337,139 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   other: 'Drugo',
 };
 
-export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
-  gvc: 'GVC — gasilsko vozilo s cisterno',
-  gvgp: 'GVGP — vozilo za gozdne požare',
-  ac: 'AC — avtocisterna',
-  pv: 'PV — poveljniško vozilo',
-  van: 'Kombi',
+/**
+ * Oznake vozil po tipizaciji GZS (tabela "Tipizacija vozil"), združene po
+ * vrsti vozila — za <optgroup> v obrazcu.
+ */
+export const VEHICLE_OZNAKA_GROUPS: {
+  group: string;
+  oznake: { value: string; label: string }[];
+}[] = [
+  {
+    group: 'Poveljniška vozila',
+    oznake: [
+      { value: 'PV-1', label: 'PV-1 — manjše poveljniško vozilo' },
+      { value: 'PV-2', label: 'PV-2 — večje poveljniško vozilo' },
+      { value: 'GVZ-1', label: 'GVZ-1 — gasilsko vozilo za zveze' },
+      { value: 'GVRZ', label: 'GVRZ — gasilsko vozilo za radijske zveze' },
+    ],
+  },
+  {
+    group: 'Gasilska vozila',
+    oznake: [
+      { value: 'GV-1', label: 'GV-1 — manjše gasilsko vozilo' },
+      { value: 'GVV-1', label: 'GVV-1 — manjše gasilsko vozilo z vodo' },
+      { value: 'GVV-2', label: 'GVV-2 — večje gasilsko vozilo z vodo' },
+    ],
+  },
+  {
+    group: 'Gasilska vozila s cisterno',
+    oznake: [
+      { value: 'GVC-1', label: 'GVC-1 — gasilsko vozilo s cisterno' },
+      { value: 'GVC-2', label: 'GVC-2 — gasilsko vozilo s cisterno' },
+      { value: 'GVC-3', label: 'GVC-3 — gasilsko vozilo s cisterno' },
+      { value: 'GVC-4', label: 'GVC-4 — gasilsko vozilo s cisterno' },
+    ],
+  },
+  {
+    group: 'Gasilska vozila s prahom',
+    oznake: [
+      { value: 'GVS-1000', label: 'GVS-1000 — gasilsko vozilo s prahom' },
+      { value: 'GVS-2000', label: 'GVS-2000 — gasilsko vozilo s prahom' },
+      { value: 'GVSV', label: 'GVSV — gasilsko vozilo s prahom in vodo' },
+    ],
+  },
+  {
+    group: 'Vozila za gašenje in reševanje z višin',
+    oznake: [
+      { value: 'ZD', label: 'ZD — gasilsko zgibno dvigalo' },
+      { value: 'TD', label: 'TD — gasilsko teleskopsko dvigalo' },
+      { value: 'ALK', label: 'ALK — gasilska avtolestev s košaro' },
+      { value: 'GVCZD-1', label: 'GVCZD-1 — vozilo s cisterno in zgibnim dvigalom' },
+      { value: 'GVCZD-2', label: 'GVCZD-2 — vozilo s cisterno in zgibnim dvigalom' },
+      { value: 'GVCTD-1', label: 'GVCTD-1 — vozilo s cisterno in teleskopskim dvigalom' },
+      { value: 'GVCTD-2', label: 'GVCTD-2 — vozilo s cisterno in teleskopskim dvigalom' },
+      { value: 'GVCALK-1', label: 'GVCALK-1 — vozilo s cisterno in avtolestvijo' },
+      { value: 'GVCALK-2', label: 'GVCALK-2 — vozilo s cisterno in avtolestvijo' },
+    ],
+  },
+  {
+    group: 'Tehnična in orodna vozila',
+    oznake: [
+      { value: 'HTRV', label: 'HTRV — hitro tehnično reševalno vozilo' },
+      { value: 'TRV', label: 'TRV — tehnično reševalno vozilo' },
+      { value: 'OVNS', label: 'OVNS — orodno vozilo za nevarne snovi' },
+      { value: 'OVRV', label: 'OVRV — orodno vozilo za reševanje na vodi' },
+    ],
+  },
+  {
+    group: 'Gasilska vozila za gozdne požare',
+    oznake: [
+      { value: 'GVGP-1', label: 'GVGP-1 — manjše vozilo za gozdne požare' },
+      { value: 'GVGP-2', label: 'GVGP-2 — večje vozilo za gozdne požare' },
+      { value: 'GCGP-1', label: 'GCGP-1 — cisterna za gozdne požare (mala)' },
+      { value: 'GCGP-2', label: 'GCGP-2 — cisterna za gozdne požare (srednja)' },
+      { value: 'GCGP-3', label: 'GCGP-3 — cisterna za gozdne požare (večja)' },
+    ],
+  },
+  {
+    group: 'Gasilska logistična vozila',
+    oznake: [
+      { value: 'GVM-1', label: 'GVM-1 — vozilo za prevoz moštva' },
+      { value: 'GVM-2', label: 'GVM-2 — večje vozilo za prevoz moštva' },
+      { value: 'VGV', label: 'VGV — večnamensko gasilsko vozilo' },
+      { value: 'GVL-1', label: 'GVL-1 — manjše vozilo za logistiko' },
+      { value: 'GVL-2', label: 'GVL-2 — večje vozilo za logistiko' },
+      { value: 'GVT', label: 'GVT — gasilsko tovorno vozilo' },
+      { value: 'GVK', label: 'GVK — vozilo za prevoz kontejnerjev' },
+      { value: 'GVO', label: 'GVO — gasilsko vozilo za opazovanje' },
+    ],
+  },
+  {
+    group: 'Gasilski čolni',
+    oznake: [
+      { value: 'GRČ-1', label: 'GRČ-1 — manjši gasilski reševalni čoln' },
+      { value: 'GRČ-2', label: 'GRČ-2 — srednji gasilski reševalni čoln' },
+      { value: 'GRČ-3', label: 'GRČ-3 — večnamenski gasilski čoln' },
+    ],
+  },
+  {
+    group: 'Gasilski priklopniki',
+    oznake: [
+      { value: 'PMB', label: 'PMB — priklopnik s prenosno motorno brizgalno' },
+      { value: 'PR', label: 'PR — priklopnik za razsvetljavo' },
+      { value: 'PŠ', label: 'PŠ — priklopnik za gasilni prah' },
+      { value: 'PČ', label: 'PČ — priklopnik za reševalni čoln' },
+      { value: 'PL', label: 'PL — priklopnik za logistiko' },
+      { value: 'PVT', label: 'PVT — priklopnik z visokotlačno črpalko' },
+    ],
+  },
+  {
+    group: 'Drugo',
+    oznake: [{ value: 'other', label: 'Drugo' }],
+  },
+];
+
+/** Stare vrednosti (pred tipizacijo) — obstoječi zapisi jih še imajo. */
+const LEGACY_VEHICLE_TYPE_LABELS: Record<string, string> = {
+  gvc: 'GVC — gasilsko vozilo s cisterno (staro)',
+  gvgp: 'GVGP — vozilo za gozdne požare (staro)',
+  ac: 'AC — avtocisterna (staro)',
+  pv: 'PV — poveljniško vozilo (staro)',
+  van: 'Kombi (staro)',
   other: 'Drugo',
 };
+
+const OZNAKA_LABELS: Record<string, string> = Object.fromEntries(
+  VEHICLE_OZNAKA_GROUPS.flatMap((g) =>
+    g.oznake.map((o) => [o.value, o.label]),
+  ),
+);
+
+/** Prikazna oznaka vozila — pozna nove oznake in stare vrednosti. */
+export function vehicleTypeLabel(type: string): string {
+  return OZNAKA_LABELS[type] ?? LEGACY_VEHICLE_TYPE_LABELS[type] ?? type;
+}
 
 export const ROLE_LABELS: Record<SystemRole, string> = {
   super_admin: 'Super admin',

@@ -292,6 +292,18 @@ export class UsersService {
     return this.sanitize(user);
   }
 
+  /** Član si sam vklopi/izklopi prejemanje SPIN obvestil. */
+  async updateSpinNotifications(
+    organizationId: string,
+    userId: string,
+    enabled: boolean,
+  ): Promise<SafeUser> {
+    const user = await this.findEntity(organizationId, userId);
+    user.spinNotifications = enabled;
+    await this.usersRepo.save(user);
+    return this.sanitize(user);
+  }
+
   /** Član si sam spremeni geslo (zahteva trenutno geslo). */
   async changePassword(
     organizationId: string,

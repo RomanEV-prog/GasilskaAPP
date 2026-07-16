@@ -72,6 +72,7 @@ export class RemindersService {
       try {
         await this.checkVehicles(org.id);
         await this.checkEquipment(org.id);
+        await this.checkEquipmentExpiry(org.id);
         await this.checkTrainings(org.id);
       } catch (err) {
         this.logger.error(
@@ -150,6 +151,43 @@ export class RemindersService {
         EQUIPMENT_REMINDER_ROLES,
         {
           title: `🧰 Pregled opreme čez ${days} dni (${due.length})`,
+          body: lines.join('\n'),
+          type: 'equipment_reminder',
+        },
+      );
+    }
+  }
+
+  /**
+   * Rok veljave opreme (zaščitna oprema ima rok trajanja): opomnik na točno
+   * 7 in 3 dni pred iztekom → isti prejemniki kot pregledi opreme.
+   */
+  private async checkEquipmentExpiry(organizationId: string): Promise<void> {
+    const maxDays = Math.max(...DEADLINE_REMINDER_DAYS);
+    const equipment = await this.equipmentService.findExpiring(
+      organizationId,
+      maxDays,
+    );
+
+    for (const days of DEADLINE_REMINDER_DAYS) {
+      const onDate = isoInDays(days);
+      const due = equipment.filter((e) => e.expiryDate === onDate);
+      if (due.length === 0) continue;
+
+      const lines = due.map((e) =>
+        [
+          e.name,
+          e.category && `(${e.category})`,
+          e.vehicle?.name && `— vozilo ${e.vehicle.name}`,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+      await this.notificationsService.createForRoles(
+        organizationId,
+        EQUIPMENT_REMINDER_ROLES,
+        {
+          title: `⏳ Rok veljave opreme poteče čez ${days} dni (${due.length})`,
           body: lines.join('\n'),
           type: 'equipment_reminder',
         },

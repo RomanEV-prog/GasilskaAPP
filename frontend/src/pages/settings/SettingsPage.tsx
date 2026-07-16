@@ -2,6 +2,7 @@ import { Card } from '../../components/ui';
 import { ChangePasswordCard } from './ChangePasswordCard';
 import { useUi, type NavStyle } from '../../stores/ui.store';
 import { OrganizationSettings } from './OrganizationSettings';
+import { SpinNotificationsCard } from './SpinNotificationsCard';
 
 /** Miniaturni predogled izgleda navigacije. */
 function LayoutPreview({ style }: { style: NavStyle }) {
@@ -88,6 +89,10 @@ export function SettingsPage() {
           Nastavitev se shrani v brskalnik in velja takoj.
         </p>
       </Card>
+
+      <div className="mt-6">
+        <SpinNotificationsCard />
+      </div>
 
       <div className="mt-6">
         <ChangePasswordCard />

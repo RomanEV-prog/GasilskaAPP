@@ -60,6 +60,10 @@ export class Equipment {
   @Column({ name: 'next_inspection', type: 'date', nullable: true })
   nextInspection?: string;
 
+  /** Rok veljave/trajanja (zaščitna oprema ima rok uporabe). */
+  @Column({ name: 'expiry_date', type: 'date', nullable: true })
+  expiryDate?: string;
+
   @Column({ type: 'text', nullable: true })
   notes?: string;
 

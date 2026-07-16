@@ -21,6 +21,7 @@ import {
   CreateUserDto,
   QueryUsersDto,
   UpdateAvailabilityDto,
+  UpdateSpinNotificationsDto,
   UpdateUserDto,
 } from './dto/user.dto';
 import { UsersService } from './users.service';
@@ -50,6 +51,29 @@ export class UsersController {
   @ApiOperation({ summary: 'Dosegljivi operativci' })
   availableOperatives(@CurrentUser('organizationId') orgId: string) {
     return this.usersService.availableOperatives(orgId);
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Moj profil' })
+  findMe(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.usersService.findOne(orgId, userId);
+  }
+
+  @Patch('me/spin-notifications')
+  @ApiOperation({ summary: 'Vklopi/izklopi moja SPIN obvestila' })
+  updateMySpinNotifications(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') userId: string,
+    @Body() dto: UpdateSpinNotificationsDto,
+  ) {
+    return this.usersService.updateSpinNotifications(
+      orgId,
+      userId,
+      dto.spinNotifications,
+    );
   }
 
   @Patch('me/availability')

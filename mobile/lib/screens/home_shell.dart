@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../api/users_api.dart';
 import '../providers/auth_provider.dart';
 import '../services/fcm_service.dart';
 import '../widgets/change_password_dialog.dart';
@@ -17,6 +18,59 @@ class HomeShell extends StatefulWidget {
 
   @override
   State<HomeShell> createState() => _HomeShellState();
+}
+
+/// Dialog z osebno nastavitvijo prejemanja SPIN obvestil.
+Future<void> _showSpinSettingsDialog(BuildContext context) async {
+  final api = UsersApi();
+  await showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('SPIN obvestila'),
+      content: FutureBuilder<Map<String, dynamic>>(
+        future: api.me(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const SizedBox(
+              height: 60,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          var enabled = snapshot.data!['spinNotifications'] as bool? ?? true;
+          return StatefulBuilder(
+            builder: (context, setState) => SwitchListTile(
+              title: const Text('Prejemaj obvestila o intervencijah'),
+              subtitle:
+                  const Text('SPIN obvestila v občinah tvojega društva'),
+              contentPadding: EdgeInsets.zero,
+              value: enabled,
+              onChanged: (value) async {
+                setState(() => enabled = value);
+                try {
+                  await api.updateSpinNotifications(value);
+                } catch (_) {
+                  setState(() => enabled = !value);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Nastavitve ni bilo mogoče shraniti.'),
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Zapri'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _HomeShellState extends State<HomeShell> {
@@ -54,11 +108,21 @@ class _HomeShellState extends State<HomeShell> {
             onSelected: (value) {
               if (value == 'password') {
                 showChangePasswordDialog(context);
+              } else if (value == 'spin') {
+                _showSpinSettingsDialog(context);
               } else if (value == 'logout') {
                 context.read<AuthProvider>().logout();
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'spin',
+                child: ListTile(
+                  leading: Icon(Icons.local_fire_department_outlined),
+                  title: Text('SPIN obvestila'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               PopupMenuItem(
                 value: 'password',
                 child: ListTile(

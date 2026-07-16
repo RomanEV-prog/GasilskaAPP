@@ -176,6 +176,7 @@ export function EquipmentPage() {
                 <th className="px-4 py-3">Lokacija</th>
                 <th className="px-4 py-3">Stanje</th>
                 <th className="px-4 py-3">Naslednji pregled</th>
+                <th className="px-4 py-3">Rok veljave</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -205,6 +206,7 @@ export function EquipmentPage() {
                   <td className="px-4 py-3">
                     {inspectionBadge(e.nextInspection)}
                   </td>
+                  <td className="px-4 py-3">{inspectionBadge(e.expiryDate)}</td>
                   <td className="px-4 py-3 text-right">
                     {canManage && (
                       <Link

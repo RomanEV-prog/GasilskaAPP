@@ -162,6 +162,23 @@ export class EventsService {
     return saved;
   }
 
+  /**
+   * Trajno izbriše dogodek (skupaj z odzivi in prisotnostjo — DB kaskada).
+   * Dovoljeno samo za pretekle ali odpovedane dogodke; prihodnje je treba
+   * najprej odpovedati, da člani dobijo obvestilo.
+   */
+  async remove(organizationId: string, id: string): Promise<{ message: string }> {
+    const event = await this.findOne(organizationId, id);
+    const ended = event.endsAt ?? event.startsAt;
+    if (!event.isCancelled && ended > new Date()) {
+      throw new BadRequestException(
+        'Izbrišeš lahko samo pretekle ali odpovedane dogodke.',
+      );
+    }
+    await this.eventsRepo.remove(event);
+    return { message: 'Dogodek je bil izbrisan.' };
+  }
+
   /** Potrdi/posodobi udeležbo prijavljenega uporabnika (upsert). */
   async rsvp(
     organizationId: string,

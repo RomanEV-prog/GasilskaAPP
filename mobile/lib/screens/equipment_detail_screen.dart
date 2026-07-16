@@ -81,6 +81,14 @@ class EquipmentDetailScreen extends StatelessWidget {
             highlight: e.nextInspection != null &&
                 e.nextInspection!.isBefore(DateTime.now()),
           ),
+          _row(
+            context,
+            Icons.hourglass_bottom_outlined,
+            'Rok veljave',
+            e.expiryDate != null ? df.format(e.expiryDate!) : null,
+            highlight:
+                e.expiryDate != null && e.expiryDate!.isBefore(DateTime.now()),
+          ),
           _row(context, Icons.qr_code, 'QR koda', e.qrCode),
           if (e.notes != null && e.notes!.isNotEmpty) ...[
             const Divider(height: 32),

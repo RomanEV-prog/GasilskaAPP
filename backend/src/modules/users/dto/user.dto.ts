@@ -97,6 +97,12 @@ export class UpdateAvailabilityDto {
   availability: AvailabilityStatus;
 }
 
+export class UpdateSpinNotificationsDto {
+  @ApiProperty({ example: false, description: 'Prejemanje SPIN obvestil' })
+  @IsBoolean({ message: 'Neveljavna vrednost nastavitve.' })
+  spinNotifications: boolean;
+}
+
 export class QueryUsersDto {
   @ApiPropertyOptional({ enum: MembershipStatus })
   @IsOptional()

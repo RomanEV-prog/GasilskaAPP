@@ -55,6 +55,14 @@ export class CreateEquipmentDto {
   @IsDateString({}, { message: 'Neveljaven datum naslednjega pregleda.' })
   nextInspection?: string;
 
+  @ApiPropertyOptional({
+    example: '2030-06-01',
+    description: 'Rok veljave/trajanja opreme',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'Neveljaven rok veljave.' })
+  expiryDate?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

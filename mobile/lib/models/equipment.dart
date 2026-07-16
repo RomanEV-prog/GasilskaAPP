@@ -15,6 +15,7 @@ class Equipment {
   final String condition;
   final DateTime? lastInspection;
   final DateTime? nextInspection;
+  final DateTime? expiryDate;
   final String? notes;
   final String? qrCode;
   final bool isActive;
@@ -29,6 +30,7 @@ class Equipment {
     required this.condition,
     this.lastInspection,
     this.nextInspection,
+    this.expiryDate,
     this.notes,
     this.qrCode,
     required this.isActive,
@@ -50,6 +52,7 @@ class Equipment {
         condition: json['condition'] as String? ?? 'good',
         lastInspection: _date(json['lastInspection']),
         nextInspection: _date(json['nextInspection']),
+        expiryDate: _date(json['expiryDate']),
         notes: json['notes'] as String?,
         qrCode: json['qrCode'] as String?,
         isActive: json['isActive'] as bool? ?? true,

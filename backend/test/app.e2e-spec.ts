@@ -374,6 +374,156 @@ describe('GasilApp E2E', () => {
     });
   });
 
+  describe('Feedback testerjev (2026-07-16)', () => {
+    it('oprema sprejme rok veljave (expiryDate) in ga vrne', async () => {
+      const res = await request(http)
+        .post('/api/v1/equipment')
+        .set(auth(tokenA))
+        .send({
+          name: 'Zaščitna obleka',
+          condition: 'good',
+          expiryDate: '2030-06-01',
+        })
+        .expect(201);
+      expect(res.body.data.expiryDate).toBe('2030-06-01');
+    });
+
+    it('vozilo sprejme oznako po tipizaciji (GVC-1)', async () => {
+      const res = await request(http)
+        .post('/api/v1/vehicles')
+        .set(auth(tokenA))
+        .send({ name: 'GVC 16/25', vehicleType: 'GVC-1' })
+        .expect(201);
+      expect(res.body.data.vehicleType).toBe('GVC-1');
+    });
+
+    it('vozilo sprejme oznako s šumniki (GRČ-1) in staro vrednost (gvc)', async () => {
+      await request(http)
+        .post('/api/v1/vehicles')
+        .set(auth(tokenA))
+        .send({ name: 'Čoln', vehicleType: 'GRČ-1' })
+        .expect(201);
+      await request(http)
+        .post('/api/v1/vehicles')
+        .set(auth(tokenA))
+        .send({ name: 'Staro vozilo', vehicleType: 'gvc' })
+        .expect(201);
+    });
+
+    it('zavrne neveljavno oznako vozila (400)', async () => {
+      await request(http)
+        .post('/api/v1/vehicles')
+        .set(auth(tokenA))
+        .send({ name: 'X', vehicleType: 'NE-OBSTAJA' })
+        .expect(400);
+    });
+
+    it('GET /users/me vrne moj profil s spinNotifications=true', async () => {
+      const res = await request(http)
+        .get('/api/v1/users/me')
+        .set(auth(memberToken))
+        .expect(200);
+      expect(res.body.data.spinNotifications).toBe(true);
+    });
+
+    it('član si izklopi SPIN obvestila', async () => {
+      const res = await request(http)
+        .patch('/api/v1/users/me/spin-notifications')
+        .set(auth(memberToken))
+        .send({ spinNotifications: false })
+        .expect(200);
+      expect(res.body.data.spinNotifications).toBe(false);
+      const me = await request(http)
+        .get('/api/v1/users/me')
+        .set(auth(memberToken))
+        .expect(200);
+      expect(me.body.data.spinNotifications).toBe(false);
+    });
+
+    it('prihodnjega neodpovedanega dogodka ni mogoče izbrisati (400)', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Prihodnja vaja',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+          sendNotification: false,
+        })
+        .expect(201);
+      const eventId = res.body.data.id;
+      await request(http)
+        .delete(`/api/v1/events/${eventId}`)
+        .set(auth(tokenA))
+        .expect(400);
+
+      // Po odpovedi je brisanje dovoljeno.
+      await request(http)
+        .patch(`/api/v1/events/${eventId}/cancel`)
+        .set(auth(tokenA))
+        .expect(200);
+      await request(http)
+        .delete(`/api/v1/events/${eventId}`)
+        .set(auth(tokenA))
+        .expect(200);
+      await request(http)
+        .get(`/api/v1/events/${eventId}`)
+        .set(auth(tokenA))
+        .expect(404);
+    });
+
+    it('pretekli dogodek je mogoče izbrisati', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Pretekla vaja',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
+          sendNotification: false,
+        })
+        .expect(201);
+      await request(http)
+        .delete(`/api/v1/events/${res.body.data.id}`)
+        .set(auth(tokenA))
+        .expect(200);
+    });
+
+    it('član ne more izbrisati dogodka (403)', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Pretekli sestanek',
+          eventType: 'meeting',
+          startsAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+          sendNotification: false,
+        })
+        .expect(201);
+      await request(http)
+        .delete(`/api/v1/events/${res.body.data.id}`)
+        .set(auth(memberToken))
+        .expect(403);
+    });
+
+    it('B ne more izbrisati dogodka društva A (404 — izolacija)', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Dogodek A',
+          eventType: 'meeting',
+          startsAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+          sendNotification: false,
+        })
+        .expect(201);
+      await request(http)
+        .delete(`/api/v1/events/${res.body.data.id}`)
+        .set(auth(tokenB))
+        .expect(404);
+    });
+  });
+
   describe('SPIN integracija', () => {
     it('GET /spin/obcine je javen in vrne statični seznam občin', async () => {
       const res = await request(http).get('/api/v1/spin/obcine').expect(200);

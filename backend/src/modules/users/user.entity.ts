@@ -86,6 +86,10 @@ export class User {
   })
   availability: AvailabilityStatus;
 
+  /** Ali uporabnik prejema SPIN push obvestila (predlog testerjev). */
+  @Column({ name: 'spin_notifications', default: true })
+  spinNotifications: boolean;
+
   /** Nikoli ne serializiraj v API odgovorih. */
   @Column({
     name: 'fcm_token',

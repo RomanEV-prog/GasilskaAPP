@@ -7,6 +7,11 @@ export const usersApi = {
     isActive?: string;
   }): Promise<User[]> => api.get('/users', { params }),
 
+  me: (): Promise<User> => api.get('/users/me'),
+
+  updateSpinNotifications: (enabled: boolean): Promise<User> =>
+    api.patch('/users/me/spin-notifications', { spinNotifications: enabled }),
+
   get: (id: string): Promise<User> => api.get(`/users/${id}`),
 
   create: (data: Partial<User> & { password: string }): Promise<User> =>

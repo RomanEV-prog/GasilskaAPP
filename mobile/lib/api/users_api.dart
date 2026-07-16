@@ -10,6 +10,18 @@ class UsersApi {
       'availability': availability,
     });
   }
+
+  /// Moj profil — vključno z nastavitvijo SPIN obvestil.
+  Future<Map<String, dynamic>> me() async {
+    return await _client.get('/users/me') as Map<String, dynamic>;
+  }
+
+  /// Vklopi/izklopi prejemanje SPIN obvestil.
+  Future<void> updateSpinNotifications(bool enabled) async {
+    await _client.patch('/users/me/spin-notifications', data: {
+      'spinNotifications': enabled,
+    });
+  }
 }
 
 class NotificationsApi {

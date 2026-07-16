@@ -126,6 +126,7 @@ findUpcoming(organizationId, limit?)       // za dashboard
 create(organizationId, createdBy, dto)
 update(organizationId, id, dto)
 cancel(organizationId, id)                 // is_cancelled = true
+remove(organizationId, id)                 // hard delete; samo pretekli/odpovedani
 rsvp(eventId, userId, dto)                 // upsert
 getRsvps(organizationId, eventId)
 markAttendance(organizationId, eventId, markedBy, dto)
@@ -192,6 +193,12 @@ equipment/
 - Ob kreaciji opreme se generira unikaten QR string: `GASILAPP-{org_slug}-{inventory_number}`
 - Endpoint `GET /equipment/qr/:qrCode` vrne **varna** polja opreme (avtenticiran,
   omejen na društvo skenerja in aktivno opremo — brez občutljivih podatkov vozila)
+
+### Roki
+- `next_inspection` — datum naslednjega periodičnega pregleda (IDA, vrvna tehnika ...)
+- `expiry_date` — rok veljave/trajanja (zaščitna oprema ima rok uporabe; feedback testerjev)
+- Oba roka pokrivajo opomniki 7/3 dni v `scheduler/reminders.service.ts`
+  (prejemniki: admin, glavni strojnik, orodjar, pomočnik za zaščito dihal)
 
 ---
 
@@ -337,6 +344,13 @@ imen; ujemanje teče po imenu za vsako v seznamu). Prazen seznam = brez obvešč
 Stara `spin_obcina`/`spin_obcina_id` sta zastareli (ohranjeni za migracijo —
 `docs/migrations/2026-07-10-spin-obcine.sql` prenese enojno v seznam).
 V testih (`NODE_ENV=test`) je poll izklopljen.
+
+**Osebni izklop:** vsak uporabnik si lahko SPIN obvestila izklopi
+(`users.spin_notifications`, `PATCH /users/me/spin-notifications`; stikalo v
+web Nastavitve in v mobilnem meniju računa). Izklop pomeni: brez SPIN pusha
+in SPIN obvestila se ne prikazujejo v seznamu obvestil (filter v
+`NotificationsService.resolveRecipients` + `findMine` za `type='spin'`).
+Mobilni zavihek SPIN (neposredni feed) ostane viden ne glede na nastavitev.
 
 ## 10. Common (`/common`)
 

@@ -51,11 +51,13 @@ Swagger UI: `http://localhost:4000/api/docs`
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
 | GET | `/users` | Seznam vseh članov | vsi |
+| GET | `/users/me` | Moj profil | vsi |
 | GET | `/users/:id` | Profil člana | vsi |
 | GET | `/users/availability` | Pregled razpoložljivosti | vsi |
 | GET | `/users/available-operatives` | Dosegljivi operativci | vsi |
 | POST | `/users` | Dodaj člana | admin, president, secretary |
 | PATCH | `/users/me/availability` | Moja razpoložljivost | vsi |
+| PATCH | `/users/me/spin-notifications` | Vklop/izklop mojih SPIN obvestil | vsi |
 | PATCH | `/users/:id` | Uredi člana | admin, president, secretary |
 | DELETE | `/users/:id` | Deaktiviraj člana | admin, president |
 
@@ -67,6 +69,12 @@ Swagger UI: `http://localhost:4000/api/docs`
 ```json
 { "availability": "on_leave" }
 // Vrednosti: available | at_home | at_work | on_leave | sick | unavailable
+```
+
+### PATCH `/users/me/spin-notifications`
+```json
+{ "spinNotifications": false }
+// false → uporabnik ne prejema SPIN push obvestil in jih ne vidi v seznamu obvestil
 ```
 
 ---
@@ -81,6 +89,7 @@ Swagger UI: `http://localhost:4000/api/docs`
 | POST | `/events` | Ustvari dogodek | admin, president, commander, secretary |
 | PATCH | `/events/:id` | Uredi dogodek | admin, president, commander, secretary |
 | PATCH | `/events/:id/cancel` | Odpovej dogodek | admin, president, commander |
+| DELETE | `/events/:id` | Izbriši dogodek (samo pretekle ali odpovedane) | admin, president, commander |
 | POST | `/events/:id/rsvp` | Potrdi udeležbo | vsi |
 | GET | `/events/:id/rsvps` | Poglej odzive | admin, president, commander, secretary |
 | POST | `/events/:id/attendance` | Označi prisotnost | admin, commander, president |
@@ -137,7 +146,7 @@ Swagger UI: `http://localhost:4000/api/docs`
 ```json
 {
   "name": "GVC 16/25",
-  "vehicleType": "gvc",
+  "vehicleType": "GVC-1",
   "licensePlate": "MB AB-123",
   "vin": "WBA...",
   "year": 2015,
@@ -146,7 +155,10 @@ Swagger UI: `http://localhost:4000/api/docs`
   "insuranceExpires": "2024-08-31",
   "serviceDue": "2024-03-15"
 }
-// vehicleType: gvc | gvgp | ac | pv | van | other
+// vehicleType: oznaka po tipizaciji GZS (PV-1, GVC-1..4, GVV-1/2, GVGP-1/2,
+// GVM-1/2, GRČ-1..3, PMB, PŠ ... — celoten seznam: VEHICLE_OZNAKE v
+// backend/src/modules/vehicles/vehicle.entity.ts) ali stara vrednost
+// (gvc | gvgp | ac | pv | van) ali 'other'
 ```
 
 ### GET `/vehicles/expiring?days=30`

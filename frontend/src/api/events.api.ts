@@ -20,6 +20,9 @@ export const eventsApi = {
 
   cancel: (id: string): Promise<Event> => api.patch(`/events/${id}/cancel`),
 
+  remove: (id: string): Promise<{ message: string }> =>
+    api.delete(`/events/${id}`),
+
   rsvp: (id: string, status: RsvpStatus, note?: string): Promise<unknown> =>
     api.post(`/events/${id}/rsvp`, { status, note }),
 

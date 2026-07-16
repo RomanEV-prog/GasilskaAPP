@@ -46,6 +46,11 @@ export class NotificationsService {
       .where('user.organizationId = :organizationId', { organizationId })
       .andWhere('user.isActive = true');
 
+    // SPIN obvestila prejmejo samo uporabniki, ki jih niso izklopili.
+    if (notification.type === 'spin') {
+      qb.andWhere('user.spinNotifications = true');
+    }
+
     switch (notification.target) {
       case NotificationTarget.OPERATIVE:
         qb.andWhere('user.membershipStatus = :ms', {
@@ -158,6 +163,10 @@ export class NotificationsService {
     });
 
     const mine = all.filter((n) => {
+      // Kdor je SPIN obvestila izklopil, jih ne vidi niti v seznamu.
+      if (n.type === 'spin' && !user.spinNotifications) {
+        return false;
+      }
       switch (n.target) {
         case NotificationTarget.ALL:
           return true;

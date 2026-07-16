@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -93,6 +94,16 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.eventsService.cancel(orgId, id);
+  }
+
+  @Delete(':id')
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
+  @ApiOperation({ summary: 'Izbriši dogodek (samo pretekle ali odpovedane)' })
+  remove(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.eventsService.remove(orgId, id);
   }
 
   @Post(':id/rsvp')

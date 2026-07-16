@@ -15,7 +15,11 @@ import {
   Select,
   Spinner,
 } from '../../components/ui';
-import { VEHICLE_TYPE_LABELS, type Vehicle } from '../../types';
+import {
+  VEHICLE_OZNAKA_GROUPS,
+  vehicleTypeLabel,
+  type Vehicle,
+} from '../../types';
 
 const schema = z.object({
   name: z.string().min(1, 'Vnesite naziv vozila.'),
@@ -61,7 +65,7 @@ export function VehicleFormPage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      vehicleType: 'gvc',
+      vehicleType: 'GVC-1',
       licensePlate: '',
       vin: '',
       year: '',
@@ -179,11 +183,24 @@ export function VehicleFormPage() {
               error={errors.name?.message}
               {...register('name')}
             />
-            <Select label="Tip vozila" {...register('vehicleType')}>
-              {Object.entries(VEHICLE_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
+            <Select label="Oznaka (tipizacija)" {...register('vehicleType')}>
+              {/* Stara vrednost obstoječega vozila ostane izbirna, dokler je ne zamenjaš. */}
+              {existing &&
+                !VEHICLE_OZNAKA_GROUPS.some((g) =>
+                  g.oznake.some((o) => o.value === existing.vehicleType),
+                ) && (
+                  <option value={existing.vehicleType}>
+                    {vehicleTypeLabel(existing.vehicleType)}
+                  </option>
+                )}
+              {VEHICLE_OZNAKA_GROUPS.map((g) => (
+                <optgroup key={g.group} label={g.group}>
+                  {g.oznake.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </Select>
             <Input

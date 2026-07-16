@@ -76,6 +76,7 @@ CREATE TABLE users (
   joined_at             DATE,
   is_active             BOOLEAN DEFAULT true,
   availability          availability_status DEFAULT 'available',
+  spin_notifications    BOOLEAN NOT NULL DEFAULT true,  -- osebni vklop/izklop SPIN obvestil
   fcm_token             VARCHAR(500),
   last_login_at         TIMESTAMPTZ,
   email_verified_at     TIMESTAMPTZ,
@@ -154,13 +155,15 @@ CREATE TABLE event_attendance (
 );
 
 -- ─── VEHICLES ────────────────────────────────────────────
-CREATE TYPE vehicle_type AS ENUM ('gvc','gvgp','ac','pv','van','other');
+-- vehicle_type: oznaka po tipizaciji GZS (GVC-1, GVV-2, PV-1, GRČ-1 ...)
+-- ali stara vrednost (gvc, gvgp, ac, pv, van) ali 'other'.
+-- Dovoljene vrednosti validira backend (VALID_VEHICLE_TYPES v vehicle.entity.ts).
 
 CREATE TABLE vehicles (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id       UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name                  VARCHAR(255) NOT NULL,
-  vehicle_type          vehicle_type NOT NULL,
+  vehicle_type          VARCHAR(50) NOT NULL,
   license_plate         VARCHAR(20),
   vin                   VARCHAR(50),
   year                  INTEGER,
@@ -199,6 +202,7 @@ CREATE TABLE equipment (
   condition           equipment_condition DEFAULT 'good',
   last_inspection     DATE,
   next_inspection     DATE,
+  expiry_date         DATE,           -- rok veljave/trajanja (zaščitna oprema)
   notes               TEXT,
   qr_code             VARCHAR(255) UNIQUE,
   is_active           BOOLEAN DEFAULT true,

@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
-  IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,16 +11,16 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { VehicleType } from '../vehicle.entity';
+import { VALID_VEHICLE_TYPES } from '../vehicle.entity';
 
 export class CreateVehicleDto {
   @ApiProperty({ example: 'GVC 16/25' })
   @IsString()
   name: string;
 
-  @ApiProperty({ enum: VehicleType, example: VehicleType.GVC })
-  @IsEnum(VehicleType, { message: 'Neveljaven tip vozila.' })
-  vehicleType: VehicleType;
+  @ApiProperty({ enum: VALID_VEHICLE_TYPES, example: 'GVC-1' })
+  @IsIn(VALID_VEHICLE_TYPES, { message: 'Neveljavna oznaka vozila.' })
+  vehicleType: string;
 
   @ApiPropertyOptional({ example: 'MB AB-123' })
   @IsOptional()

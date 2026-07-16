@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../../stores/auth.store';
 import {
   VEHICLE_MANAGE_ROLES,
-  VEHICLE_TYPE_LABELS,
+  vehicleTypeLabel,
   type Vehicle,
 } from '../../types';
 
@@ -53,7 +53,7 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
         )}
       </div>
       <p className="mb-3 text-sm text-gray-500">
-        {VEHICLE_TYPE_LABELS[vehicle.vehicleType]}
+        {vehicleTypeLabel(vehicle.vehicleType)}
         {vehicle.year ? ` · ${vehicle.year}` : ''}
         {vehicle.mileage ? ` · ${vehicle.mileage.toLocaleString('sl')} km` : ''}
       </p>
