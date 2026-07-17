@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -34,7 +34,7 @@ export class VehiclesController {
   }
 
   @Get('expiring')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST)
   @ApiOperation({ summary: 'Vozila s potekajočimi roki' })
   findExpiring(
     @CurrentUser('organizationId') orgId: string,
@@ -53,7 +53,7 @@ export class VehiclesController {
   }
 
   @Post()
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST)
   @ApiOperation({ summary: 'Dodaj vozilo' })
   create(
     @CurrentUser('organizationId') orgId: string,
@@ -63,7 +63,7 @@ export class VehiclesController {
   }
 
   @Patch(':id')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST)
   @ApiOperation({ summary: 'Uredi vozilo' })
   update(
     @CurrentUser('organizationId') orgId: string,
@@ -84,7 +84,7 @@ export class VehiclesController {
   }
 
   @Post(':id/drivers')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST)
   @ApiOperation({ summary: 'Dodaj voznika' })
   addDriver(
     @CurrentUser('organizationId') orgId: string,
@@ -95,7 +95,7 @@ export class VehiclesController {
   }
 
   @Delete(':id/drivers/:userId')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST)
   @ApiOperation({ summary: 'Odstrani voznika' })
   removeDriver(
     @CurrentUser('organizationId') orgId: string,

@@ -6,10 +6,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { errorMessage } from '../../api/client';
 import { eventsApi } from '../../api/events.api';
+import { usersApi } from '../../api/users.api';
 import { Button, Card, Input, Select, Spinner } from '../../components/ui';
 import {
   EVENT_TYPE_LABELS,
   MEMBERSHIP_LABELS,
+  REMINDER_OFFSET_OPTIONS,
   type Event,
   type MembershipStatus,
 } from '../../types';
@@ -23,7 +25,6 @@ const schema = z.object({
   endsAt: z.string(),
   requiresRsvp: z.boolean(),
   sendNotification: z.boolean(),
-  reminderMinutes: z.coerce.number().min(0),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -43,11 +44,19 @@ export function EventFormPage() {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState('');
   const [targetGroup, setTargetGroup] = useState<MembershipStatus[]>([]);
+  const [targetUserIds, setTargetUserIds] = useState<string[]>([]);
+  const [onlySelected, setOnlySelected] = useState(false);
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>([]);
 
   const { data: existing, isLoading } = useQuery({
     queryKey: ['events', id],
     queryFn: () => eventsApi.get(id!),
     enabled: isEdit,
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => usersApi.list(),
   });
 
   const {
@@ -64,7 +73,6 @@ export function EventFormPage() {
       endsAt: '',
       requiresRsvp: true,
       sendNotification: true,
-      reminderMinutes: 60,
     },
   });
 
@@ -79,9 +87,11 @@ export function EventFormPage() {
         endsAt: toLocalInput(existing.endsAt),
         requiresRsvp: existing.requiresRsvp,
         sendNotification: existing.sendNotification,
-        reminderMinutes: existing.reminderMinutes,
       });
       setTargetGroup(existing.targetGroup ?? []);
+      setTargetUserIds(existing.targetUserIds ?? []);
+      setOnlySelected((existing.targetUserIds ?? []).length > 0);
+      setReminderOffsets(existing.reminderOffsets ?? []);
     }
   }, [existing, reset]);
 
@@ -95,9 +105,10 @@ export function EventFormPage() {
         startsAt: new Date(data.startsAt).toISOString(),
         endsAt: data.endsAt ? new Date(data.endsAt).toISOString() : undefined,
         targetGroup: targetGroup.length ? targetGroup : undefined,
+        targetUserIds: onlySelected && targetUserIds.length ? targetUserIds : [],
         requiresRsvp: data.requiresRsvp,
         sendNotification: data.sendNotification,
-        reminderMinutes: data.reminderMinutes,
+        reminderOffsets,
       };
       return isEdit
         ? eventsApi.update(id!, payload)
@@ -187,22 +198,83 @@ export function EventFormPage() {
               </label>
             ))}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+
+          <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={onlySelected}
+              onChange={(e) => setOnlySelected(e.target.checked)}
+            />
+            Obvesti samo izbrane člane
+          </label>
+          {onlySelected && (
+            <div className="mb-4 max-h-56 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2">
+              {members
+                ?.filter((m) => m.isActive)
+                .map((m) => (
+                  <label
+                    key={m.id}
+                    className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={targetUserIds.includes(m.id)}
+                      onChange={() =>
+                        setTargetUserIds((prev) =>
+                          prev.includes(m.id)
+                            ? prev.filter((x) => x !== m.id)
+                            : [...prev, m.id],
+                        )
+                      }
+                    />
+                    {m.lastName} {m.firstName}
+                  </label>
+                ))}
+              <p className="px-2 pt-1 text-xs text-gray-400">
+                Izbranih: {targetUserIds.length}. Obvestilo in opomniki gredo
+                samo tem članom.
+              </p>
+            </div>
+          )}
+
+          <div className="mb-4 grid gap-4 sm:grid-cols-2">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" {...register('requiresRsvp')} />
-              Zahtevaj prijavo (RSVP)
+              Člani naj potrdijo udeležbo (pridem / ne pridem)
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" {...register('sendNotification')} />
-              Pošlji obvestilo članom
+              Pošlji obvestilo ob objavi
             </label>
-            <Input
-              label="Opomnik (minut prej)"
-              type="number"
-              min={0}
-              {...register('reminderMinutes')}
-            />
           </div>
+
+          <p className="mb-2 text-sm font-medium text-gray-700">
+            Opomniki pred dogodkom
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {REMINDER_OFFSET_OPTIONS.map((opt) => (
+              <label
+                key={opt.value}
+                className="flex items-center gap-1.5 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={reminderOffsets.includes(opt.value)}
+                  onChange={() =>
+                    setReminderOffsets((prev) =>
+                      prev.includes(opt.value)
+                        ? prev.filter((x) => x !== opt.value)
+                        : [...prev, opt.value],
+                    )
+                  }
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-gray-400">
+            Ob izbranih časih pred začetkom dobijo udeleženci push obvestilo.
+          </p>
         </Card>
 
         {serverError && (

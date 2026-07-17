@@ -6,6 +6,7 @@ const eventTypeLabels = {
   'cleanup': 'Čistilna akcija',
   'celebration': 'Proslava',
   'assembly': 'Občni zbor',
+  'operative_day': 'Operativni dan',
   'other': 'Drugo',
 };
 
@@ -26,6 +27,9 @@ class Event {
   final bool requiresRsvp;
   final bool isCancelled;
 
+  /// Odziv trenutnega uporabnika (attending/late/not_attending) ali null.
+  final String? myRsvpStatus;
+
   Event({
     required this.id,
     required this.title,
@@ -36,6 +40,7 @@ class Event {
     this.endsAt,
     required this.requiresRsvp,
     required this.isCancelled,
+    this.myRsvpStatus,
   });
 
   String get typeLabel => eventTypeLabels[eventType] ?? eventType;
@@ -52,5 +57,6 @@ class Event {
             : null,
         requiresRsvp: json['requiresRsvp'] as bool? ?? true,
         isCancelled: json['isCancelled'] as bool? ?? false,
+        myRsvpStatus: json['myRsvpStatus'] as String?,
       );
 }

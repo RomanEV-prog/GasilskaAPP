@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -38,7 +38,7 @@ export class EquipmentController {
 
   @Get('inspections-due')
   @ApiBearerAuth()
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
   @ApiOperation({ summary: 'Oprema s pregledom v naslednjih N dneh' })
   findInspectionsDue(
     @CurrentUser('organizationId') orgId: string,
@@ -74,7 +74,7 @@ export class EquipmentController {
 
   @Post()
   @ApiBearerAuth()
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
   @ApiOperation({ summary: 'Dodaj opremo' })
   create(
     @CurrentUser('organizationId') orgId: string,
@@ -85,7 +85,7 @@ export class EquipmentController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
   @ApiOperation({ summary: 'Uredi opremo' })
   update(
     @CurrentUser('organizationId') orgId: string,

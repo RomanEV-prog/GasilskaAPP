@@ -181,19 +181,28 @@ export function EventDetailPage() {
         {event.requiresRsvp && !event.isCancelled && (
           <Card title="Moja udeležba">
             <div className="flex flex-wrap gap-2">
-              {RSVP_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => {
-                    setActionError('');
-                    rsvpMutation.mutate(opt.value);
-                  }}
-                  disabled={rsvpMutation.isPending}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 ${opt.color}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {RSVP_OPTIONS.map((opt) => {
+                const selected = event.myRsvpStatus === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      setActionError('');
+                      rsvpMutation.mutate(opt.value);
+                    }}
+                    disabled={rsvpMutation.isPending}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 ${opt.color} ${
+                      selected
+                        ? 'ring-2 ring-gray-800 ring-offset-2'
+                        : event.myRsvpStatus
+                          ? 'opacity-50'
+                          : ''
+                    }`}
+                  >
+                    {selected ? `✓ ${opt.label}` : opt.label}
+                  </button>
+                );
+              })}
             </div>
             {rsvpMutation.isSuccess && (
               <p className="mt-2 text-sm text-green-700">

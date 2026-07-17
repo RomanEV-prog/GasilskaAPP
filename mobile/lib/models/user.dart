@@ -1,12 +1,8 @@
 // Vloge in statusi zrcalijo backend enume (docs/DATABASE.md).
 
-const leadershipRoles = [
-  'org_admin',
-  'president',
-  'commander',
-  'deputy_commander',
-  'secretary',
-];
+// Funkcije (predsednik, poveljnik ...) so samo nazivi brez pravic
+// (feedback PGD Pekre) — upravljavske pravice ima le administrator.
+const leadershipRoles = ['org_admin'];
 
 const availabilityLabels = {
   'available': 'Dosegljiv',

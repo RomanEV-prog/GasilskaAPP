@@ -9,7 +9,17 @@ import '../theme.dart';
 class RsvpButtons extends StatefulWidget {
   final String eventId;
   final bool compact;
-  const RsvpButtons({required this.eventId, this.compact = false, super.key});
+
+  /// Že oddani odziv uporabnika (myRsvpStatus iz API) — da je izbira vidna
+  /// tudi v koledarju in po ponovnem odprtju zaslona.
+  final String? initialStatus;
+
+  const RsvpButtons({
+    required this.eventId,
+    this.compact = false,
+    this.initialStatus,
+    super.key,
+  });
 
   @override
   State<RsvpButtons> createState() => _RsvpButtonsState();
@@ -19,6 +29,21 @@ class _RsvpButtonsState extends State<RsvpButtons> {
   final _api = EventsApi();
   String? _status;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.initialStatus;
+  }
+
+  @override
+  void didUpdateWidget(covariant RsvpButtons oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Ob osvežitvi seznama (pull-to-refresh) prevzemi svež odziv s strežnika.
+    if (widget.initialStatus != oldWidget.initialStatus) {
+      _status = widget.initialStatus;
+    }
+  }
 
   Future<void> _rsvp(String status) async {
     setState(() => _submitting = true);

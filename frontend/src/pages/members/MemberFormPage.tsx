@@ -32,7 +32,8 @@ const schema = z.object({
   address: z.string(),
   city: z.string(),
   dateOfBirth: z.string(),
-  membershipStatus: z.string(),
+  // Obvezna izrecna izbira — prej so bili vsi novi člani tiho "operativec".
+  membershipStatus: z.string().min(1, 'Izberite status članstva.'),
   rank: z.string(),
   membershipNumber: z.string(),
   joinedAt: z.string(),
@@ -85,7 +86,7 @@ export function MemberFormPage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      membershipStatus: 'operative',
+      membershipStatus: '',
       password: '',
       phone: '',
       address: '',
@@ -194,7 +195,12 @@ export function MemberFormPage() {
 
         <Card title="Članstvo">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Status članstva" {...register('membershipStatus')}>
+            <Select
+              label="Status članstva *"
+              error={errors.membershipStatus?.message}
+              {...register('membershipStatus')}
+            >
+              <option value="">— izberi status —</option>
               {Object.entries(MEMBERSHIP_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}

@@ -42,6 +42,7 @@ export type EventType =
   | 'cleanup'
   | 'celebration'
   | 'assembly'
+  | 'operative_day'
   | 'other';
 
 export type RsvpStatus = 'attending' | 'not_attending' | 'maybe' | 'late';
@@ -101,9 +102,13 @@ export interface Event {
   startsAt: string;
   endsAt?: string;
   targetGroup?: MembershipStatus[];
+  targetUserIds?: string[];
+  /** Odziv trenutnega uporabnika (vrne ga GET /events in GET /events/:id). */
+  myRsvpStatus?: RsvpStatus;
   requiresRsvp: boolean;
   sendNotification: boolean;
   reminderMinutes: number;
+  reminderOffsets?: number[];
   isCancelled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -268,28 +273,21 @@ export interface Organization {
   isActive: boolean;
 }
 
-/** Vodstvene vloge — smejo urejati člane, dogodke ipd. */
-export const LEADERSHIP_ROLES: SystemRole[] = [
-  'org_admin',
-  'president',
-  'commander',
-  'deputy_commander',
-  'secretary',
-];
+/**
+ * Vloge z upravljavskimi pravicami. Funkcije (predsednik, poveljnik ...) so
+ * samo nazivi brez pravic (feedback PGD Pekre) — upravlja le administrator.
+ */
+export const LEADERSHIP_ROLES: SystemRole[] = ['org_admin'];
 
 /** Vloge, ki smejo urejati vozila (zrcali backend @Roles). */
 export const VEHICLE_MANAGE_ROLES: SystemRole[] = [
   'org_admin',
-  'commander',
-  'deputy_commander',
   'chief_machinist',
 ];
 
 /** Vloge, ki smejo urejati opremo (zrcali backend @Roles). */
 export const EQUIPMENT_MANAGE_ROLES: SystemRole[] = [
   'org_admin',
-  'commander',
-  'deputy_commander',
   'chief_machinist',
   'toolkeeper',
   'assistant_breathing_apparatus',
@@ -334,8 +332,18 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   cleanup: 'Čistilna akcija',
   celebration: 'Proslava',
   assembly: 'Občni zbor',
+  operative_day: 'Operativni dan',
   other: 'Drugo',
 };
+
+/** Možnosti opomnikov pred dogodkom (minute pred začetkom, zrcali backend). */
+export const REMINDER_OFFSET_OPTIONS: { value: number; label: string }[] = [
+  { value: 7 * 24 * 60, label: '7 dni prej' },
+  { value: 3 * 24 * 60, label: '3 dni prej' },
+  { value: 24 * 60, label: '1 dan prej' },
+  { value: 3 * 60, label: '3 ure prej' },
+  { value: 60, label: '1 uro prej' },
+];
 
 /**
  * Oznake vozil po tipizaciji GZS (tabela "Tipizacija vozil"), združene po

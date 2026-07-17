@@ -127,6 +127,8 @@ create(organizationId, createdBy, dto)
 update(organizationId, id, dto)
 cancel(organizationId, id)                 // is_cancelled = true
 remove(organizationId, id)                 // hard delete; samo pretekli/odpovedani
+sendDueReminders()                         // cron */10 min: opomniki pred dogodki
+                                           // (reminder_offsets → reminders_sent)
 rsvp(eventId, userId, dto)                 // upsert
 getRsvps(organizationId, eventId)
 markAttendance(organizationId, eventId, markedBy, dto)

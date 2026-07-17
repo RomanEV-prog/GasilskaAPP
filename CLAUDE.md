@@ -67,20 +67,19 @@ gasilapp/
 
 ```
 super_admin   → admin platforme (Anthropic/mi)
-org_admin     → admin društva
-president     → predsednik
-commander     → poveljnik
-secretary     → tajnik
-treasurer     → blagajnik
-youth_mentor  → mentor mladine
+org_admin     → admin društva — EDINA vloga z upravljavskimi pravicami
 member        → navaden član
 
-# funkcije brez posebnih pravic: board_member (član UO),
-# supervisory_board_member (član NO), assistant_communications,
-# assistant_first_aid
-# funkcije s pravicami: deputy_commander (= commander povsod),
+# FUNKCIJE SO SAMO NAZIVI BREZ PRAVIC (feedback PGD Pekre, 17. 7. 2026):
+# president, commander, deputy_commander, secretary, treasurer,
+# youth_mentor, board_member, supervisory_board_member,
+# assistant_communications, assistant_first_aid
+# Admin pravice se dodelijo posebej (vloga org_admin ob članu).
+# Izjema — tehnične vloge z modulskimi pravicami:
 # chief_machinist (vozila+oprema), toolkeeper (oprema),
 # assistant_breathing_apparatus (oprema)
+# Funkcije se še vedno uporabljajo za CILJANJE obvestil
+# (NotificationTarget.LEADERSHIP, opomniki) — to ni pravica.
 ```
 
 Navaden `member` vidi samo:

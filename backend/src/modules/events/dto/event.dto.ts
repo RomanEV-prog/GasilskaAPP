@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -15,7 +16,7 @@ import {
 } from 'class-validator';
 import { MembershipStatus } from '../../../common/enums/roles.enum';
 import { RsvpStatus } from '../event-rsvp.entity';
-import { EventType } from '../event.entity';
+import { EventType, REMINDER_OFFSET_MINUTES } from '../event.entity';
 
 export class CreateEventDto {
   @ApiProperty({ example: 'Redna vaja' })
@@ -51,6 +52,15 @@ export class CreateEventDto {
   @IsEnum(MembershipStatus, { each: true })
   targetGroup?: MembershipStatus[];
 
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Obvestilo samo tem članom (prazno = po ciljni skupini)',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true, message: 'Neveljaven ID člana.' })
+  targetUserIds?: string[];
+
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
@@ -66,6 +76,20 @@ export class CreateEventDto {
   @IsInt()
   @Min(0)
   reminderMinutes?: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description:
+      'Opomniki pred dogodkom v minutah — dovoljeno: 10080 (7 dni), 4320 (3 dni), 1440 (1 dan), 180 (3 ure), 60 (1 ura)',
+    example: [4320, 1440],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn([...REMINDER_OFFSET_MINUTES], {
+    each: true,
+    message: 'Neveljaven odmik opomnika.',
+  })
+  reminderOffsets?: number[];
 }
 
 export class UpdateEventDto extends PartialType(CreateEventDto) {}

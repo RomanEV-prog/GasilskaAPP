@@ -97,17 +97,15 @@ export class UsersService {
     if (actorRoles === undefined) return;
     const isSuperAdmin = actorRoles.includes(SystemRole.SUPER_ADMIN);
     const isOrgAdmin = isSuperAdmin || actorRoles.includes(SystemRole.ORG_ADMIN);
-    const adminOnly: SystemRole[] = [
-      SystemRole.ORG_ADMIN,
-      SystemRole.PRESIDENT,
-    ];
+    // Funkcije (predsednik, poveljnik ...) so samo nazivi brez pravic —
+    // posebej varovana je le dodelitev administratorja.
     for (const role of requested) {
       if (role === SystemRole.SUPER_ADMIN && !isSuperAdmin) {
         throw new ForbiddenException('Vloge super_admin ni mogoče dodeliti.');
       }
-      if (adminOnly.includes(role) && !isOrgAdmin) {
+      if (role === SystemRole.ORG_ADMIN && !isOrgAdmin) {
         throw new ForbiddenException(
-          'Vlogi administrator društva in predsednik lahko dodeli le administrator društva.',
+          'Vlogo administrator društva lahko dodeli le administrator društva.',
         );
       }
     }

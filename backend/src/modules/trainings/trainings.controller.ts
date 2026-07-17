@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -27,13 +27,7 @@ export class TrainingsController {
   constructor(private readonly trainingsService: TrainingsService) {}
 
   @Get()
-  @Roles(
-    SystemRole.ORG_ADMIN,
-    SystemRole.PRESIDENT,
-    SystemRole.COMMANDER,
-    SystemRole.DEPUTY_COMMANDER,
-    SystemRole.SECRETARY,
-  )
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Vsa usposabljanja društva' })
   findAll(@CurrentUser('organizationId') orgId: string) {
     return this.trainingsService.findAll(orgId);
@@ -49,7 +43,7 @@ export class TrainingsController {
   }
 
   @Get('expiring')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Potekajoča usposabljanja' })
   findExpiring(
     @CurrentUser('organizationId') orgId: string,
@@ -59,7 +53,7 @@ export class TrainingsController {
   }
 
   @Get('user/:userId')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Usposabljanja člana' })
   findByUser(
     @CurrentUser('organizationId') orgId: string,
@@ -69,7 +63,7 @@ export class TrainingsController {
   }
 
   @Post()
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.SECRETARY)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Dodaj usposabljanje' })
   create(
     @CurrentUser('organizationId') orgId: string,
@@ -79,7 +73,7 @@ export class TrainingsController {
   }
 
   @Patch(':id')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.SECRETARY)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Uredi usposabljanje' })
   update(
     @CurrentUser('organizationId') orgId: string,

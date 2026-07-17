@@ -23,8 +23,21 @@ export enum EventType {
   CLEANUP = 'cleanup',
   CELEBRATION = 'celebration',
   ASSEMBLY = 'assembly',
+  OPERATIVE_DAY = 'operative_day',
   OTHER = 'other',
 }
+
+/**
+ * Dovoljeni odmiki opomnikov pred dogodkom, v minutah (predlog testerjev:
+ * 3 dni / 1 dan, plus krajše možnosti). Zaprt seznam, da cron ostane preprost.
+ */
+export const REMINDER_OFFSET_MINUTES = [
+  7 * 24 * 60, // 7 dni
+  3 * 24 * 60, // 3 dni
+  24 * 60, // 1 dan
+  3 * 60, // 3 ure
+  60, // 1 ura
+] as const;
 
 @Entity('events')
 export class Event {
@@ -74,14 +87,27 @@ export class Event {
   })
   targetGroup?: MembershipStatus[];
 
+  /** Obvestilo samo tem članom (namesto ciljne skupine); prazno = po skupini. */
+  @Column({ name: 'target_user_ids', type: 'jsonb', nullable: true })
+  targetUserIds?: string[];
+
   @Column({ name: 'requires_rsvp', default: true })
   requiresRsvp: boolean;
 
   @Column({ name: 'send_notification', default: true })
   sendNotification: boolean;
 
+  /** Zastarelo — nadomeščeno z reminderOffsets; ohranjen zaradi starih zapisov. */
   @Column({ name: 'reminder_minutes', default: 60 })
   reminderMinutes: number;
+
+  /** Odmiki opomnikov pred začetkom, v minutah (podmnožica REMINDER_OFFSET_MINUTES). */
+  @Column({ name: 'reminder_offsets', type: 'jsonb', nullable: true })
+  reminderOffsets?: number[];
+
+  /** Že poslani odmiki — da cron ne pošilja dvakrat. */
+  @Column({ name: 'reminders_sent', type: 'jsonb', default: () => "'[]'" })
+  remindersSent: number[];
 
   @Column({ name: 'is_cancelled', default: false })
   isCancelled: boolean;

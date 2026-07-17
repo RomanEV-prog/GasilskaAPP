@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+﻿import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -12,13 +12,7 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('admin')
-  @Roles(
-    SystemRole.ORG_ADMIN,
-    SystemRole.PRESIDENT,
-    SystemRole.COMMANDER,
-    SystemRole.DEPUTY_COMMANDER,
-    SystemRole.SECRETARY,
-  )
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Dashboard za vodstvo' })
   adminDashboard(@CurrentUser('organizationId') orgId: string) {
     return this.dashboardService.adminDashboard(orgId);

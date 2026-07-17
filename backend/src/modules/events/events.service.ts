@@ -20,6 +20,30 @@ import {
   UpdateEventDto,
 } from './dto/event.dto';
 
+/**
+ * Strežnik (Docker) teče v UTC — čase v obvestilih je treba izpisati v
+ * slovenskem času, sicer se "ob 9.00" izpiše kot "ob 7.00" (hrošč iz testiranja).
+ */
+const TZ = 'Europe/Ljubljana';
+
+/** "sobota, 1. 8. 2026 ob 9.00–13.00" — za telo obvestil. */
+function formatEventTime(startsAt: Date, endsAt?: Date): string {
+  const date = startsAt.toLocaleDateString('sl-SI', {
+    timeZone: TZ,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  });
+  const time = (d: Date) =>
+    d.toLocaleTimeString('sl-SI', {
+      timeZone: TZ,
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  return `${date} ob ${time(startsAt)}${endsAt ? `–${time(endsAt)}` : ''}`;
+}
+
 @Injectable()
 export class EventsService {
   constructor(
@@ -46,6 +70,37 @@ export class EventsService {
     return NotificationTarget.ALL;
   }
 
+  /** Cilj obvestila: izbrani člani imajo prednost pred ciljno skupino. */
+  private notificationTargeting(event: Event): {
+    target: NotificationTarget;
+    targetUserIds?: string[];
+  } {
+    if (event.targetUserIds && event.targetUserIds.length > 0) {
+      return {
+        target: NotificationTarget.SPECIFIC,
+        targetUserIds: event.targetUserIds,
+      };
+    }
+    return { target: this.notificationTarget(event) };
+  }
+
+  /** Preveri, da vsi navedeni člani pripadajo temu društvu. */
+  private async assertUsersInOrg(
+    organizationId: string,
+    userIds?: string[],
+  ): Promise<void> {
+    const unique = [...new Set(userIds ?? [])];
+    if (unique.length === 0) return;
+    const validCount = await this.usersRepo.count({
+      where: { id: In(unique), organizationId },
+    });
+    if (validCount !== unique.length) {
+      throw new BadRequestException(
+        'Nekateri člani ne pripadajo temu društvu.',
+      );
+    }
+  }
+
   async create(
     organizationId: string,
     createdBy: string,
@@ -56,6 +111,7 @@ export class EventsService {
         'Konec dogodka ne more biti pred začetkom.',
       );
     }
+    await this.assertUsersInOrg(organizationId, dto.targetUserIds);
     const event = this.eventsRepo.create({
       ...dto,
       startsAt: new Date(dto.startsAt),
@@ -68,13 +124,46 @@ export class EventsService {
     if (saved.sendNotification) {
       await this.notificationsService.create(organizationId, createdBy, {
         title: `Nov dogodek: ${saved.title}`,
-        body: `${saved.startsAt.toLocaleString('sl-SI')}${saved.location ? ` — ${saved.location}` : ''}`,
+        body: `${formatEventTime(saved.startsAt, saved.endsAt)}${saved.location ? ` — ${saved.location}` : ''}`,
         type: 'event',
-        target: this.notificationTarget(saved),
+        ...this.notificationTargeting(saved),
         data: { eventId: saved.id },
       });
     }
     return saved;
+  }
+
+  /**
+   * Dogodkom pripne odziv trenutnega uporabnika (`myRsvpStatus`) — da mobilna
+   * in web pokažeta že oddani odziv tudi v koledarju in po ponovnem odprtju.
+   */
+  private async withMyRsvp(
+    events: Event[],
+    userId?: string,
+  ): Promise<(Event & { myRsvpStatus?: string })[]> {
+    if (!userId || events.length === 0) return events;
+    const rsvps = await this.rsvpsRepo.find({
+      where: { userId, eventId: In(events.map((e) => e.id)) },
+    });
+    const byEvent = new Map(rsvps.map((r) => [r.eventId, r.status]));
+    return events.map((e) => ({ ...e, myRsvpStatus: byEvent.get(e.id) }));
+  }
+
+  async findAllWithMyRsvp(
+    organizationId: string,
+    query: QueryEventsDto = {},
+    userId?: string,
+  ): Promise<(Event & { myRsvpStatus?: string })[]> {
+    return this.withMyRsvp(await this.findAll(organizationId, query), userId);
+  }
+
+  async findOneWithMyRsvp(
+    organizationId: string,
+    id: string,
+    userId?: string,
+  ): Promise<Event & { myRsvpStatus?: string }> {
+    const event = await this.findOne(organizationId, id);
+    return (await this.withMyRsvp([event], userId))[0];
   }
 
   async findAll(
@@ -138,6 +227,7 @@ export class EventsService {
         'Konec dogodka ne more biti pred začetkom.',
       );
     }
+    await this.assertUsersInOrg(organizationId, dto.targetUserIds);
 
     Object.assign(event, {
       ...dto,
@@ -154,12 +244,51 @@ export class EventsService {
 
     await this.notificationsService.create(organizationId, null, {
       title: `Odpovedan dogodek: ${saved.title}`,
-      body: `Dogodek ${saved.startsAt.toLocaleString('sl-SI')} je odpovedan.`,
+      body: `Dogodek ${formatEventTime(saved.startsAt)} je odpovedan.`,
       type: 'event_cancelled',
-      target: this.notificationTarget(saved),
+      ...this.notificationTargeting(saved),
       data: { eventId: saved.id },
     });
     return saved;
+  }
+
+  /**
+   * Pošlje zapadle opomnike pred dogodki (kliče scheduler). Za vsak prihajajoč
+   * dogodek preveri izbrane odmike (reminderOffsets); ko je do začetka manj
+   * kot odmik in ta še ni bil poslan, pošlje obvestilo udeležencem in odmik
+   * zabeleži v remindersSent.
+   */
+  async sendDueReminders(): Promise<number> {
+    const now = new Date();
+    const upcoming = await this.eventsRepo.find({
+      where: { isCancelled: false, startsAt: MoreThanOrEqual(now) },
+    });
+
+    let sentCount = 0;
+    for (const event of upcoming) {
+      const offsets = event.reminderOffsets ?? [];
+      const sent = new Set(event.remindersSent ?? []);
+      const due = offsets.filter(
+        (o) =>
+          !sent.has(o) &&
+          new Date(event.startsAt.getTime() - o * 60_000) <= now,
+      );
+      if (due.length === 0) continue;
+
+      await this.notificationsService.create(event.organizationId, null, {
+        title: `⏰ Opomnik: ${event.title}`,
+        body: `${formatEventTime(event.startsAt, event.endsAt)}${event.location ? ` — ${event.location}` : ''}`,
+        type: 'event_reminder',
+        ...this.notificationTargeting(event),
+        data: { eventId: event.id },
+      });
+      // Vsi pravkar zapadli odmiki se zabeležijo naenkrat — en opomnik,
+      // tudi če je bil backend nekaj časa ugasnjen in je zapadlo več odmikov.
+      event.remindersSent = [...(event.remindersSent ?? []), ...due];
+      await this.eventsRepo.save(event);
+      sentCount++;
+    }
+    return sentCount;
   }
 
   /**

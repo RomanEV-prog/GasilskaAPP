@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EquipmentModule } from '../equipment/equipment.module';
+import { EventsModule } from '../events/events.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { Organization } from '../organizations/organization.entity';
 import { Training } from '../trainings/training.entity';
@@ -16,6 +17,7 @@ import { RemindersService } from './reminders.service';
     VehiclesModule,
     TrainingsModule,
     EquipmentModule,
+    EventsModule,
     NotificationsModule,
   ],
   providers: [RemindersService],

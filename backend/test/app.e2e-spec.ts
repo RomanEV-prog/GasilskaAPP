@@ -524,6 +524,170 @@ describe('GasilApp E2E', () => {
     });
   });
 
+  describe('Feedback testerjev (2026-07-17)', () => {
+    let presidentToken = '';
+
+    it('funkcija predsednik NE nosi upravljavskih pravic (403)', async () => {
+      await request(http)
+        .post('/api/v1/users')
+        .set(auth(tokenA))
+        .send({
+          password: pass,
+          firstName: 'Peter',
+          lastName: 'Predsednik',
+          roles: ['president'],
+        })
+        .expect(201);
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({
+          username: 'peter.predsednik',
+          organizationId: orgAId,
+          password: pass,
+        })
+        .expect(200);
+      presidentToken = login.body.data.accessToken;
+
+      // Predsednik ne more ustvariti dogodka, člana ali urediti društva.
+      await request(http)
+        .post('/api/v1/events')
+        .set(auth(presidentToken))
+        .send({
+          title: 'X',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() + 3600_000).toISOString(),
+          sendNotification: false,
+        })
+        .expect(403);
+      await request(http)
+        .post('/api/v1/users')
+        .set(auth(presidentToken))
+        .send({ password: pass, firstName: 'A', lastName: 'B' })
+        .expect(403);
+      await request(http)
+        .patch('/api/v1/organizations/me')
+        .set(auth(presidentToken))
+        .send({ phone: '01 234 567' })
+        .expect(403);
+    });
+
+    it('nov tip dogodka operative_day je sprejet', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Operativni dan',
+          eventType: 'operative_day',
+          startsAt: new Date(Date.now() + 3600_000).toISOString(),
+          sendNotification: false,
+        })
+        .expect(201);
+      expect(res.body.data.eventType).toBe('operative_day');
+    });
+
+    it('opomniki: veljavni odmiki sprejeti, neveljavni zavrnjeni', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Vaja z opomniki',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
+          sendNotification: false,
+          reminderOffsets: [4320, 1440],
+        })
+        .expect(201);
+      expect(res.body.data.reminderOffsets).toEqual([4320, 1440]);
+
+      await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'X',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() + 3600_000).toISOString(),
+          sendNotification: false,
+          reminderOffsets: [999],
+        })
+        .expect(400);
+    });
+
+    it('GET /events in /events/:id vrneta moj odziv (myRsvpStatus)', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Vaja z odzivom',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() + 24 * 3600_000).toISOString(),
+          sendNotification: false,
+          requiresRsvp: true,
+        })
+        .expect(201);
+      const eventId = res.body.data.id;
+
+      await request(http)
+        .post(`/api/v1/events/${eventId}/rsvp`)
+        .set(auth(memberToken))
+        .send({ status: 'attending' })
+        .expect(201);
+
+      const one = await request(http)
+        .get(`/api/v1/events/${eventId}`)
+        .set(auth(memberToken))
+        .expect(200);
+      expect(one.body.data.myRsvpStatus).toBe('attending');
+
+      const list = await request(http)
+        .get('/api/v1/events')
+        .set(auth(memberToken))
+        .expect(200);
+      const mine = list.body.data.find(
+        (e: { id: string }) => e.id === eventId,
+      );
+      expect(mine.myRsvpStatus).toBe('attending');
+
+      // Drug uporabnik ne vidi tujega odziva.
+      const other = await request(http)
+        .get(`/api/v1/events/${eventId}`)
+        .set(auth(tokenA))
+        .expect(200);
+      expect(other.body.data.myRsvpStatus ?? null).toBeNull();
+    });
+
+    it('dogodek za izbrane člane: tuj član zavrnjen (400)', async () => {
+      const res = await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'Samo zate',
+          eventType: 'meeting',
+          startsAt: new Date(Date.now() + 3600_000).toISOString(),
+          sendNotification: false,
+          targetUserIds: [memberId],
+        })
+        .expect(201);
+      expect(res.body.data.targetUserIds).toEqual([memberId]);
+
+      // Član drugega društva → 400 (multi-tenant zaščita).
+      const meB = await request(http)
+        .get('/api/v1/users/me')
+        .set(auth(tokenB))
+        .expect(200);
+      await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenA))
+        .send({
+          title: 'X',
+          eventType: 'meeting',
+          startsAt: new Date(Date.now() + 3600_000).toISOString(),
+          sendNotification: false,
+          targetUserIds: [meB.body.data.id],
+        })
+        .expect(400);
+    });
+  });
+
   describe('SPIN integracija', () => {
     it('GET /spin/obcine je javen in vrne statični seznam občin', async () => {
       const res = await request(http).get('/api/v1/spin/obcine').expect(200);

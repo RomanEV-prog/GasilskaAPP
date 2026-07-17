@@ -182,7 +182,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             if (e.requiresRsvp && !e.isCancelled) ...[
               const SizedBox(height: 10),
-              RsvpButtons(eventId: e.id, compact: true),
+              RsvpButtons(
+                eventId: e.id,
+                compact: true,
+                initialStatus: e.myRsvpStatus,
+              ),
             ],
           ],
         ),

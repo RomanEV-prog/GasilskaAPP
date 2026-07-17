@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -29,12 +29,13 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Seznam dogodkov' })
+  @ApiOperation({ summary: 'Seznam dogodkov (z mojim odzivom)' })
   findAll(
     @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') userId: string,
     @Query() query: QueryEventsDto,
   ) {
-    return this.eventsService.findAll(orgId, query);
+    return this.eventsService.findAllWithMyRsvp(orgId, query, userId);
   }
 
   @Get('upcoming')
@@ -44,22 +45,17 @@ export class EventsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Podrobnosti dogodka' })
+  @ApiOperation({ summary: 'Podrobnosti dogodka (z mojim odzivom)' })
   findOne(
     @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') userId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.eventsService.findOne(orgId, id);
+    return this.eventsService.findOneWithMyRsvp(orgId, id, userId);
   }
 
   @Post()
-  @Roles(
-    SystemRole.ORG_ADMIN,
-    SystemRole.PRESIDENT,
-    SystemRole.COMMANDER,
-    SystemRole.DEPUTY_COMMANDER,
-    SystemRole.SECRETARY,
-  )
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Ustvari dogodek' })
   create(
     @CurrentUser('organizationId') orgId: string,
@@ -70,13 +66,7 @@ export class EventsController {
   }
 
   @Patch(':id')
-  @Roles(
-    SystemRole.ORG_ADMIN,
-    SystemRole.PRESIDENT,
-    SystemRole.COMMANDER,
-    SystemRole.DEPUTY_COMMANDER,
-    SystemRole.SECRETARY,
-  )
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Uredi dogodek' })
   update(
     @CurrentUser('organizationId') orgId: string,
@@ -87,7 +77,7 @@ export class EventsController {
   }
 
   @Patch(':id/cancel')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Odpovej dogodek' })
   cancel(
     @CurrentUser('organizationId') orgId: string,
@@ -97,7 +87,7 @@ export class EventsController {
   }
 
   @Delete(':id')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Izbriši dogodek (samo pretekle ali odpovedane)' })
   remove(
     @CurrentUser('organizationId') orgId: string,
@@ -118,13 +108,7 @@ export class EventsController {
   }
 
   @Get(':id/rsvps')
-  @Roles(
-    SystemRole.ORG_ADMIN,
-    SystemRole.PRESIDENT,
-    SystemRole.COMMANDER,
-    SystemRole.DEPUTY_COMMANDER,
-    SystemRole.SECRETARY,
-  )
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Odzivi na dogodek' })
   getRsvps(
     @CurrentUser('organizationId') orgId: string,
@@ -134,7 +118,7 @@ export class EventsController {
   }
 
   @Post(':id/attendance')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.COMMANDER, SystemRole.DEPUTY_COMMANDER, SystemRole.PRESIDENT)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Označi prisotnost' })
   markAttendance(
     @CurrentUser('organizationId') orgId: string,

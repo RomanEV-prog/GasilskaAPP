@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemRole } from '../../common/enums/roles.enum';
 import { EquipmentService } from '../equipment/equipment.service';
+import { EventsService } from '../events/events.service';
 import { NotificationTarget } from '../notifications/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Organization } from '../organizations/organization.entity';
@@ -61,8 +62,28 @@ export class RemindersService {
     private readonly vehiclesService: VehiclesService,
     private readonly trainingsService: TrainingsService,
     private readonly equipmentService: EquipmentService,
+    private readonly eventsService: EventsService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  /**
+   * Opomniki pred dogodki (predlog testerjev: 3 dni / 1 dan / ure prej) —
+   * pogosteje kot dnevni pregled, ker so odmiki lahko urni.
+   */
+  @Cron('*/10 * * * *')
+  async runEventReminders(): Promise<void> {
+    if (process.env.NODE_ENV === 'test') return;
+    try {
+      const sent = await this.eventsService.sendDueReminders();
+      if (sent > 0) {
+        this.logger.log(`Poslanih ${sent} opomnikov pred dogodki.`);
+      }
+    } catch (err) {
+      this.logger.error(
+        `Opomniki pred dogodki niso uspeli: ${(err as Error).message}`,
+      );
+    }
+  }
 
   @Cron('0 8 * * *')
   async runDailyChecks(): Promise<void> {

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Get,
@@ -30,20 +30,14 @@ export class NotificationsController {
   }
 
   @Get('all')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Vsa obvestila društva' })
   findAll(@CurrentUser('organizationId') orgId: string) {
     return this.notificationsService.findAll(orgId);
   }
 
   @Post()
-  @Roles(
-    SystemRole.ORG_ADMIN,
-    SystemRole.PRESIDENT,
-    SystemRole.COMMANDER,
-    SystemRole.DEPUTY_COMMANDER,
-    SystemRole.SECRETARY,
-  )
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Pošlji obvestilo' })
   create(
     @CurrentUser('organizationId') orgId: string,
@@ -64,7 +58,7 @@ export class NotificationsController {
   }
 
   @Get(':id/reads')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Kdo je prebral obvestilo' })
   getReads(
     @CurrentUser('organizationId') orgId: string,

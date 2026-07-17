@@ -26,7 +26,7 @@ CREATE TABLE organizations (
 CREATE TYPE membership_status AS ENUM ('operative','veteran','youth','trainee','support','honorary');
 CREATE TYPE availability_status AS ENUM ('available','at_home','at_work','on_leave','sick','unavailable');
 CREATE TYPE system_role AS ENUM ('super_admin','org_admin','president','commander','deputy_commander','secretary','treasurer','youth_mentor','chief_machinist','toolkeeper','board_member','supervisory_board_member','assistant_breathing_apparatus','assistant_communications','assistant_first_aid','member');
-CREATE TYPE event_type AS ENUM ('drill','meeting','competition','intervention','cleanup','celebration','assembly','other');
+CREATE TYPE event_type AS ENUM ('drill','meeting','competition','intervention','cleanup','celebration','assembly','operative_day','other');
 CREATE TYPE rsvp_status AS ENUM ('attending','not_attending','maybe','late');
 CREATE TYPE equipment_condition AS ENUM ('excellent','good','fair','poor','out_of_service');
 CREATE TYPE notification_target AS ENUM ('all','operative','youth','leadership','specific');
@@ -92,9 +92,12 @@ CREATE TABLE events (
   starts_at         TIMESTAMPTZ NOT NULL,
   ends_at           TIMESTAMPTZ,
   target_group      membership_status[],
+  target_user_ids   JSONB,            -- obvestilo samo izbranim članom
   requires_rsvp     BOOLEAN DEFAULT true,
   send_notification BOOLEAN DEFAULT true,
-  reminder_minutes  INTEGER DEFAULT 60,
+  reminder_minutes  INTEGER DEFAULT 60,  -- zastarelo (glej reminder_offsets)
+  reminder_offsets  JSONB,            -- opomniki pred dogodkom (minute)
+  reminders_sent    JSONB NOT NULL DEFAULT '[]',
   is_cancelled      BOOLEAN DEFAULT false,
   created_at        TIMESTAMPTZ DEFAULT NOW(),
   updated_at        TIMESTAMPTZ DEFAULT NOW()

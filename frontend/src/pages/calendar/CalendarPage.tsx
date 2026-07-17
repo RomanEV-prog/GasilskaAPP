@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addMonths,
   eachDayOfInterval,
@@ -37,12 +37,25 @@ const RSVP_OPTIONS: { value: RsvpStatus; label: string; color: string }[] = [
 
 const WEEKDAYS = ['pon', 'tor', 'sre', 'čet', 'pet', 'sob', 'ned'];
 
-/** Gumbi za RSVP na posameznem dogodku (izbira se obarva po kliku). */
-function RsvpButtons({ eventId }: { eventId: string }) {
-  const [selected, setSelected] = useState<RsvpStatus | null>(null);
+/** Gumbi za RSVP na posameznem dogodku (pokaže tudi že oddani odziv). */
+function RsvpButtons({
+  eventId,
+  initialStatus,
+}: {
+  eventId: string;
+  initialStatus?: RsvpStatus;
+}) {
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<RsvpStatus | null>(
+    initialStatus ?? null,
+  );
   const mutation = useMutation({
     mutationFn: (status: RsvpStatus) => eventsApi.rsvp(eventId, status),
-    onSuccess: (_data, status) => setSelected(status),
+    onSuccess: (_data, status) => {
+      setSelected(status);
+      // Osveži sezname, da je odziv viden tudi v zavihku Dogodki.
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
   });
 
   return (
@@ -210,7 +223,11 @@ export function CalendarPage() {
                     {e.isCancelled ? ' · ODPOVEDAN' : ''}
                   </p>
                   {e.requiresRsvp && !e.isCancelled && (
-                    <RsvpButtons eventId={e.id} />
+                    <RsvpButtons
+                      key={`${e.id}-${e.myRsvpStatus ?? ''}`}
+                      eventId={e.id}
+                      initialStatus={e.myRsvpStatus}
+                    />
                   )}
                 </div>
               ))}

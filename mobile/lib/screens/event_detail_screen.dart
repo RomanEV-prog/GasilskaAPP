@@ -1,18 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../api/events_api.dart';
 import '../models/event.dart';
 import '../theme.dart';
 import '../widgets/rsvp_buttons.dart';
 
-class EventDetailScreen extends StatelessWidget {
+/// Podrobnosti dogodka. Ob odprtju osveži podatke s strežnika (da je viden
+/// tudi že oddani odziv, npr. oddan v drugem zavihku), do takrat pokaže
+/// podatke, ki jih je dobil ob navigaciji.
+class EventDetailScreen extends StatefulWidget {
   final Event event;
   const EventDetailScreen({required this.event, super.key});
 
   @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  late Event _event = widget.event;
+  bool _fresh = false;
+
+  @override
+  void initState() {
+    super.initState();
+    EventsApi().get(widget.event.id).then((e) {
+      if (mounted) {
+        setState(() {
+          _event = e;
+          _fresh = true;
+        });
+      }
+    }).catchError((_) {
+      // Strežnik nedosegljiv — ostanemo pri podatkih iz seznama.
+      if (mounted) setState(() => _fresh = true);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final e = event;
+    final e = _event;
     final df = DateFormat('EEEE, d. MMMM yyyy · HH:mm', 'sl');
+    final timeFmt = DateFormat('HH:mm', 'sl');
 
     return Scaffold(
       appBar: AppBar(title: Text(e.title)),
@@ -44,7 +73,11 @@ class EventDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(df.format(e.startsAt)),
+          // Začetek in predvideni konec (npr. "sobota, 1. avgust 2026 · 09:00–13:00").
+          Text(
+            '${df.format(e.startsAt)}'
+            '${e.endsAt != null ? '–${timeFmt.format(e.endsAt!)}' : ''}',
+          ),
           if (e.location != null) ...[
             const SizedBox(height: 4),
             Row(
@@ -67,7 +100,10 @@ class EventDetailScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            RsvpButtons(eventId: e.id),
+            if (_fresh)
+              RsvpButtons(eventId: e.id, initialStatus: e.myRsvpStatus)
+            else
+              const Center(child: CircularProgressIndicator()),
           ],
         ],
       ),

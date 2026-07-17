@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Get,
@@ -37,7 +37,7 @@ export class OrganizationsController {
   }
 
   @Patch('me')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Uredi podatke društva' })
   updateMine(
     @CurrentUser('organizationId') orgId: string,
@@ -47,7 +47,7 @@ export class OrganizationsController {
   }
 
   @Post('me/logo')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT)
+  @Roles(SystemRole.ORG_ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       // Logotip: največ 2 MB, ena datoteka (prepreči izčrpanje pomnilnika).

@@ -1,4 +1,4 @@
-# GasilApp — API Endpoint Specifikacija
+﻿# GasilApp — API Endpoint Specifikacija
 
 Base URL: `http://localhost:4000/api/v1`
 Swagger UI: `http://localhost:4000/api/docs`
@@ -6,6 +6,11 @@ Swagger UI: `http://localhost:4000/api/docs`
 **Vsi endpointi (razen Auth) zahtevajo:** `Authorization: Bearer <jwt_token>`
 
 **`orgId` se VEDNO bere iz JWT** — ne iz URL-ja ali body-ja.
+
+**Model pravic (od 17. 7. 2026):** funkcije (predsednik, poveljnik, podpoveljnik,
+tajnik ...) so samo nazivi brez pravic. Upravljanje = vloga `org_admin` (v tabelah
+»admin«); izjema so tehnične vloge: glavni strojnik (vozila + oprema), orodjar in
+pomočnik za zaščito dihal (oprema).
 
 ---
 
@@ -55,11 +60,11 @@ Swagger UI: `http://localhost:4000/api/docs`
 | GET | `/users/:id` | Profil člana | vsi |
 | GET | `/users/availability` | Pregled razpoložljivosti | vsi |
 | GET | `/users/available-operatives` | Dosegljivi operativci | vsi |
-| POST | `/users` | Dodaj člana | admin, president, secretary |
+| POST | `/users` | Dodaj člana | admin |
 | PATCH | `/users/me/availability` | Moja razpoložljivost | vsi |
 | PATCH | `/users/me/spin-notifications` | Vklop/izklop mojih SPIN obvestil | vsi |
-| PATCH | `/users/:id` | Uredi člana | admin, president, secretary |
-| DELETE | `/users/:id` | Deaktiviraj člana | admin, president |
+| PATCH | `/users/:id` | Uredi člana | admin |
+| DELETE | `/users/:id` | Deaktiviraj člana | admin |
 
 ### Query params za GET `/users`
 - `?membershipStatus=operative`
@@ -86,13 +91,13 @@ Swagger UI: `http://localhost:4000/api/docs`
 | GET | `/events` | Seznam dogodkov | vsi |
 | GET | `/events/upcoming` | Prihajajoči (za dashboard) | vsi |
 | GET | `/events/:id` | Podrobnosti | vsi |
-| POST | `/events` | Ustvari dogodek | admin, president, commander, secretary |
-| PATCH | `/events/:id` | Uredi dogodek | admin, president, commander, secretary |
-| PATCH | `/events/:id/cancel` | Odpovej dogodek | admin, president, commander |
-| DELETE | `/events/:id` | Izbriši dogodek (samo pretekle ali odpovedane) | admin, president, commander |
+| POST | `/events` | Ustvari dogodek | admin |
+| PATCH | `/events/:id` | Uredi dogodek | admin |
+| PATCH | `/events/:id/cancel` | Odpovej dogodek | admin |
+| DELETE | `/events/:id` | Izbriši dogodek (samo pretekle ali odpovedane) | admin |
 | POST | `/events/:id/rsvp` | Potrdi udeležbo | vsi |
-| GET | `/events/:id/rsvps` | Poglej odzive | admin, president, commander, secretary |
-| POST | `/events/:id/attendance` | Označi prisotnost | admin, commander, president |
+| GET | `/events/:id/rsvps` | Poglej odzive | admin |
+| POST | `/events/:id/attendance` | Označi prisotnost | admin |
 
 ### POST `/events`
 ```json
@@ -104,11 +109,15 @@ Swagger UI: `http://localhost:4000/api/docs`
   "startsAt": "2024-02-15T18:00:00Z",
   "endsAt": "2024-02-15T20:00:00Z",
   "targetGroup": ["operative"],
+  "targetUserIds": ["uuid-1", "uuid-2"],
   "requiresRsvp": true,
   "sendNotification": true,
-  "reminderMinutes": 60
+  "reminderOffsets": [4320, 1440]
 }
-// eventType: drill | meeting | competition | intervention | cleanup | celebration | assembly | other
+// eventType: drill | meeting | competition | intervention | cleanup | celebration | assembly | operative_day | other
+// targetUserIds (neobvezno): obvestilo in opomniki samo tem članom (prazno = po targetGroup)
+// reminderOffsets (neobvezno): opomniki pred začetkom v minutah —
+//   dovoljeno 10080 (7 dni), 4320 (3 dni), 1440 (1 dan), 180 (3 ure), 60 (1 ura)
 ```
 
 ### POST `/events/:id/rsvp`
@@ -135,12 +144,12 @@ Swagger UI: `http://localhost:4000/api/docs`
 |--------|-----|------|-------|
 | GET | `/vehicles` | Seznam vozil | vsi |
 | GET | `/vehicles/:id` | Podrobnosti vozila | vsi |
-| GET | `/vehicles/expiring` | Vozila s potekajočimi roki | admin, commander |
-| POST | `/vehicles` | Dodaj vozilo | admin, commander |
-| PATCH | `/vehicles/:id` | Uredi vozilo | admin, commander |
+| GET | `/vehicles/expiring` | Vozila s potekajočimi roki | admin, glavni strojnik |
+| POST | `/vehicles` | Dodaj vozilo | admin, glavni strojnik |
+| PATCH | `/vehicles/:id` | Uredi vozilo | admin, glavni strojnik |
 | DELETE | `/vehicles/:id` | Deaktiviraj vozilo | admin |
-| POST | `/vehicles/:id/drivers` | Dodaj voznika | admin, commander |
-| DELETE | `/vehicles/:id/drivers/:userId` | Odstrani voznika | admin, commander |
+| POST | `/vehicles/:id/drivers` | Dodaj voznika | admin, glavni strojnik |
+| DELETE | `/vehicles/:id/drivers/:userId` | Odstrani voznika | admin, glavni strojnik |
 
 ### POST `/vehicles`
 ```json
@@ -170,12 +179,12 @@ Vrne vozila, kjer registration_expires, insurance_expires ali service_due pade v
 
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
-| GET | `/trainings` | Vsa usposabljanja org | admin, president, commander, secretary |
+| GET | `/trainings` | Vsa usposabljanja org | admin |
 | GET | `/trainings/me` | Moja usposabljanja | vsi |
-| GET | `/trainings/expiring` | Potekajoča (za dashboard) | admin, commander |
-| GET | `/trainings/user/:userId` | Usposabljanja člana | admin, president, commander |
-| POST | `/trainings` | Dodaj usposabljanje | admin, president, secretary |
-| PATCH | `/trainings/:id` | Uredi | admin, president, secretary |
+| GET | `/trainings/expiring` | Potekajoča (za dashboard) | admin |
+| GET | `/trainings/user/:userId` | Usposabljanja člana | admin |
+| POST | `/trainings` | Dodaj usposabljanje | admin |
+| PATCH | `/trainings/:id` | Uredi | admin |
 | DELETE | `/trainings/:id` | Izbriši | admin |
 
 ### POST `/trainings`
@@ -197,10 +206,10 @@ Vrne vozila, kjer registration_expires, insurance_expires ali service_due pade v
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
 | GET | `/notifications` | Moja obvestila | vsi |
-| GET | `/notifications/all` | Vsa obvestila org | admin, president |
-| POST | `/notifications` | Pošlji obvestilo | admin, president, commander, secretary |
+| GET | `/notifications/all` | Vsa obvestila org | admin |
+| POST | `/notifications` | Pošlji obvestilo | admin |
 | PATCH | `/notifications/:id/read` | Označi kot prebrano | vsi |
-| GET | `/notifications/:id/reads` | Kdo je prebral | admin, president |
+| GET | `/notifications/:id/reads` | Kdo je prebral | admin |
 
 ### POST `/notifications`
 ```json
@@ -220,7 +229,7 @@ Vrne vozila, kjer registration_expires, insurance_expires ali service_due pade v
 
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
-| GET | `/dashboard/admin` | Dashboard za vodstvo | admin, president, commander, secretary |
+| GET | `/dashboard/admin` | Dashboard za vodstvo | admin |
 | GET | `/dashboard/member` | Dashboard za člana | vsi |
 
 ### GET `/dashboard/admin` — Response
@@ -262,8 +271,8 @@ Vrne vozila, kjer registration_expires, insurance_expires ali service_due pade v
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
 | GET | `/organizations/me` | Podatki o mojem društvu | vsi |
-| PATCH | `/organizations/me` | Uredi društvo (vklj. `spinObcine: string[]`) | admin, president |
-| POST | `/organizations/me/logo` | Naloži logotip | admin, president |
+| PATCH | `/organizations/me` | Uredi društvo (vklj. `spinObcine: string[]`) | admin |
+| POST | `/organizations/me/logo` | Naloži logotip | admin |
 
 ---
 
@@ -287,7 +296,7 @@ neposredno s telefona in filtrira po teh občinah.
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
 | GET | `/documents` | Seznam dokumentov | vsi |
-| POST | `/documents` | Naloži dokument | admin, president, secretary |
+| POST | `/documents` | Naloži dokument | admin |
 | DELETE | `/documents/:id` | Izbriši dokument | admin |
 
 ---

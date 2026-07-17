@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -100,7 +100,7 @@ export class UsersController {
   }
 
   @Post()
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.SECRETARY)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Dodaj novega člana' })
   create(
     @CurrentUser('organizationId') orgId: string,
@@ -111,7 +111,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.SECRETARY)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Uredi člana' })
   update(
     @CurrentUser('organizationId') orgId: string,
@@ -123,7 +123,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT)
+  @Roles(SystemRole.ORG_ADMIN)
   @ApiOperation({ summary: 'Deaktiviraj člana' })
   deactivate(
     @CurrentUser('organizationId') orgId: string,

@@ -29,15 +29,11 @@ import { SystemRole } from '../../common/enums/roles.enum';
 import { UploadDocumentDto } from './dto/document.dto';
 import { DocumentsService } from './documents.service';
 
-/** Vloge, ki vidijo tudi ne-javne dokumente. */
-const LEADERSHIP: string[] = [
-  SystemRole.ORG_ADMIN,
-  SystemRole.PRESIDENT,
-  SystemRole.COMMANDER,
-  SystemRole.DEPUTY_COMMANDER,
-  SystemRole.SECRETARY,
-  SystemRole.TREASURER,
-];
+/**
+ * Vloge, ki vidijo tudi ne-javne dokumente. Funkcije (predsednik, poveljnik
+ * ...) so samo nazivi brez pravic (feedback PGD Pekre) — dostop ima le admin.
+ */
+const LEADERSHIP: string[] = [SystemRole.ORG_ADMIN];
 
 function isLeadership(user: AuthUser): boolean {
   return user.roles.some((r) => LEADERSHIP.includes(r));
@@ -78,7 +74,7 @@ export class DocumentsController {
   }
 
   @Post()
-  @Roles(SystemRole.ORG_ADMIN, SystemRole.PRESIDENT, SystemRole.SECRETARY)
+  @Roles(SystemRole.ORG_ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       // Omeji velikost naložene datoteke (prepreči izčrpanje pomnilnika/diska).

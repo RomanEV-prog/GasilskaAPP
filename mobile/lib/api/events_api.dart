@@ -18,6 +18,11 @@ class EventsApi {
         .toList();
   }
 
+  Future<Event> get(String eventId) async {
+    final data = await _client.get('/events/$eventId') as Map<String, dynamic>;
+    return Event.fromJson(data);
+  }
+
   Future<void> rsvp(String eventId, String status, {String? note}) async {
     await _client.post('/events/$eventId/rsvp', data: {
       'status': status,
