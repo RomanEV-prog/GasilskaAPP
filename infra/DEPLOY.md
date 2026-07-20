@@ -9,8 +9,12 @@
 
 ## 2. Domena
 
-DNS **A zapis** domene (npr. `app.gasilapp.si`) → IP strežnika.
-Brez domene HTTPS (in s tem FCM push + Play objava) ne deluje.
+DNS **A zapis** domene → IP strežnika. Brez domene HTTPS (in s tem FCM push
++ Play objava) ne deluje.
+
+**Produkcija teče na `gasilapp.eu`** (ne `.si` — ta je bila prvotno načrtovana,
+a ni v uporabi). Ime aplikacije je od 20. 7. 2026 »Plamen«, domena pa ostaja
+`gasilapp.eu`; neujemanje je zavestno.
 
 ## 3. Priprava strežnika (enkratno)
 
@@ -25,19 +29,26 @@ cd gasilapp
 
 ```bash
 cat > .env.prod <<'EOF'
-DOMAIN=app.gasilapp.si
+DOMAIN=gasilapp.eu
 DB_PASS=<dolgo naključno geslo>
 JWT_SECRET=<openssl rand -hex 48>
 JWT_REFRESH_SECRET=<openssl rand -hex 48>
 FIREBASE_PROJECT_ID=gasilapp
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@gasilapp.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+REGISTRATION_KEY=<openssl rand -hex 32>
+SPIN_BASE_URL=http://<IP_SI_RELAYA>
 EOF
 chmod 600 .env.prod
 ```
 
 Naključne vrednosti: `openssl rand -hex 48`. `FIREBASE_PRIVATE_KEY` prekopiraj
 iz service-account JSON (polje `private_key`, z `\n` kot dobesednim besedilom, v narekovajih).
+
+`REGISTRATION_KEY` je master ključ za izdajo aktivacijskih kod (§9) — brez njega
+ni mogoče registrirati novega društva. `SPIN_BASE_URL` kaže na slovenski relay
+(§10); brez njega SPIN na produkciji tiho ne dela, ker Hetzner DE ne doseže
+feeda. Oba sta v `.env.prod` na produkciji dejansko nastavljena.
 
 ## 5. Zagon
 

@@ -46,14 +46,23 @@ Prekopiraj `firebaseConfig` vrednosti:
 VITE_FIREBASE_API_KEY=AIza...
 VITE_FIREBASE_AUTH_DOMAIN=gasilapp.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=gasilapp
-VITE_FIREBASE_STORAGE_BUCKET=gasilapp.appspot.com
+VITE_FIREBASE_STORAGE_BUCKET=gasilapp.firebasestorage.app
 VITE_FIREBASE_MESSAGING_SENDER_ID=1234567890
 VITE_FIREBASE_APP_ID=1:1234567890:web:abc...
 VITE_FIREBASE_VAPID_KEY=   # Cloud Messaging → Web configuration → Key pair (Generate)
 ```
 
+> `STORAGE_BUCKET` je za ta projekt `gasilapp.firebasestorage.app`, **ne**
+> `gasilapp.appspot.com` (kot je pisalo tu prej) — Firebase je privzeto domeno
+> vedrca zamenjal. Ne ugibaj: prava vrednost je v `frontend/.env.production`
+> (datoteka je commitana, ker web config ni skrivnost — glej spodaj) in v
+> Firebase konzoli.
+
 Nato **enake vrednosti** vpiši še v `frontend/public/firebase-messaging-sw.js`
-(service worker ne bere env spremenljivk). Web config ni skrivnost.
+(service worker ne bere env spremenljivk). Web config ni skrivnost: `VITE_*`
+se vgradi v brskalnikov bundle, `API_KEY` je identifikator projekta in VAPID
+ključ je javni del para. Skrivnost je **samo** service-account JSON za backend
+(gitignoran — glej §1).
 
 Koda: `frontend/src/firebase.ts`, `frontend/src/hooks/useFcm.ts`
 
