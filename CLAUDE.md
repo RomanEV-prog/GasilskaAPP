@@ -15,21 +15,30 @@ Vsako društvo je lasten **tenant** z ločenimi podatki.
 ```
 gasilapp/
 ├── CLAUDE.md                  ← si tukaj
+├── .claude/commands/          ← skilli projekta (/gasilapp-deploy, /gasilapp-shema)
 ├── docs/
 │   ├── ARCHITECTURE.md        ← arhitektura sistema
 │   ├── DATABASE.md            ← shema baze podatkov
+│   ├── schema.sql             ← KANONIČNI CREATE skript (nova baza prek initdb)
+│   ├── migrations/            ← idempotentne delte za obstoječe baze (YYYY-MM-DD-*.sql)
 │   ├── API.md                 ← vsi API endpointi
 │   ├── MODULES.md             ← opis vsakega modula
-│   └── DECISIONS.md           ← arhitekturne odločitve (ADR)
-├── backend/                   ← NestJS API
+│   ├── DECISIONS.md           ← arhitekturne odločitve (ADR)
+│   └── FIREBASE.md            ← FCM konfiguracija
+├── backend/                   ← NestJS API (13 modulov v src/modules/)
 │   └── BACKEND.md             ← navodila za backend
 ├── frontend/                  ← React web portal
 │   └── FRONTEND.md            ← navodila za frontend
 ├── mobile/                    ← Flutter mobilna app
 │   └── MOBILE.md              ← navodila za mobilno
 └── infra/
-    └── INFRA.md               ← docker, env, deployment
+    ├── INFRA.md               ← docker, env
+    ├── DEPLOY.md              ← postopek objave na prod (§9 kode, §10 SPIN relay)
+    └── beta/index.html        ← stran za beta razdeljevanje APK
 ```
+
+**Shemo baze spreminjaj na OBEH mestih** — `docs/schema.sql` (kanonično) in nova
+datoteka v `docs/migrations/` (za obstoječe baze). Glej `/gasilapp-shema`.
 
 ---
 
@@ -57,7 +66,13 @@ gasilapp/
 4. **DTO validacija** — vsak input validiran z `class-validator`
 5. **Čista modularna koda** — en modul = en direktorij
 6. **Audit log** — pomembne akcije (create/update/delete) se logirajo
-7. **Nikoli ne vrni `passwordHash` ali `fcmToken`** v API odgovorih
+7. **Nikoli ne vrni `passwordHash` ali `fcmToken`** v API odgovorih.
+   Prav tako **nikoli ne vračaj celega `User`** v ugnezdenih odgovorih (imetnik
+   opreme, udeleženec dogodka, prejemnik obvestila) — vedno ozka projekcija
+   (`id, firstName, lastName`). Osebne podatke sočlanov (telefon, e-pošta,
+   naslov, datum rojstva) vidi le `org_admin` (`MEMBER_DIRECTORY_ROLES` v
+   `common/enums/roles.enum.ts`; `UsersService.publicProjection`).
+   **Skrivanje v vmesniku NI varnostna meja** — podatki potujejo po API-ju.
 8. **Slovenščina** za error sporočila (ker so za gasilce)
 9. **Swagger** dokumentacija za vsak endpoint
 
@@ -90,36 +105,23 @@ Navaden `member` vidi samo:
 
 ---
 
-## Začni tukaj (vrstni red razvoja)
+## Stanje projekta
 
-### Faza 1 — Backend foundation
-1. `backend/` — NestJS projekt setup
-2. PostgreSQL schema (`docs/DATABASE.md`)
-3. Auth modul (login, register, JWT)
-4. Users modul (CRUD + razpoložljivost)
-5. Events modul (CRUD + RSVP + prisotnost)
-6. Vehicles modul (CRUD + opomniki)
-7. Trainings modul (CRUD + opomniki)
-8. Notifications modul (FCM + interna)
-9. Dashboard modul (agregati za vodstvo + član)
+**Vse tri faze so dokončane; produkcija teče na https://gasilapp.eu od 7. 7. 2026.**
+Backend ima 13 modulov, web portal pokriva vse module, mobilna je v beta
+razdeljevanju (Android 1.0.7+8). Novo delo je **nadgradnja obstoječega**, ne
+postavljanje od začetka — poglej obstoječi modul kot vzorec, preden pišeš nov.
 
-### Faza 2 — Web portal
-1. `frontend/` — React + Vite setup
-2. Auth (login, profile)
-3. Dashboard
-4. Člani (seznam, profil, dodaj)
-5. Dogodki (koledar, ustvari, RSVP)
-6. Vozila
-7. Usposabljanja
-8. Obvestila
+Skilli projekta (`.claude/commands/`, kliči z `/ime`):
 
-### Faza 3 — Mobilna app
-1. `mobile/` — Flutter setup
-2. Auth
-3. Dashboard
-4. Dogodki + RSVP
-5. Razpoložljivost
-6. Push obvestila
+| Skill | Kdaj |
+|---|---|
+| `/gasilapp-deploy` | objava na produkcijo — vrstni red, override za Caddy, verifikacija |
+| `/gasilapp-shema` | nova tabela ali stolpec — migracije, indeksi, e2e izolacija |
+
+Kaj sodi kam: **skill** = ponovljiv postopek s pastmi · **CLAUDE.md** = kar mora
+vedeti vsaka seja že ob zagonu · **`docs/DECISIONS.md`** = arhitekturne odločitve
+z razlogi (ADR) · **komentar v kodi** = kar velja le za tisto vrstico.
 
 ---
 
@@ -141,9 +143,10 @@ Glej `infra/INFRA.md` za celoten seznam.
 ## Razvojno okolje (dev)
 
 - **Baza:** `docker compose up -d db` (Postgres 15). Shema se ustvari iz `docs/schema.sql` prek initdb.
-- **Seed:** `cd backend && npm run seed` → ustvari test društvo + admina.
-- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (org_admin) · `janez@pgd-pekre.si` / `Geslo1234` (member). **Prijava zdaj z uporabniškim imenom** (`admin.pekre`, `janez.novak` + organizationId) ali e-pošto; javni seznam društev: `GET /auth/organizations`.
+- **Seed:** `cd backend && npm run seed` → ustvari test društvo + **samo admina**.
+- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (`admin.pekre`, org_admin). **Člana seed NE ustvari** — za testiranje pravic ga dodaj prek portala. V trenutni dev bazi sta `janez.novak` in `miha.kranjc`, a ju svež seed ne obnovi (po `docker compose down -v` ju ne bo). **Prijava z uporabniškim imenom** (+ organizationId) ali e-pošto; javni seznam društev: `GET /auth/organizations`.
 - **Zagon:** backend `npm run start:dev` (port 4000), frontend `npm run dev` (port 3000).
+- **Preverjanje pred commitom:** backend `npx tsc --noEmit -p tsconfig.json` + `npm run lint`; frontend `npx tsc --noEmit` + `npm run build`; mobile `flutter analyze`. Frontend nima ne lint ne test skripte — `build` je edino sito.
 - **Okolje:** Git Bash + PowerShell. `$TMPDIR` NI nastavljen — za log datoteke uporabi absolutno pot.
 - **Ustavi backend proces:** PowerShell `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*dist*main*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }` (vrne exit 255 tudi ob uspehu — kozmetično).
 - **Šumniki v testnih podatkih:** curl iz Git Bash na Windows **pomangla šumnike/emoji** v inline argumentih (v bazo se zapiše U+FFFD `�`) — testne vnose s šumniki delaj prek portala/app ali z JSON telesom iz UTF-8 datoteke (`curl -d @telo.json`), nikoli inline. Popravek pokvarjenih vrstic: UTF-8 .sql datoteka + `docker cp` + `psql -f` (PowerShell, ne Git Bash — path mangling).
