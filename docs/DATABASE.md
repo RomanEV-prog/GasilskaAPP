@@ -1,4 +1,4 @@
-# GasilApp — Shema baze podatkov
+# Plamen — Shema baze podatkov
 
 ## Diagram entitet
 

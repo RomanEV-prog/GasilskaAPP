@@ -1,4 +1,4 @@
-# GasilApp — Firebase Cloud Messaging (FCM) setup
+# Plamen — Firebase Cloud Messaging (FCM) setup
 
 Push obvestila so **implementirana na vseh treh nivojih**, a se aktivirajo šele,
 ko vstaviš prave poverilnice iz Firebase konzole. Brez njih vse gracefully

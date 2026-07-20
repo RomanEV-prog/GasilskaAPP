@@ -1,4 +1,4 @@
-# GasilApp — spremembe sheme baze (entiteta, migracija, testi)
+# Plamen — spremembe sheme baze (entiteta, migracija, testi)
 
 Postopek dodajanja nove tabele ali stolpca skozi vse plasti: TypeORM entiteta →
 `docs/schema.sql` → migracija → e2e testi. Zgrajen iz seje 2026-07-20
@@ -118,7 +118,7 @@ Obstoječa infrastruktura v `test/app.e2e-spec.ts`: `tokenA` (admin org A),
   pred spremembo projekcije uporabnika.
 
 - **`ON DELETE CASCADE` na `user_id`** bi ob trdem izbrisu izbrisal zgodovino.
-  V GasilApp je `DELETE /users/:id` v resnici `deactivate` (mehki izbris), zato je
+  V Plamnu je `DELETE /users/:id` v resnici `deactivate` (mehki izbris), zato je
   varno — a to preveri, preden se zaneseš.
 
 - **Vsak FK na `users(id)` MORA imeti eksplicitno `ON DELETE` pravilo.** Brez

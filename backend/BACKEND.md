@@ -1,4 +1,4 @@
-# GasilApp — Backend (NestJS)
+# Plamen — Backend (NestJS)
 
 ## Setup
 

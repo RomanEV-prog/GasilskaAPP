@@ -1,4 +1,4 @@
-﻿# GasilApp — API Endpoint Specifikacija
+﻿# Plamen — API Endpoint Specifikacija
 
 Base URL: `http://localhost:4000/api/v1`
 Swagger UI: `http://localhost:4000/api/docs`

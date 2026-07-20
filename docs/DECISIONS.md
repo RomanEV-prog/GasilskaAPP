@@ -1,4 +1,4 @@
-# GasilApp — Arhitekturne odločitve (ADR)
+# Plamen — Arhitekturne odločitve (ADR)
 
 ## ADR-001: Multi-tenant z shared database
 

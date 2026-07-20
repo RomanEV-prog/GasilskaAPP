@@ -1,4 +1,4 @@
-# GasilApp — Opis modulov
+# Plamen — Opis modulov
 
 ## Splošna pravila za vse module
 

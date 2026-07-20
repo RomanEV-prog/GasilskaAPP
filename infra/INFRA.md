@@ -1,4 +1,4 @@
-# GasilApp — Infrastruktura
+# Plamen — Infrastruktura
 
 ## Docker Compose za lokalni razvoj
 

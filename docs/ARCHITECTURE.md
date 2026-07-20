@@ -1,10 +1,10 @@
-# GasilApp — Arhitektura sistema
+# Plamen — Arhitektura sistema
 
 ## Pregled
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    GASILAPP PLATFORMA                   │
+│                    PLAMEN PLATFORMA                     │
 ├──────────────────────┬──────────────────────────────────┤
 │   Web Portal         │   Mobilna App                    │
 │   React + TypeScript │   Flutter (iOS + Android)        │

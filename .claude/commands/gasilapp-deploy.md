@@ -1,4 +1,4 @@
-# GasilApp — objava nove različice na produkcijo
+# Plamen — objava nove različice na produkcijo
 
 Celoten postopek objave (backend + splet + baza + beta APK) na Hetzner
 `178.104.67.229`. Zgrajen iz realne seje 2026-07-20 (zadolžitve opreme + NFC).

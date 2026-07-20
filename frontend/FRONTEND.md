@@ -1,4 +1,4 @@
-# GasilApp — Frontend (React Web Portal)
+# Plamen — Frontend (React Web Portal)
 
 ## Setup
 

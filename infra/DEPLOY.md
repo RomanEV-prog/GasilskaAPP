@@ -1,4 +1,4 @@
-# GasilApp — namestitev v produkcijo (Hetzner)
+# Plamen — namestitev v produkcijo (Hetzner)
 
 ## 1. Ustvari strežnik (Hetzner Cloud)
 
