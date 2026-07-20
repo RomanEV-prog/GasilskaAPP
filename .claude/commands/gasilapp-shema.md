@@ -120,3 +120,25 @@ Obstoječa infrastruktura v `test/app.e2e-spec.ts`: `tokenA` (admin org A),
 - **`ON DELETE CASCADE` na `user_id`** bi ob trdem izbrisu izbrisal zgodovino.
   V GasilApp je `DELETE /users/:id` v resnici `deactivate` (mehki izbris), zato je
   varno — a to preveri, preden se zaneseš.
+
+- **Vsak FK na `users(id)` MORA imeti eksplicitno `ON DELETE` pravilo.** Brez
+  njega je privzeto `NO ACTION` in referencirani član postane neizbrisljiv, z
+  njim pa **celotno društvo** (brisanje društva kaskadira na uporabnike in se
+  ustavi ob tvoji referenci). Ta past je udarila 2026-07-20: `equipment_assignments`
+  je imel `issued_by`/`returned_by` brez pravila, kar se je pokazalo šele pri
+  čiščenju testnega društva na produkciji, ne v testih.
+  Pravilo: **kdo je nosilec zapisa → `CASCADE`; kdo je zapis ustvaril → `SET NULL`**
+  (stolpec mora biti `nullable`). Preveri z:
+  ```sql
+  SELECT conname, confdeltype FROM pg_constraint
+   WHERE conrelid = '<tabela>'::regclass AND contype='f';
+  -- c = CASCADE, n = SET NULL, a = NO ACTION (sumljivo!)
+  ```
+
+- **`psql -c` z več stavki teče v ENI transakciji** — ena napaka razveljavi tudi
+  vse uspešne brise pred njo. Pri čiščenju odvisnosti napiši stavke v pravem
+  vrstnem redu v en klic z `ON_ERROR_STOP=1`, ne po korakih.
+
+- **`audit_logs` namenoma NE kaskadira** z društvom (revizijska sled naj preživi),
+  zato je pri brisanju testnega društva treba najprej pobrisati njegove vrstice
+  v `audit_logs`.
