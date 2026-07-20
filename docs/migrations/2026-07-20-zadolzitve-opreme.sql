@@ -12,8 +12,9 @@ CREATE TABLE IF NOT EXISTS equipment_assignments (
   user_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   issued_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   returned_at          TIMESTAMPTZ,
-  issued_by            UUID REFERENCES users(id),
-  returned_by          UUID REFERENCES users(id),
+  -- SET NULL popravljen naknadno v 2026-07-20b (glej razlog tam).
+  issued_by            UUID REFERENCES users(id) ON DELETE SET NULL,
+  returned_by          UUID REFERENCES users(id) ON DELETE SET NULL,
   condition_at_issue   equipment_condition,
   condition_at_return  equipment_condition,
   issue_notes          TEXT,

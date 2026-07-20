@@ -182,8 +182,11 @@ CREATE TABLE equipment_assignments (
   user_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   issued_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   returned_at          TIMESTAMPTZ,    -- NULL = še zadolženo
-  issued_by            UUID REFERENCES users(id),
-  returned_by          UUID REFERENCES users(id),
+  -- SET NULL, ne privzeti NO ACTION: sicer člana, ki je kdaj izdal opremo,
+  -- ni mogoče izbrisati, z njim pa tudi ne društva. Zgodovina "kdo je IMEL"
+  -- (user_id) ostane; izgubi se le "kdo je izdal".
+  issued_by            UUID REFERENCES users(id) ON DELETE SET NULL,
+  returned_by          UUID REFERENCES users(id) ON DELETE SET NULL,
   condition_at_issue   equipment_condition,
   condition_at_return  equipment_condition,
   issue_notes          TEXT,
