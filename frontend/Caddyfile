@@ -18,6 +18,12 @@
 		header @apk {
 			Content-Type application/vnd.android.package-archive
 			Content-Disposition "attachment; filename=gasilapp.apk"
+			# APK vedno leži na ISTI poti (/beta/gasilapp.apk), zato brskalnik
+			# brez tega postreže predpomnjeno staro različico — tester namesti
+			# star build in misli, da objava ni delovala. "no-cache" ne pomeni
+			# "ne shrani", ampak "pred uporabo vedno preveri": ob nespremenjeni
+			# datoteki ETag vrne 304 in 75 MB se NE prenese znova.
+			Cache-Control "no-cache"
 		}
 		# Beta stran se ne sme predpomniti — povezava/verzija se spreminjata.
 		@html not path *.apk
