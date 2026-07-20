@@ -139,6 +139,8 @@ Skilli projekta (`.claude/commands/`, kliči z `/ime`):
 |---|---|
 | `/gasilapp-deploy` | objava na produkcijo — vrstni red, override za Caddy, verifikacija |
 | `/gasilapp-shema` | nova tabela ali stolpec — migracije, indeksi, e2e izolacija |
+| `/ikona-aplikacije` | zamenjava ikone — izrez motiva, adaptive icon, preverba v APK |
+| `/preimenovanje-znamke` | sprememba imena — kaj zamenjati in kaj bi zlomilo sistem |
 
 Kaj sodi kam: **skill** = ponovljiv postopek s pastmi · **CLAUDE.md** = kar mora
 vedeti vsaka seja že ob zagonu · **`docs/DECISIONS.md`** = arhitekturne odločitve

@@ -90,6 +90,23 @@ brez prijave v račun pravega društva.
   kot APK. V seji sem jo najprej kopiral v napačno mapo — stran se ni spremenila,
   brez napake.
 - **Brez `infra/compose.behind-proxy.yml` rebuild odpove** na zasedenem portu 80.
+- **»Tester ima star build« = najprej posumi na predpomnilnik, ne na objavo.**
+  APK vedno leži na ISTI poti `/beta/gasilapp.apk`, zato brskalnik brez
+  `Cache-Control` postreže predpomnjeno staro datoteko — objava izgleda
+  neuspešna, čeprav je na strežniku prava. Glava je od `7240966` nastavljena
+  v `frontend/Caddyfile` (`header @apk { … Cache-Control "no-cache" }`).
+  `no-cache` NE pomeni ponovnega prenosa 75 MB: ob nespremenjeni datoteki
+  ETag vrne 304. Preveri:
+  ```bash
+  curl -sI https://gasilapp.eu/beta/gasilapp.apk | grep -i "cache-control\|etag"
+  ET=$(curl -sI https://gasilapp.eu/beta/gasilapp.apk | grep -i etag | tr -d '\r' | cut -d' ' -f2)
+  curl -s -o /dev/null -w "%{http_code} %{size_download}B\n" -H "If-None-Match: $ET" \
+    https://gasilapp.eu/beta/gasilapp.apk    # pricakovano: 304 0B
+  ```
+  **Caddyfile je v sliki `web`** → sprememba zahteva `up -d --build web`,
+  ne le kopiranja datoteke.
+  Ta past je udarila 2026-07-20b: ikona je bila pravilna v APK-ju na strežniku,
+  tester pa je videl staro — vzrok je bil predpomnjen prenos, ne build.
 - **`git push` pred `git pull` na strežniku** — sicer prod potegne staro kodo in
   vse ostalo (migracija, verifikacija) izgleda uspešno, a teče stara koda.
 - **Vsebnik baze je `gasilapp-db-1`, splet pa `gasilapp-web`** (brez `-1`).
