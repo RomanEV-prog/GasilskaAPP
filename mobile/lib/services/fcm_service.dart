@@ -17,7 +17,7 @@ Future<void> _backgroundHandler(RemoteMessage message) async {
 const AndroidNotificationChannel _channel = AndroidNotificationChannel(
   'high_importance_channel',
   'Pomembna obvestila',
-  description: 'GasilApp obvestila',
+  description: 'Plamen obvestila',
   importance: Importance.high,
 );
 

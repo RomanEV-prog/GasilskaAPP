@@ -29,19 +29,19 @@ Future<void> main() async {
   runApp(
     ChangeNotifierProvider.value(
       value: auth,
-      child: const GasilApp(),
+      child: const PlamenApp(),
     ),
   );
 }
 
-class GasilApp extends StatefulWidget {
-  const GasilApp({super.key});
+class PlamenApp extends StatefulWidget {
+  const PlamenApp({super.key});
 
   @override
-  State<GasilApp> createState() => _GasilAppState();
+  State<PlamenApp> createState() => _PlamenAppState();
 }
 
-class _GasilAppState extends State<GasilApp> {
+class _PlamenAppState extends State<PlamenApp> {
   late final GoRouter _router;
 
   @override
@@ -58,7 +58,7 @@ class _GasilAppState extends State<GasilApp> {
     final router = _router;
 
     return MaterialApp.router(
-      title: 'GasilApp',
+      title: 'Plamen',
       debugShowCheckedModeBanner: false,
       theme: buildGasilTheme(),
       routerConfig: router,

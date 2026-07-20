@@ -1,4 +1,7 @@
-# GasilApp — Mobilna aplikacija (Flutter)
+# Plamen — Mobilna aplikacija (Flutter)
+
+> Ime aplikacije je **Plamen**; paket ostaja `si.gasilapp.gasilapp_mobile` in
+> Dart paket `gasilapp_mobile`. Razlogi: `CLAUDE.md` § »Ime Plamen vs. gasilapp«.
 
 ## Setup
 

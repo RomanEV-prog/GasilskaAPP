@@ -1,4 +1,4 @@
-# GasilApp — Claude Code Master Instructions
+# Plamen — Claude Code Master Instructions
 
 ## Kaj je ta projekt?
 
@@ -7,6 +7,27 @@ Vsako društvo je lasten **tenant** z ločenimi podatki.
 
 **To NI aplikacija za alarmiranje** (Vulkan/GZS to pokriva).
 **Je interna organizacijska platforma:** člani, dogodki, vozila, oprema, usposabljanja, obvestila.
+
+### Ime »Plamen« vs. identifikator `gasilapp` — NE poenoti jih
+
+Blagovna znamka se je 20. 7. 2026 preimenovala iz »GasilApp« v **Plamen**.
+Preimenovalo se je **samo, kar uporabnik vidi** (naslovi, `android:label`,
+manifest PWA, prijavni zaslon, beta stran). Vse spodnje ostane `gasilapp` in
+**preimenovanje bi kaj pokvarilo**:
+
+| Ostane | Zakaj |
+|---|---|
+| `si.gasilapp.gasilapp_mobile` (applicationId, namespace, `MainActivity.kt`) | Play Console ga po prvi objavi ne dovoli spremeniti — nov ID = nova aplikacija |
+| `pubspec.yaml` `name: gasilapp_mobile` | Dart ime paketa; sprememba zahteva popravek vsakega `import 'package:...'` |
+| Firebase `projectId: 'gasilapp'`, `authDomain`, `storageBucket` | pravi Firebase projekt |
+| `gasilapp.eu`, `/opt/gasilapp`, `gasilapp-db-1`, `gasilapp-web`, ime baze | domena in produkcija ostaneta |
+| ključ `gasilapp.tour.v1.<userId>` (`OnboardingTour.tsx`) | v localStorage; nov ključ = uvodni vodič se znova prikaže vsem |
+
+Ikona: `infra/brand/` hrani izvorni logotip. Ikone se generirajo iz njega —
+plamen brez besedila (besedilo je pri 48 dp neberljivo, ime pa Android že
+izpiše pod ikono). Android uporablja adaptive icon
+(`mipmap-anydpi-v26/ic_launcher.xml` + `ic_launcher_foreground` + barva
+`#121519`).
 
 ---
 

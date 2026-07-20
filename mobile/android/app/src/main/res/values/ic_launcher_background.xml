@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ozadje ikone aplikacije (adaptive icon, Android 8+). Usklajeno s
+         temnim ozadjem logotipa Plamen. -->
+    <color name="ic_launcher_background">#121519</color>
+</resources>

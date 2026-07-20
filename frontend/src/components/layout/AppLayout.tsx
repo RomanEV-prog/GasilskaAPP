@@ -111,7 +111,7 @@ function SidebarContent({
       {showLogo && (
         <div className="flex items-center gap-2 px-5 py-5">
           <span className="text-2xl">🔥</span>
-          <span className="text-lg font-bold">GasilApp</span>
+          <span className="text-lg font-bold">Plamen</span>
         </div>
       )}
 
@@ -211,7 +211,7 @@ export function AppLayout() {
             <div className="flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🔥</span>
-                <span className="text-lg font-bold">GasilApp</span>
+                <span className="text-lg font-bold">Plamen</span>
               </div>
               <button
                 onClick={() => setDrawerOpen(false)}
@@ -251,7 +251,7 @@ export function AppLayout() {
               (i) =>
                 i.to === location.pathname ||
                 (i.to !== '/' && location.pathname.startsWith(i.to)),
-            )?.label ?? 'GasilApp'}
+            )?.label ?? 'Plamen'}
           </span>
         </header>
 

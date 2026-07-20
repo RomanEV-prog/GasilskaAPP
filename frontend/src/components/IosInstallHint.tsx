@@ -49,7 +49,7 @@ export function IosInstallHint() {
       </button>
       <p className="font-semibold">📱 Imaš iPhone?</p>
       <p className="mt-1">
-        Dodaj GasilApp na začetni zaslon in dobivala boš tudi obvestila: v
+        Dodaj Plamen na začetni zaslon in dobivala boš tudi obvestila: v
         Safariju pritisni <strong>Deli</strong>{' '}
         <span aria-hidden>(kvadrat s puščico)</span> →{' '}
         <strong>Dodaj na začetni zaslon</strong>, nato aplikacijo odpiraj z

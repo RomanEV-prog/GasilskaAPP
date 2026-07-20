@@ -112,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text('🔥', style: TextStyle(fontSize: 40)),
                       const SizedBox(height: 8),
                       const Text(
-                        'GasilApp',
+                        'Plamen',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,

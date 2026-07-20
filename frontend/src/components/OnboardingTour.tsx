@@ -19,8 +19,8 @@ interface Step {
 const STEPS: Step[] = [
   {
     icon: '🔥',
-    title: 'Dobrodošli v GasilApp',
-    kaj: 'GasilApp je interna organizacijska platforma vašega društva — člani, dogodki, vozila, oprema, usposabljanja, obvestila in intervencije SPIN na enem mestu.',
+    title: 'Dobrodošli v Plamen',
+    kaj: 'Plamen je interna organizacijska platforma vašega društva — člani, dogodki, vozila, oprema, usposabljanja, obvestila in intervencije SPIN na enem mestu.',
     kako: 'Ta kratek vodič vas v nekaj korakih popelje skozi glavne funkcije. Kadar koli ga lahko znova odprete z gumbom “❓ Vodič” spodaj levo.',
   },
   {
