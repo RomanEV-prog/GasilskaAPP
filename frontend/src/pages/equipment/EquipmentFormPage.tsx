@@ -26,6 +26,7 @@ const schema = z.object({
   lastInspection: z.string(),
   nextInspection: z.string(),
   expiryDate: z.string(),
+  purchaseDate: z.string(),
   notes: z.string(),
 });
 
@@ -67,6 +68,7 @@ export function EquipmentFormPage() {
       lastInspection: '',
       nextInspection: '',
       expiryDate: '',
+      purchaseDate: '',
       notes: '',
     },
   });
@@ -83,6 +85,7 @@ export function EquipmentFormPage() {
         lastInspection: existing.lastInspection ?? '',
         nextInspection: existing.nextInspection ?? '',
         expiryDate: existing.expiryDate ?? '',
+        purchaseDate: existing.purchaseDate ?? '',
         notes: existing.notes ?? '',
       });
     }
@@ -100,6 +103,7 @@ export function EquipmentFormPage() {
         lastInspection: data.lastInspection || undefined,
         nextInspection: data.nextInspection || undefined,
         expiryDate: data.expiryDate || undefined,
+        purchaseDate: data.purchaseDate || undefined,
         notes: data.notes || undefined,
       };
       return isEdit
@@ -195,6 +199,11 @@ export function EquipmentFormPage() {
               label="Rok veljave"
               type="date"
               {...register('expiryDate')}
+            />
+            <Input
+              label="Datum nabave"
+              type="date"
+              {...register('purchaseDate')}
             />
           </div>
           <label className="mt-4 block">

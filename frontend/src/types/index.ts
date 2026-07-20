@@ -244,10 +244,54 @@ export interface Equipment {
   expiryDate?: string;
   notes?: string;
   qrCode?: string;
+  /** Strojni UID NFC oznake (NTAG213). */
+  nfcUid?: string | null;
+  /** Datum nabave — podlaga za starost opreme. */
+  purchaseDate?: string;
   isActive: boolean;
   vehicle?: { id: string; name: string };
+  /** Trenutni imetnik; `null`, če je oprema prosta. */
+  currentHolder?: EquipmentHolder | null;
+  /** Kdaj je bila zadolžena (skupaj s `currentHolder`). */
+  issuedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Imetnik opreme — namerno brez kontaktnih podatkov. */
+export interface EquipmentHolder {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+/** Ena vrstica v zgodovini zadolžitev kosa opreme. */
+export interface EquipmentAssignment {
+  id: string;
+  issuedAt: string;
+  returnedAt?: string | null;
+  conditionAtIssue?: EquipmentCondition;
+  conditionAtReturn?: EquipmentCondition;
+  issueNotes?: string;
+  returnNotes?: string;
+  user: EquipmentHolder | null;
+}
+
+/** Vnos v "Moja zadolžena oprema". */
+export interface MyEquipmentAssignment {
+  id: string;
+  issuedAt: string;
+  conditionAtIssue?: EquipmentCondition;
+  issueNotes?: string;
+  equipment: {
+    id: string;
+    name: string;
+    category?: string;
+    inventoryNumber?: string;
+    condition: EquipmentCondition;
+    expiryDate?: string;
+    nextInspection?: string;
+  } | null;
 }
 
 export const EQUIPMENT_CONDITION_LABELS: Record<EquipmentCondition, string> = {

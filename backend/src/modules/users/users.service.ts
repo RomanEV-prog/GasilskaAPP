@@ -10,6 +10,7 @@ import * as bcrypt from 'bcryptjs';
 import { DataSource, Repository } from 'typeorm';
 import {
   AvailabilityStatus,
+  MEMBER_DIRECTORY_ROLES,
   MembershipStatus,
   SystemRole,
 } from '../../common/enums/roles.enum';
@@ -29,6 +30,15 @@ export type SafeUser = Omit<
   User,
   'passwordHash' | 'fcmToken' | 'passwordResetToken' | 'passwordResetExpires'
 > & { roles?: SystemRole[] | UserRole[] };
+
+/**
+ * Minimalna projekcija člana za navadne člane (feedback Darjan, 20. 7. 2026).
+ * Brez telefona, e-pošte, naslova, datuma rojstva in vlog.
+ */
+export type PublicUser = Pick<
+  User,
+  'id' | 'firstName' | 'lastName' | 'username' | 'membershipStatus' | 'isActive'
+>;
 
 @Injectable()
 export class UsersService {
@@ -59,6 +69,22 @@ export class UsersService {
         ? roles.map((r) => (r instanceof UserRole ? r.role : r))
         : undefined,
     } as SafeUser;
+  }
+
+  /**
+   * Skrči člana na javna polja. Uporabi se, kadar poizvedbo izvaja
+   * nekdo brez pravice do imenika — meja je strežniška, ne v vmesniku,
+   * ker bi bili podatki sicer vidni v omrežnem prometu.
+   */
+  publicProjection(user: User): PublicUser {
+    const { id, firstName, lastName, username, membershipStatus, isActive } =
+      user;
+    return { id, firstName, lastName, username, membershipStatus, isActive };
+  }
+
+  /** Ali klicatelj sme videti polne osebne podatke sočlanov? */
+  private canSeeFullProfile(actorRoles: SystemRole[] = []): boolean {
+    return actorRoles.some((r) => MEMBER_DIRECTORY_ROLES.includes(r));
   }
 
   /**
@@ -178,11 +204,17 @@ export class UsersService {
   async findAll(
     organizationId: string,
     query: QueryUsersDto = {},
-  ): Promise<SafeUser[]> {
+    actorRoles?: SystemRole[],
+  ): Promise<SafeUser[] | PublicUser[]> {
+    const full = this.canSeeFullProfile(actorRoles);
     const qb = this.usersRepo
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.roles', 'role')
       .where('user.organizationId = :organizationId', { organizationId });
+
+    // Vloge nalagamo samo, kadar jih klicatelj sme videti — sicer odveč join.
+    if (full) {
+      qb.leftJoinAndSelect('user.roles', 'role');
+    }
 
     if (query.membershipStatus) {
       qb.andWhere('user.membershipStatus = :ms', {
@@ -197,7 +229,9 @@ export class UsersService {
 
     qb.orderBy('user.lastName', 'ASC').addOrderBy('user.firstName', 'ASC');
     const users = await qb.getMany();
-    return users.map((u) => this.sanitize(u));
+    return full
+      ? users.map((u) => this.sanitize(u))
+      : users.map((u) => this.publicProjection(u));
   }
 
   /** Vrne surov User z vlogami (za interno uporabo, npr. Auth). */
@@ -215,8 +249,22 @@ export class UsersService {
     return user;
   }
 
-  async findOne(organizationId: string, id: string): Promise<SafeUser> {
-    return this.sanitize(await this.findEntity(organizationId, id));
+  /**
+   * Profil člana. Poln le za upravljavce imenika ali kadar član gleda sebe;
+   * sicer skrčen (brez tega bi bila omejitev na `findAll` zaobidena z enim klicem).
+   */
+  async findOne(
+    organizationId: string,
+    id: string,
+    actorRoles?: SystemRole[],
+    actorId?: string,
+  ): Promise<SafeUser | PublicUser> {
+    const user = await this.findEntity(organizationId, id);
+    const full =
+      actorRoles === undefined || // sistemski klic (seed, interno)
+      this.canSeeFullProfile(actorRoles) ||
+      (actorId !== undefined && actorId === id);
+    return full ? this.sanitize(user) : this.publicProjection(user);
   }
 
   async update(
@@ -361,7 +409,10 @@ export class UsersService {
   }
 
   /** Dosegljivi operativci (available + operative). */
-  async availableOperatives(organizationId: string): Promise<SafeUser[]> {
+  async availableOperatives(
+    organizationId: string,
+    actorRoles?: SystemRole[],
+  ): Promise<SafeUser[] | PublicUser[]> {
     const users = await this.usersRepo.find({
       where: {
         organizationId,
@@ -371,6 +422,9 @@ export class UsersService {
       },
       order: { lastName: 'ASC' },
     });
-    return users.map((u) => this.sanitize(u));
+    // Tudi ta seznam je puščal telefon in naslov vsem prijavljenim.
+    return this.canSeeFullProfile(actorRoles)
+      ? users.map((u) => this.sanitize(u))
+      : users.map((u) => this.publicProjection(u));
   }
 }

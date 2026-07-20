@@ -174,6 +174,7 @@ export function EquipmentPage() {
                 <th className="px-4 py-3">Kategorija</th>
                 <th className="px-4 py-3">Inv. št.</th>
                 <th className="px-4 py-3">Lokacija</th>
+                <th className="px-4 py-3">Zadolženo</th>
                 <th className="px-4 py-3">Stanje</th>
                 <th className="px-4 py-3">Naslednji pregled</th>
                 <th className="px-4 py-3">Rok veljave</th>
@@ -188,7 +189,14 @@ export function EquipmentPage() {
                     e.isActive ? '' : 'opacity-50'
                   }`}
                 >
-                  <td className="px-4 py-3 font-medium">{e.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link
+                      to={`/equipment/${e.id}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {e.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-gray-600">
                     {e.category ?? '—'}
                   </td>
@@ -197,6 +205,15 @@ export function EquipmentPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {e.location ?? '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {e.currentHolder ? (
+                      <Badge color="yellow">
+                        {e.currentHolder.lastName} {e.currentHolder.firstName}
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-400">Prosto</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Badge color={conditionColor[e.condition]}>

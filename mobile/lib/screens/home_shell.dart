@@ -106,7 +106,9 @@ class _HomeShellState extends State<HomeShell> {
             tooltip: 'Račun',
             icon: const Icon(Icons.account_circle_outlined),
             onSelected: (value) {
-              if (value == 'password') {
+              if (value == 'my-equipment') {
+                context.push('/moja-oprema');
+              } else if (value == 'password') {
                 showChangePasswordDialog(context);
               } else if (value == 'spin') {
                 _showSpinSettingsDialog(context);
@@ -115,6 +117,14 @@ class _HomeShellState extends State<HomeShell> {
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'my-equipment',
+                child: ListTile(
+                  leading: Icon(Icons.checkroom_outlined),
+                  title: Text('Moja oprema'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               PopupMenuItem(
                 value: 'spin',
                 child: ListTile(

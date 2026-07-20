@@ -1,4 +1,4 @@
-﻿name: gasilapp_mobile
+name: gasilapp_mobile
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.6+7
+version: 1.0.7+8
 
 environment:
   sdk: ^3.8.1
@@ -47,6 +47,7 @@ dependencies:
   mobile_scanner: ^7.2.0
   table_calendar: ^3.2.0
   flutter_local_notifications: ^20.1.0
+  nfc_manager: ^4.0.2
   # FCM je aktiven šele, ko lib/firebase_options.dart vsebuje prave vrednosti
   # (ustvari z `flutterfire configure`). Do takrat se init gracefully preskoči.
 

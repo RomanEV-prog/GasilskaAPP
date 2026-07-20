@@ -743,4 +743,256 @@ describe('GasilApp E2E', () => {
       expect(res.body.data.obcine).toEqual([]);
     });
   });
+
+  describe('Zasebnost članov (predlogi Darjan, 2026-07-20)', () => {
+    it('član dobi le ime, priimek, prijavno ime in status', async () => {
+      const res = await request(http)
+        .get('/api/v1/users')
+        .set(auth(memberToken))
+        .expect(200);
+      const first = res.body.data[0];
+      expect(first.firstName).toBeDefined();
+      expect(first.lastName).toBeDefined();
+      expect(first.username).toBeDefined();
+      expect(first.membershipStatus).toBeDefined();
+      // Osebni podatki sočlanov ne smejo priti niti po API-ju.
+      expect(first.phone).toBeUndefined();
+      expect(first.address).toBeUndefined();
+      expect(first.dateOfBirth).toBeUndefined();
+      expect(first.email).toBeUndefined();
+      expect(first.roles).toBeUndefined();
+    });
+
+    it('admin še vedno vidi polne podatke', async () => {
+      const res = await request(http)
+        .get('/api/v1/users')
+        .set(auth(tokenA))
+        .expect(200);
+      expect(res.body.data[0]).toHaveProperty('email');
+      expect(res.body.data[0]).toHaveProperty('roles');
+    });
+
+    it('član ne more obiti omejitve prek GET /users/:id', async () => {
+      const admin = await request(http)
+        .get('/api/v1/users')
+        .set(auth(tokenA))
+        .expect(200);
+      const other = admin.body.data.find(
+        (u: { id: string }) => u.id !== memberId,
+      );
+      const res = await request(http)
+        .get(`/api/v1/users/${other.id}`)
+        .set(auth(memberToken))
+        .expect(200);
+      expect(res.body.data.phone).toBeUndefined();
+      expect(res.body.data.email).toBeUndefined();
+    });
+
+    it('član vidi svoj polni profil prek /users/me', async () => {
+      const res = await request(http)
+        .get('/api/v1/users/me')
+        .set(auth(memberToken))
+        .expect(200);
+      expect(res.body.data).toHaveProperty('email');
+    });
+
+    it('dosegljivi operativci ne razkrijejo telefonov', async () => {
+      const res = await request(http)
+        .get('/api/v1/users/available-operatives')
+        .set(auth(memberToken))
+        .expect(200);
+      for (const u of res.body.data) {
+        expect(u.phone).toBeUndefined();
+        expect(u.address).toBeUndefined();
+      }
+    });
+  });
+
+  describe('Zadolžitve opreme (2026-07-20)', () => {
+    let eqId = '';
+
+    beforeAll(async () => {
+      const res = await request(http)
+        .post('/api/v1/equipment')
+        .set(auth(tokenA))
+        .send({
+          name: 'Zaščitna obleka',
+          inventoryNumber: `ZAD-${stamp}`,
+          condition: 'good',
+          purchaseDate: '2021-03-20',
+        })
+        .expect(201);
+      eqId = res.body.data.id;
+    });
+
+    it('admin zadolži opremo članu', async () => {
+      const res = await request(http)
+        .post(`/api/v1/equipment/${eqId}/assignments`)
+        .set(auth(tokenA))
+        .send({ userId: memberId, issueNotes: 'Predano ob vaji.' })
+        .expect(201);
+      expect(res.body.data.userId).toBe(memberId);
+      expect(res.body.data.returnedAt).toBeFalsy();
+    });
+
+    it('iste opreme ni mogoče zadolžiti dvakrat (409)', async () => {
+      const res = await request(http)
+        .post(`/api/v1/equipment/${eqId}/assignments`)
+        .set(auth(tokenA))
+        .send({ userId: memberId })
+        .expect(409);
+      expect(res.body.message).toContain('že zadolžena');
+    });
+
+    it('seznam opreme pokaže imetnika, a brez osebnih podatkov', async () => {
+      const res = await request(http)
+        .get('/api/v1/equipment')
+        .set(auth(memberToken))
+        .expect(200);
+      const item = res.body.data.find((e: { id: string }) => e.id === eqId);
+      expect(item.currentHolder.firstName).toBeDefined();
+      expect(item.currentHolder.phone).toBeUndefined();
+      expect(item.currentHolder.email).toBeUndefined();
+    });
+
+    it('član vidi svojo zadolženo opremo', async () => {
+      const res = await request(http)
+        .get('/api/v1/equipment/my-assignments')
+        .set(auth(memberToken))
+        .expect(200);
+      expect(
+        res.body.data.some(
+          (a: { equipment: { id: string } }) => a.equipment.id === eqId,
+        ),
+      ).toBe(true);
+    });
+
+    it('član ne more zadolževati opreme (403)', async () => {
+      await request(http)
+        .post(`/api/v1/equipment/${eqId}/assignments`)
+        .set(auth(memberToken))
+        .send({ userId: memberId })
+        .expect(403);
+    });
+
+    it('član ne vidi zgodovine zadolžitev (403)', async () => {
+      await request(http)
+        .get(`/api/v1/equipment/${eqId}/assignments`)
+        .set(auth(memberToken))
+        .expect(403);
+    });
+
+    it('drugo društvo ne more zadolžiti tuje opreme (404)', async () => {
+      await request(http)
+        .post(`/api/v1/equipment/${eqId}/assignments`)
+        .set(auth(tokenB))
+        .send({ userId: memberId })
+        .expect(404);
+    });
+
+    it('vračilo zapre zadolžitev', async () => {
+      const res = await request(http)
+        .post(`/api/v1/equipment/${eqId}/assignments/return`)
+        .set(auth(tokenA))
+        .send({ returnNotes: 'Vrnjeno čisto.', conditionAtReturn: 'fair' })
+        .expect(201);
+      expect(res.body.data.returnedAt).toBeTruthy();
+    });
+
+    it('ponovno vračilo ni mogoče (404)', async () => {
+      await request(http)
+        .post(`/api/v1/equipment/${eqId}/assignments/return`)
+        .set(auth(tokenA))
+        .send({})
+        .expect(404);
+    });
+
+    it('po vračilu je nova zadolžitev spet mogoča', async () => {
+      await request(http)
+        .post(`/api/v1/equipment/${eqId}/assignments`)
+        .set(auth(tokenA))
+        .send({ userId: memberId })
+        .expect(201);
+    });
+
+    it('zgodovina vrne oba vnosa, najnovejši prvi', async () => {
+      const res = await request(http)
+        .get(`/api/v1/equipment/${eqId}/assignments`)
+        .set(auth(tokenA))
+        .expect(200);
+      expect(res.body.data.length).toBe(2);
+      expect(res.body.data[0].returnedAt).toBeFalsy();
+      expect(res.body.data[1].returnedAt).toBeTruthy();
+      expect(res.body.data[0].user.phone).toBeUndefined();
+    });
+  });
+
+  describe('NFC oznake (2026-07-20)', () => {
+    let eqId = '';
+    let otherId = '';
+    // UID oznake je globalno unikaten (ena fizična nalepka na svetu), zato ga
+    // izpeljemo iz časovne značke — fiksna vrednost bi ob drugem zagonu
+    // trčila sama vase, ker razvojna baza ostane med zagoni.
+    const uid = `04${stamp.toString(16).toUpperCase().padStart(12, '0')}`;
+
+    beforeAll(async () => {
+      const a = await request(http)
+        .post('/api/v1/equipment')
+        .set(auth(tokenA))
+        .send({ name: 'Čelada', inventoryNumber: `NFC-${stamp}` })
+        .expect(201);
+      eqId = a.body.data.id;
+      const b = await request(http)
+        .post('/api/v1/equipment')
+        .set(auth(tokenA))
+        .send({ name: 'Rokavice', inventoryNumber: `NFC2-${stamp}` })
+        .expect(201);
+      otherId = b.body.data.id;
+    });
+
+    it('oznako je mogoče povezati z opremo', async () => {
+      const res = await request(http)
+        .patch(`/api/v1/equipment/${eqId}`)
+        .set(auth(tokenA))
+        .send({ nfcUid: uid })
+        .expect(200);
+      expect(res.body.data.nfcUid).toBe(uid);
+    });
+
+    it('ista oznaka ne more biti na dveh kosih (409)', async () => {
+      const res = await request(http)
+        .patch(`/api/v1/equipment/${otherId}`)
+        .set(auth(tokenA))
+        .send({ nfcUid: uid })
+        .expect(409);
+      expect(res.body.message).toContain('že povezana');
+    });
+
+    it('neveljaven UID zavrnjen (400)', async () => {
+      await request(http)
+        .patch(`/api/v1/equipment/${otherId}`)
+        .set(auth(tokenA))
+        .send({ nfcUid: 'zzz' })
+        .expect(400);
+    });
+
+    it('skeniranje vrne imetnika in datum nabave, brez podatkov vozila', async () => {
+      const res = await request(http)
+        .get(`/api/v1/equipment/nfc/${uid}`)
+        .set(auth(memberToken))
+        .expect(200);
+      expect(res.body.data.name).toBe('Čelada');
+      expect(res.body.data).toHaveProperty('currentHolder');
+      const raw = JSON.stringify(res.body);
+      expect(raw).not.toContain('vin');
+      expect(raw).not.toContain('registrationNumber');
+    });
+
+    it('oznaka drugega društva ni dosegljiva (404)', async () => {
+      await request(http)
+        .get(`/api/v1/equipment/nfc/${uid}`)
+        .set(auth(tokenB))
+        .expect(404);
+    });
+  });
 });

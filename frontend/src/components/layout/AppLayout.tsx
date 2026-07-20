@@ -12,23 +12,41 @@ import { ROLE_LABELS } from '../../types';
 import { NotificationsBanner } from '../NotificationsBanner';
 import { OnboardingTour, tourStorageKey } from '../OnboardingTour';
 
-const navItems = [
+type NavItem = {
+  to: string;
+  label: string;
+  icon: string;
+  end?: boolean;
+  /** Vidno samo vodstvu (imenik članov — feedback Darjan, 20. 7. 2026). */
+  leadershipOnly?: boolean;
+};
+
+const navItems: NavItem[] = [
   { to: '/', label: 'Nadzorna plošča', icon: '📊', end: true },
-  { to: '/members', label: 'Člani', icon: '👥' },
+  { to: '/members', label: 'Člani', icon: '👥', leadershipOnly: true },
   { to: '/events', label: 'Dogodki', icon: '📅' },
   { to: '/calendar', label: 'Koledar', icon: '🗓️' },
   { to: '/vehicles', label: 'Vozila', icon: '🚒' },
   { to: '/equipment', label: 'Oprema', icon: '🧰' },
+  { to: '/moja-oprema', label: 'Moja oprema', icon: '🎽' },
   { to: '/trainings', label: 'Usposabljanja', icon: '🎓' },
   { to: '/notifications', label: 'Obvestila', icon: '🔔' },
   { to: '/settings', label: 'Nastavitve', icon: '⚙️' },
 ];
 
+/**
+ * Vnosi menija za dano vlogo. Skrivanje je zgolj vmesniško — prava meja
+ * je strežniška projekcija v `users.service.ts` plus `LeadershipRoute`.
+ */
+function visibleNavItems(isLeadership: boolean): NavItem[] {
+  return isLeadership ? navItems : navItems.filter((i) => !i.leadershipOnly);
+}
+
 /** Klasičen seznam — ikona + naziv v vrstici. */
-function NavList() {
+function NavList({ items }: { items: NavItem[] }) {
   return (
     <nav className="flex-1 space-y-1 px-3">
-      {navItems.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -50,10 +68,10 @@ function NavList() {
 }
 
 /** Velike ikone — mreža ploščic z veliko ikono in nazivom spodaj. */
-function NavIcons() {
+function NavIcons({ items }: { items: NavItem[] }) {
   return (
     <nav className="grid flex-1 grid-cols-2 content-start gap-2 px-3">
-      {navItems.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -82,10 +100,11 @@ function SidebarContent({
   onOpenTour: () => void;
   showLogo?: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, isLeadership } = useAuth();
   const { navStyle } = useUi();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const items = visibleNavItems(isLeadership);
 
   return (
     <>
@@ -96,7 +115,11 @@ function SidebarContent({
         </div>
       )}
 
-      {navStyle === 'icons' ? <NavIcons /> : <NavList />}
+      {navStyle === 'icons' ? (
+        <NavIcons items={items} />
+      ) : (
+        <NavList items={items} />
+      )}
 
       <div className="border-t border-white/10 p-4">
         <p className="text-sm font-medium">

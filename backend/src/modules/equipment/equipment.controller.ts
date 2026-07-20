@@ -14,6 +14,10 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../../common/enums/roles.enum';
 import {
+  IssueEquipmentDto,
+  ReturnEquipmentDto,
+} from './dto/equipment-assignment.dto';
+import {
   CreateEquipmentDto,
   InspectionsQueryDto,
   QueryEquipmentDto,
@@ -62,6 +66,28 @@ export class EquipmentController {
     return this.equipmentService.findByQrCode(orgId, qrCode);
   }
 
+  /** NFC skeniranje — zrcali QR pot. Mora biti pred `:id` (ParseUUIDPipe). */
+  @Get('nfc/:uid')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Podatki o opremi preko NFC oznake' })
+  findByNfcUid(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('uid') uid: string,
+  ) {
+    return this.equipmentService.findByNfcUid(orgId, uid);
+  }
+
+  /** Moja zadolžena oprema — vsak prijavljen član vidi svoje. */
+  @Get('my-assignments')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Moja zadolžena oprema' })
+  myAssignments(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.equipmentService.myAssignments(orgId, userId);
+  }
+
   @Get(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Podrobnosti opreme' })
@@ -93,6 +119,43 @@ export class EquipmentController {
     @Body() dto: UpdateEquipmentDto,
   ) {
     return this.equipmentService.update(orgId, id, dto);
+  }
+
+  @Post(':id/assignments')
+  @ApiBearerAuth()
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
+  @ApiOperation({ summary: 'Zadolži opremo članu' })
+  issue(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') actorId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: IssueEquipmentDto,
+  ) {
+    return this.equipmentService.issue(orgId, id, actorId, dto);
+  }
+
+  @Post(':id/assignments/return')
+  @ApiBearerAuth()
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
+  @ApiOperation({ summary: 'Vrni zadolženo opremo' })
+  returnItem(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') actorId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReturnEquipmentDto,
+  ) {
+    return this.equipmentService.returnItem(orgId, id, actorId, dto);
+  }
+
+  @Get(':id/assignments')
+  @ApiBearerAuth()
+  @Roles(SystemRole.ORG_ADMIN, SystemRole.CHIEF_MACHINIST, SystemRole.TOOLKEEPER, SystemRole.ASSISTANT_BREATHING_APPARATUS)
+  @ApiOperation({ summary: 'Zgodovina zadolžitev opreme' })
+  history(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.equipmentService.history(orgId, id);
   }
 
   @Delete(':id')

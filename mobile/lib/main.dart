@@ -11,6 +11,7 @@ import 'screens/equipment_detail_screen.dart';
 import 'screens/event_detail_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/my_equipment_screen.dart';
 import 'screens/scan_screen.dart';
 import 'services/fcm_service.dart';
 import 'theme.dart';
@@ -109,6 +110,10 @@ class _GasilAppState extends State<GasilApp> {
             final equipment = state.extra as Equipment;
             return EquipmentDetailScreen(equipment: equipment);
           },
+        ),
+        GoRoute(
+          path: '/moja-oprema',
+          builder: (_, __) => const MyEquipmentScreen(),
         ),
       ],
     );

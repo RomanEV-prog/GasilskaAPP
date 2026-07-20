@@ -4,6 +4,14 @@
 // (feedback PGD Pekre) — upravljavske pravice ima le administrator.
 const leadershipRoles = ['org_admin'];
 
+// Tehnične vloge z modulskimi pravicami nad opremo — zrcali backend @Roles.
+const equipmentManageRoles = [
+  'org_admin',
+  'chief_machinist',
+  'toolkeeper',
+  'assistant_breathing_apparatus',
+];
+
 const availabilityLabels = {
   'available': 'Dosegljiv',
   'at_home': 'Doma',
@@ -42,6 +50,9 @@ class AuthUser {
   });
 
   bool get isLeadership => roles.any(leadershipRoles.contains);
+
+  /// Sme urejati opremo (in povezovati NFC oznake).
+  bool get canManageEquipment => roles.any(equipmentManageRoles.contains);
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as String,

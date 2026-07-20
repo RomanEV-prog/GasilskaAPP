@@ -77,7 +77,8 @@ export class DashboardService {
         this.eventsService.findUpcoming(organizationId, 5),
         this.trainingsService.findByUser(organizationId, userId),
         this.notificationsService.findMine(organizationId, userId),
-        this.usersService.findOne(organizationId, userId),
+        // Surova entiteta — beremo le `availability`, v odgovor gre samo to polje.
+        this.usersService.findEntity(organizationId, userId),
         this.rsvpsRepo.find({
           where: {
             userId,

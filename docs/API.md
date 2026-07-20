@@ -55,16 +55,23 @@ pomočnik za zaščito dihal (oprema).
 
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
-| GET | `/users` | Seznam vseh članov | vsi |
-| GET | `/users/me` | Moj profil | vsi |
-| GET | `/users/:id` | Profil člana | vsi |
+| GET | `/users` | Seznam vseh članov (skrčen za ne-admine ↓) | vsi |
+| GET | `/users/me` | Moj profil (vedno poln) | vsi |
+| GET | `/users/:id` | Profil člana (skrčen za ne-admine ↓) | vsi |
 | GET | `/users/availability` | Pregled razpoložljivosti | vsi |
-| GET | `/users/available-operatives` | Dosegljivi operativci | vsi |
+| GET | `/users/available-operatives` | Dosegljivi operativci (skrčen ↓) | vsi |
 | POST | `/users` | Dodaj člana | admin |
 | PATCH | `/users/me/availability` | Moja razpoložljivost | vsi |
 | PATCH | `/users/me/spin-notifications` | Vklop/izklop mojih SPIN obvestil | vsi |
 | PATCH | `/users/:id` | Uredi člana | admin |
 | DELETE | `/users/:id` | Deaktiviraj člana | admin |
+
+### Zasebnost članov (od 20. 7. 2026)
+Navadni člani dobijo le `id, firstName, lastName, username, membershipStatus,
+isActive` — brez telefona, e-pošte, naslova, datuma rojstva in vlog. Polne
+podatke vidijo samo vloge iz `MEMBER_DIRECTORY_ROLES` (`org_admin`,
+`super_admin`); vsak član vedno vidi svoj polni profil. Meja je strežniška —
+skrivanje v vmesniku ne bi zadostovalo, ker podatki potujejo po API-ju.
 
 ### Query params za GET `/users`
 - `?membershipStatus=operative`
@@ -172,6 +179,43 @@ pomočnik za zaščito dihal (oprema).
 
 ### GET `/vehicles/expiring?days=30`
 Vrne vozila, kjer registration_expires, insurance_expires ali service_due pade v naslednjih N dneh.
+
+---
+
+## EQUIPMENT `/equipment`
+
+`upravljavci` = `org_admin`, `chief_machinist`, `toolkeeper`,
+`assistant_breathing_apparatus`.
+
+| Metoda | Pot | Opis | Vloge |
+|--------|-----|------|-------|
+| GET | `/equipment` | Seznam opreme (z `currentHolder`) | vsi |
+| GET | `/equipment/:id` | Podrobnosti opreme | vsi |
+| GET | `/equipment/qr/:qrCode` | Podatki preko QR kode | vsi |
+| GET | `/equipment/nfc/:uid` | Podatki preko NFC oznake | vsi |
+| GET | `/equipment/my-assignments` | Moja zadolžena oprema | vsi |
+| GET | `/equipment/inspections-due?days=30` | Oprema s pregledom | upravljavci |
+| POST | `/equipment` | Dodaj opremo | upravljavci |
+| PATCH | `/equipment/:id` | Uredi opremo (tudi `nfcUid`) | upravljavci |
+| DELETE | `/equipment/:id` | Deaktiviraj opremo | admin |
+| POST | `/equipment/:id/assignments` | Zadolži članu | upravljavci |
+| POST | `/equipment/:id/assignments/return` | Vrni opremo | upravljavci |
+| GET | `/equipment/:id/assignments` | Zgodovina zadolžitev | upravljavci |
+
+### Skeniranje (QR in NFC)
+Obe poti vračata isto **namerno ozko** projekcijo (brez VIN/registrske/
+zavarovanja vozila), obogateno s `currentHolder` (samo ime in priimek),
+`issuedAt` in `purchaseDate` — cilj skeniranja je ugotoviti, komu kos pripada
+in kako star je.
+
+`nfcUid` je strojni UID nalepke (NTAG213). Sprejema hex z neobveznimi ločili
+(`04:1F:2E:…`), shrani se normaliziran (velike črke, brez ločil). Je **globalno**
+unikaten, ker je ena fizična nalepka na svetu ena sama; `null` ga odklopi.
+
+### Zadolžitve
+Kos opreme ima največ eno odprto zadolžitev (`returned_at IS NULL`), kar vsili
+delni unikatni indeks v bazi. Ponovna zadolžitev brez vračila → **409**.
+Vračilo brez odprte zadolžitve → **404**. Član iz drugega društva → **400**.
 
 ---
 

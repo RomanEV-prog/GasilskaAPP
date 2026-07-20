@@ -166,9 +166,30 @@ CREATE TABLE equipment (
   expiry_date         DATE,           -- rok veljave/trajanja (zaščitna oprema)
   notes               TEXT,
   qr_code             VARCHAR(255) UNIQUE,
+  nfc_uid             VARCHAR(32) UNIQUE,  -- strojni UID NTAG213 oznake
+  purchase_date       DATE,           -- datum nabave → starost opreme
   is_active           BOOLEAN DEFAULT true,
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Zadolžitve opreme — trajna zgodovina (kdo je kdaj imel kateri kos).
+-- Najemništvo se podeduje prek equipment.organization_id, zato tu ni
+-- svojega organization_id (enako kot event_attendance).
+CREATE TABLE equipment_assignments (
+  id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  equipment_id         UUID NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
+  user_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  issued_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  returned_at          TIMESTAMPTZ,    -- NULL = še zadolženo
+  issued_by            UUID REFERENCES users(id),
+  returned_by          UUID REFERENCES users(id),
+  condition_at_issue   equipment_condition,
+  condition_at_return  equipment_condition,
+  issue_notes          TEXT,
+  return_notes         TEXT,
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE trainings (
@@ -261,6 +282,10 @@ CREATE INDEX idx_vehicles_exp ON vehicles(registration_expires, insurance_expire
 CREATE INDEX idx_trainings_user ON trainings(user_id, expires_at);
 CREATE INDEX idx_trainings_org ON trainings(organization_id, expires_at);
 CREATE INDEX idx_notif_org ON notifications(organization_id, created_at);
+CREATE INDEX idx_eq_assign_equipment ON equipment_assignments(equipment_id, issued_at DESC);
+CREATE INDEX idx_eq_assign_user ON equipment_assignments(user_id, returned_at);
+-- Invarianta: en kos opreme = največ ena odprta zadolžitev.
+CREATE UNIQUE INDEX idx_eq_assign_open ON equipment_assignments(equipment_id) WHERE returned_at IS NULL;
 
 -- Updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at() RETURNS TRIGGER AS $$
@@ -271,5 +296,6 @@ CREATE TRIGGER t_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION upda
 CREATE TRIGGER t_events BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_vehicles BEFORE UPDATE ON vehicles FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_equipment BEFORE UPDATE ON equipment FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER t_equipment_assignments BEFORE UPDATE ON equipment_assignments FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_trainings BEFORE UPDATE ON trainings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_docs BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION update_updated_at();

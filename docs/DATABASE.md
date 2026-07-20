@@ -205,10 +205,36 @@ CREATE TABLE equipment (
   expiry_date         DATE,           -- rok veljave/trajanja (zaščitna oprema)
   notes               TEXT,
   qr_code             VARCHAR(255) UNIQUE,
+  nfc_uid             VARCHAR(32) UNIQUE,  -- strojni UID NTAG213 oznake
+  purchase_date       DATE,           -- datum nabave → starost opreme
   is_active           BOOLEAN DEFAULT true,
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ─── EQUIPMENT ASSIGNMENTS ───────────────────────────────
+-- Trajna zgodovina zadolžitev: kdo je kdaj imel kateri kos.
+-- Nima svojega organization_id — najemništvo podeduje prek equipment
+-- (enak vzorec kot event_attendance).
+CREATE TABLE equipment_assignments (
+  id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  equipment_id         UUID NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
+  user_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  issued_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  returned_at          TIMESTAMPTZ,    -- NULL = še zadolženo
+  issued_by            UUID REFERENCES users(id),
+  returned_by          UUID REFERENCES users(id),
+  condition_at_issue   equipment_condition,
+  condition_at_return  equipment_condition,
+  issue_notes          TEXT,
+  return_notes         TEXT,
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Invarianta: en kos = največ ena odprta zadolžitev (glej ADR-009).
+CREATE UNIQUE INDEX idx_eq_assign_open
+  ON equipment_assignments(equipment_id) WHERE returned_at IS NULL;
 
 -- ─── TRAININGS ───────────────────────────────────────────
 CREATE TABLE trainings (

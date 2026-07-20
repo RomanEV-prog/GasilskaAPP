@@ -179,7 +179,7 @@ Cron job vsak dan ob 08:00 preveri:
 
 ## 6. Equipment modul (`/modules/equipment`)
 
-**Namen:** Inventar opreme z QR kodami.
+**Namen:** Inventar opreme z QR in NFC oznakami ter zadolžitvami članom.
 
 ### Datoteke
 ```
@@ -188,7 +188,10 @@ equipment/
 ├── equipment.controller.ts
 ├── equipment.service.ts
 ├── equipment.entity.ts
-└── dto/equipment.dto.ts
+├── equipment-assignment.entity.ts
+└── dto/
+    ├── equipment.dto.ts
+    └── equipment-assignment.dto.ts
 ```
 
 ### QR koda
@@ -201,6 +204,27 @@ equipment/
 - `expiry_date` — rok veljave/trajanja (zaščitna oprema ima rok uporabe; feedback testerjev)
 - Oba roka pokrivajo opomniki 7/3 dni v `scheduler/reminders.service.ts`
   (prejemniki: admin, glavni strojnik, orodjar, pomočnik za zaščito dihal)
+
+### NFC oznake (predlog Darjan, 20. 7. 2026)
+Ker se na etikete oblek in rokavic po pravilih ne sme pisati imen, se oprema
+meša in izgublja. Rešitev: NFC nalepka (NTAG213, 13,56 MHz) na kosu opreme.
+
+- `equipment.nfc_uid` hrani **strojni UID nalepke**; na oznako ne pišemo ničesar
+  (glej ADR-010 za razloge in kompromise)
+- `GET /equipment/nfc/:uid` zrcali QR pot — ista reducirana projekcija
+  (`toScanProjection`), obogatena z imetnikom, datumom zadolžitve in nabave
+- Mobilna: `services/nfc_service.dart` (paket `nfc_manager` v4), zaslon za
+  skeniranje bere QR in NFC hkrati; povezovanje oznake na zaslonu podrobnosti
+- Naprave brez NFC tiho degradirajo na QR
+
+### Zadolžitve opreme
+- `equipment_assignments` — trajna zgodovina; odprta zadolžitev = `returned_at IS NULL`
+- `POST /equipment/:id/assignments` (zadolži) · `.../return` (vrni) ·
+  `GET /equipment/:id/assignments` (zgodovina) — vse za upravljavce opreme
+- `GET /equipment/my-assignments` — vsak član vidi svoje, brez posebnih pravic
+- Seznam in podrobnosti opreme nosijo `currentHolder` (samo ime in priimek —
+  nikoli cel `User`, sicer bi obšli zasebnost članov)
+- Invarianta »en kos = ena odprta zadolžitev« je v bazi (ADR-009), ne v kodi
 
 ---
 

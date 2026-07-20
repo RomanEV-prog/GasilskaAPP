@@ -118,6 +118,47 @@ findAll(@Param('orgId') orgId: string) {
 
 ---
 
+## ADR-009: Zadolžitve opreme — invarianta v bazi, ne v aplikaciji
+
+**Odločitev:** Trenutni imetnik se bere z `LEFT JOIN` na `equipment_assignments`
+(odprta zadolžitev = `returned_at IS NULL`). Brez denormaliziranega stolpca
+`assigned_to` na `equipment`. Pravilo »en kos = največ ena odprta zadolžitev«
+vsili delni unikatni indeks `idx_eq_assign_open`.
+
+**Razlogi:**
+- Aplikacijsko preverjanje ob hkratnih zahtevkih ne zdrži — dva klika na
+  »Zadolži« bi ustvarila dve odprti vrstici. Indeks tak vpis zavrne (23505).
+- Brez dvojnega pisanja ni razreda napak »stolpec kaže na že vrnjeno zadolžitev«.
+- Delni indeks je majhen (le trenutno izdani kosi); društvo ima 10²–10³ kosov.
+
+**Cena:** vsak seznam potrebuje join. Zanemarljivo pri tej velikosti.
+
+---
+
+## ADR-010: NFC oznake — hranimo UID, ne pišemo NDEF
+
+**Odločitev:** Na opremo shranimo tovarniški UID nalepke (`equipment.nfc_uid`),
+na oznako ne pišemo ničesar. Preslikava UID → oprema živi v bazi.
+
+**Razlogi:**
+- Deluje s prazno nalepko iz vrečke — ni koraka pisanja ob uvedbi.
+- UID je tovarniško zaklenjen; nihče ga ne prepiše z »NFC Tools«.
+- Ena resnica v bazi, skupaj s QR kodo.
+
+**Kompromisi (zavestni):**
+- **UID ni varnostni žeton** — klonirljive »magic« oznake obstajajo. Za evidenco
+  inventarja zadošča, za dostopni nadzor NE.
+- Brez baze je nalepka nema (NDEF z URL-jem bi se odprl na tujem telefonu).
+  Sprejemljivo — aplikacija je zaprta za člane.
+- QR kode obdržimo kot rezervo za naprave brez NFC.
+
+**Strojna oprema:** kupljene NTAG213 nalepke (13,56 MHz) so za tiskovine in
+**niso pralno odporne** — primerne za čelade, škornje, IDA, orodje. Za obleke in
+rokavice bodo potrebne všivne/termo-lepljene pralne oznake; shema je enaka,
+zamenjava ne zahteva sprememb kode.
+
+---
+
 ## TODO za V2
 
 - [ ] Refresh tokeni

@@ -22,6 +22,18 @@ export enum SystemRole {
 }
 
 /**
+ * Vloge, ki smejo videti polne osebne podatke članov (telefon, naslov, rojstvo).
+ * Navadni člani dobijo le ime, priimek, prijavno ime in status članstva.
+ *
+ * Zavestno ozko: funkcije (predsednik, tajnik ...) so po dogovoru s PGD Pekre
+ * samo nazivi brez pravic, zato tudi imenika ne odpirajo.
+ */
+export const MEMBER_DIRECTORY_ROLES: SystemRole[] = [
+  SystemRole.SUPER_ADMIN,
+  SystemRole.ORG_ADMIN,
+];
+
+/**
  * Status članstva (membership_status ENUM).
  */
 export enum MembershipStatus {

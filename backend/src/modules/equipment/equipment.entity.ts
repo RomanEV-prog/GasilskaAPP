@@ -70,6 +70,26 @@ export class Equipment {
   @Column({ name: 'qr_code', nullable: true, length: 255, unique: true })
   qrCode?: string;
 
+  /**
+   * Strojni UID NFC oznake (NTAG213, 13,56 MHz) — velika hex brez ločil.
+   * Namerno hranimo UID in ne pišemo NDEF vsebine na oznako: deluje s prazno
+   * nalepko, nihče je ne more po nesreči prepisati, resnica ostane v bazi.
+   * UID ni varnostni žeton (klonirljive oznake obstajajo) — za inventar zadošča.
+   */
+  // Tip je eksplicitno naveden: iz unije `string | null` ga TypeORM ne izpelje.
+  @Column({
+    name: 'nfc_uid',
+    type: 'varchar',
+    nullable: true,
+    length: 32,
+    unique: true,
+  })
+  nfcUid?: string | null;
+
+  /** Datum nabave — podlaga za dejansko starost opreme ob skeniranju. */
+  @Column({ name: 'purchase_date', type: 'date', nullable: true })
+  purchaseDate?: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

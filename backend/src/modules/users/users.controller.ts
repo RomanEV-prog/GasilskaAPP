@@ -36,9 +36,10 @@ export class UsersController {
   @ApiOperation({ summary: 'Seznam vseh članov društva' })
   findAll(
     @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('roles') actorRoles: SystemRole[],
     @Query() query: QueryUsersDto,
   ) {
-    return this.usersService.findAll(orgId, query);
+    return this.usersService.findAll(orgId, query, actorRoles);
   }
 
   @Get('availability')
@@ -49,8 +50,11 @@ export class UsersController {
 
   @Get('available-operatives')
   @ApiOperation({ summary: 'Dosegljivi operativci' })
-  availableOperatives(@CurrentUser('organizationId') orgId: string) {
-    return this.usersService.availableOperatives(orgId);
+  availableOperatives(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('roles') actorRoles: SystemRole[],
+  ) {
+    return this.usersService.availableOperatives(orgId, actorRoles);
   }
 
   @Get('me')
@@ -94,9 +98,11 @@ export class UsersController {
   @ApiOperation({ summary: 'Profil člana' })
   findOne(
     @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('roles') actorRoles: SystemRole[],
+    @CurrentUser('userId') actorId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.usersService.findOne(orgId, id);
+    return this.usersService.findOne(orgId, id, actorRoles, actorId);
   }
 
   @Post()
