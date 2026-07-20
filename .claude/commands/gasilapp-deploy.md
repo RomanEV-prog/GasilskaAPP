@@ -100,8 +100,48 @@ brez prijave v račun pravega društva.
 - **SPIN geo-omejitev:** prod (Hetzner DE) ne doseže spin3.sos112.si; teče prek
   SI relay `152.89.232.161` (env `SPIN_BASE_URL`). Če SPIN po objavi ne dela,
   preveri relay, ne backend.
+- **Tišina SPIN-a v dnevniku po objavi je NORMALNA — ne lovi je.** Sporočilo
+  `SPIN inicializacija: shranjenih N …` se izpiše **samo ob prazni tabeli**:
+  `onModuleInit` ob `count() > 0` nastavi `primed=true` in se vrne brez zapisa
+  (`spin.service.ts:81`), `pollInterventions` pa tiho konča, kadar ni novih
+  (vrstici 104, 116). Na delujoči produkciji je tabela vedno polna, zato po
+  vsakem rebuildu **ni pričakovati nobene SPIN vrstice**. Da poller res teče,
+  preveri podatke, ne dnevnika:
+  ```bash
+  ssh root@178.104.67.229 "docker exec gasilapp-db-1 psql -U postgres -d gasilapp \
+    -t -c 'SELECT count(*), max(created_at) FROM spin_interventions;'"
+  ```
+  `max(created_at)` mlajši od zagona vsebnika = poller dela. (Ta gotcha je
+  stala nekaj minut v seji 2026-07-20b — prejšnja različica tega skilla je
+  navajala, da je zapis znak uspeha, kar drži le ob prvi postavitvi.)
 
 ## Preverjeno delujoč zaključek seje 2026-07-20
 
 Kopija 72K → migracija (tabela + 3 indeksi + 2 stolpca) → rebuild → 401 na obeh
 novih poteh → APK 75.552.969 B na `gasilapp.eu/beta` → stran kaže »Različica 1.0.7«.
+
+## Objava BREZ migracije (seja 2026-07-20b, preimenovanje v »Plamen«)
+
+Kadar sprememba ne zadene sheme (besedilo, ikone, blagovna znamka), koraka
+kopije baze in migracije **odpadeta** — vrstni red je `push → git pull →
+rebuild → verifikacija → APK + beta stran`. Kopija baze pred rebuildom brez
+migracije ni potrebna: rebuild vsebnika `db` ne dotakne.
+
+Verifikacija preimenovanja (namesto trika 401-namesto-404, ki velja za nove
+endpointe):
+```bash
+curl -s https://gasilapp.eu/ | grep -o "<title>[^<]*</title>"      # <title>Plamen</title>
+curl -s https://gasilapp.eu/manifest.webmanifest | head -3          # "name": "Plamen"
+curl -sI https://gasilapp.eu/icons/icon-512.png | grep -i length    # ujemanje z lokalno
+```
+
+**Pri APK vedno primerjaj SHA-256, ne le velikosti** — velikost ujame skrajšan
+prenos, ne pa tihe okvare:
+```bash
+sha256sum /c/gasilapp_mobile/build/app/outputs/flutter-apk/app-release.apk
+ssh root@178.104.67.229 'sha256sum /opt/gasilapp/downloads/gasilapp.apk'
+```
+
+Preverjeno delujoče: `9698650` → rebuild → portal in manifest kažeta »Plamen«,
+4/4 ikone bajtno enake → APK 75.727.829 B, SHA-256 identičen, `aapt2` potrjuje
+`label='Plamen'`, versionCode 9 → beta stran »Različica 1.0.8«.
