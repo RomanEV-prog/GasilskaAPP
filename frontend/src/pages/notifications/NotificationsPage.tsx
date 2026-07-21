@@ -131,6 +131,14 @@ export function NotificationsPage() {
   const { isLeadership } = useAuth();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  // Razprta obvestila (besedilo se pokaže šele ob pritisku).
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const { data: notifications, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications', 'mine'],
@@ -180,38 +188,49 @@ export function NotificationsPage() {
         <EmptyState message="Ni obvestil." />
       ) : (
         <div className="space-y-2">
-          {notifications.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => {
-                if (!n.isRead) markRead.mutate(n.id);
-              }}
-              className={`block w-full rounded-xl bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md ${
-                n.isRead ? 'opacity-70' : 'border-l-4 border-primary'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p
-                    className={`text-sm ${n.isRead ? '' : 'font-semibold'}`}
-                  >
-                    {n.title}
-                  </p>
-                  <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-600">
-                    {n.body}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-400">
-                    {format(new Date(n.createdAt), 'd. M. yyyy HH:mm', {
-                      locale: sl,
-                    })}
-                  </p>
+          {notifications.map((n) => {
+            const isOpen = expanded.has(n.id);
+            return (
+              <button
+                key={n.id}
+                onClick={() => {
+                  toggleExpanded(n.id);
+                  if (!n.isRead) markRead.mutate(n.id);
+                }}
+                aria-expanded={isOpen}
+                className={`block w-full rounded-xl bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md ${
+                  n.isRead ? 'opacity-70' : 'border-l-4 border-primary'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-sm ${n.isRead ? '' : 'font-semibold'}`}>
+                      {n.title}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {format(new Date(n.createdAt), 'd. M. yyyy HH:mm', {
+                        locale: sl,
+                      })}
+                    </p>
+                    {/* Besedilo šele ob pritisku. */}
+                    {isOpen && (
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
+                        {n.body}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge color={n.target === 'all' ? 'gray' : 'blue'}>
+                      {TARGET_LABELS[n.target]}
+                    </Badge>
+                    <span className="text-gray-400" aria-hidden>
+                      {isOpen ? '▲' : '▼'}
+                    </span>
+                  </div>
                 </div>
-                <Badge color={n.target === 'all' ? 'gray' : 'blue'}>
-                  {TARGET_LABELS[n.target]}
-                </Badge>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

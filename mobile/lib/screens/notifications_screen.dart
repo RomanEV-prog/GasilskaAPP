@@ -15,6 +15,8 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final _api = NotificationsApi();
   late Future<List<AppNotification>> _future;
+  // Razprta obvestila — besedilo se pokaže šele ob pritisku.
+  final Set<String> _expanded = {};
 
   @override
   void initState() {
@@ -67,6 +69,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: items.map((n) {
+              final isOpen = _expanded.contains(n.id);
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
@@ -91,8 +94,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(n.body),
-                      const SizedBox(height: 4),
                       Text(
                         df.format(n.createdAt),
                         style: const TextStyle(
@@ -100,9 +101,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           fontSize: 11,
                         ),
                       ),
+                      // Besedilo šele ob pritisku.
+                      if (isOpen) ...[
+                        const SizedBox(height: 6),
+                        Text(n.body),
+                      ],
                     ],
                   ),
-                  onTap: () => _markRead(n),
+                  trailing: Icon(
+                    isOpen ? Icons.expand_less : Icons.expand_more,
+                    color: GasilColors.textMuted,
+                  ),
+                  onTap: () {
+                    setState(() {
+                      if (isOpen) {
+                        _expanded.remove(n.id);
+                      } else {
+                        _expanded.add(n.id);
+                      }
+                    });
+                    _markRead(n);
+                  },
                 ),
               );
             }).toList(),
