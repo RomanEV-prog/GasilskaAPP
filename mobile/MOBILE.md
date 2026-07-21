@@ -80,17 +80,50 @@ flutter run              # na priklopljeni napravi/emulatorju
 - **Test računa:** enaka kot backend (`admin@pgd-pekre.si` / `GasilApp123!`,
   `janez@pgd-pekre.si` / `Geslo1234`).
 
-## Stanje (MVP dokončan)
+## Stanje
 
 - ✅ Login (JWT v flutter_secure_storage, GoRouter redirect)
-- ✅ Dashboard (prihajajoči dogodki, usposabljanja, obvestila) — pull-to-refresh
-- ✅ Dogodki + detajl z RSVP gumbi
-- ✅ Razpoložljivost (nastavitev statusa)
-- ✅ Obvestila (read/unread, tap = označi prebrano)
+- ✅ Nadzorna plošča — povzetek (naslednji dogodek, št. neprebranih, usposabljanja)
+- ✅ Dogodki + detajl z RSVP; seznam kaže lasten odziv (badge, brez odpiranja)
+- ✅ Koledar (`table_calendar`) + povzetek »Danes« in »Naslednji dogodek«
+- ✅ SPIN (zavihek »Intervencije«, bere lasten feed; NE meša z obvestili)
+- ✅ Obvestila (naslov+datum, besedilo razpre ob tapu, tap = označi prebrano)
+- ✅ Skeniranje opreme (QR + NFC), »Moja oprema«
+- ✅ Vozila — **samo pregled**, za odgovorne (`chief_machinist`/`org_admin`);
+  vnos v meniju računa (glej vzorec spodaj)
+- ✅ Fotografije — vnos v meniju odpre album društva (`photoUploadLink`) prek
+  `url_launcher`
 - ✅ Firebase FCM — koda vgrajena (`firebase_core`/`firebase_messaging`,
   `FcmService`, žeton se pošlje ob prijavi). Aktivira se, ko `flutterfire configure`
   prepiše `lib/firebase_options.dart` s pravimi vrednostmi. Do takrat gracefully no-op.
   Navodila: `docs/FIREBASE.md`.
+
+## Vzorec: nov pregledni (read-only) zaslon nad obstoječim API-jem
+
+Zgrajen iz zavihka Vozila (2026-07-21). Ko web že upravlja neko entiteto in v
+mobilni rabiš samo pregled, ne podvajaj urejanja — zrcali ta vzorec (predloga:
+`screens/my_equipment_screen.dart`, `screens/vehicles_screen.dart`):
+
+1. **Model** `models/<x>.dart` — `fromJson`, ki zrcali serializacijo backend
+   entitete (TypeORM polja so camelCase). Ne ugibaj oznak/label — če je surova
+   vrednost že berljiva (npr. GZS oznaka `GVC-1`), jo prikaži kot je.
+2. **API** `api/<x>_api.dart` — samo `list()` / `get(id)` proti obstoječemu
+   `GET`. Preveri RBAC v `<x>.controller.ts`: `GET` je pogosto odprt vsem članom,
+   pisanje pa `@Roles(...)`.
+3. **Zaslona** `screens/<x>_screen.dart` (`Scaffold`+`AppBar`+`RefreshIndicator`+
+   `FutureBuilder`, stanja waiting/error/empty) in `<x>_detail_screen.dart`
+   (ob odprtju osveži z `get(id)`, ker je `extra` iz seznama lahko zastarel).
+4. **Poti** v `main.dart`: `/<x>` in `/<x>/:id` (`state.extra as <X>`).
+5. **Vstopna točka:** dno ima že 5 zavihkov (max) — dodatne vnose daj v zgornji
+   `PopupMenuButton` v `home_shell.dart`, **pogojno po vlogi**. Vloge zrcali
+   backend `@Roles` prek getterja v `models/user.dart`
+   (`canManageVehicles => roles.any(vehicleManageRoles.contains)`), NE skrivaj
+   samo v UI brez preverbe pravice na backendu.
+
+**Zunanje povezave:** `url_launcher` (`launchUrl(uri, mode:
+LaunchMode.externalApplication)`); vrednost potegni ob kliku (npr.
+`OrganizationsApi().me()['photoUploadLink']`), obravnavaj prazno/neveljavno s
+snackbarjem.
 
 ## ⚠️ Gradle in ne-ASCII pot
 
@@ -106,10 +139,9 @@ Set-Location 'C:\gasilapp_mobile'; flutter build apk --debug
 `android/gradle.properties` že vsebuje `android.overridePathCheck=true`.
 `flutter analyze` in `flutter test` delujeta neposredno v pravi mapi.
 
-## POZNEJE (ne za MVP)
+## POZNEJE (še ni)
 
-- Vozila in oprema
-- QR skeniranje
+- Vozila: urejanje iz mobilne (zdaj samo pregled — urejanje v spletu)
 - Offline mode
 - Biometric login
 

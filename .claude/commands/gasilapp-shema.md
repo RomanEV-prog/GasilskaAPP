@@ -142,3 +142,23 @@ Obstoječa infrastruktura v `test/app.e2e-spec.ts`: `tokenA` (admin org A),
 - **`audit_logs` namenoma NE kaskadira** z društvom (revizijska sled naj preživi),
   zato je pri brisanju testnega društva treba najprej pobrisati njegove vrstice
   v `audit_logs`.
+
+- **Sprememba obnašanja NE počisti starih podatkov — to je ločen korak.** Ko
+  spremeniš kodo tako, da se vrstice tipa X nehajo ustvarjati (npr. SPIN se
+  odslej samo pusha, ne piše več v `notifications`), **obstoječe** vrstice tipa X
+  ostanejo v bazi in se še naprej kažejo v vmesniku (`findMine` bere zadnjih 100).
+  Popravek kode ne deluje za nazaj. Če je namen funkcije, da tega tipa NI več v
+  seznamu, po objavi enkratno počisti stare vrstice:
+  ```bash
+  # PRED brisanjem: kopija baze + preveri, da FK kaskadira (sicer najprej otroci)
+  docker exec gasilapp-db-1 psql -U postgres -d gasilapp -c \
+    "SELECT conname, confdeltype FROM pg_constraint
+     WHERE conrelid='notification_reads'::regclass AND contype='f';"  # c = CASCADE
+  docker exec gasilapp-db-1 psql -U postgres -d gasilapp -v ON_ERROR_STOP=1 -c \
+    "DELETE FROM notifications WHERE type='spin';"
+  ```
+  Udarilo 2026-07-21: po SPIN→push-only je Darjan v Obvestilih še vedno videl 39
+  starih SPIN vnosov, dokler jih nisem počistil. **Brisanje produkcijskih
+  podatkov zahteva uporabnikovo potrditev** (glej `CLAUDE.md` § potrditev) —
+  predlagaj, ne izvedi na svojo roko. Preveri, da referenčni podatek (tu
+  `spin_interventions` = 855 vrstic) ostane nedotaknjen.

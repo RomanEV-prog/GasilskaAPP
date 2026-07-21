@@ -130,8 +130,9 @@ Navaden `member` vidi samo:
 
 **Vse tri faze so dokončane; produkcija teče na https://gasilapp.eu od 7. 7. 2026.**
 Backend ima 13 modulov, web portal pokriva vse module, mobilna je v beta
-razdeljevanju (Android 1.0.7+8). Novo delo je **nadgradnja obstoječega**, ne
-postavljanje od začetka — poglej obstoječi modul kot vzorec, preden pišeš nov.
+razdeljevanju (Android 1.0.9+10, ime aplikacije »Plamen«). Novo delo je
+**nadgradnja obstoječega**, ne postavljanje od začetka — poglej obstoječi modul
+kot vzorec, preden pišeš nov.
 
 Skilli projekta (`.claude/commands/`, kliči z `/ime`):
 
@@ -180,4 +181,5 @@ Glej `infra/INFRA.md` za celoten seznam.
 - **SSH na strežnike (Windows):** ni `sshpass`/`plink`; za geslo-prijavo uporabi `python` + `paramiko` (`pip install paramiko`). Hetzner + SI relay imata dodan ključ `~/.ssh/id_ed25519` (`ssh root@<IP>` deluje brez gesla).
 - **NFC (oprema):** `nfc_manager` v4 (API se od v3 **prelomno** razlikuje — beri README nameščene verzije, ne piši po spominu). UID se bere prek `NfcTagAndroid.from(tag)?.id` (Android) oz. `MiFareIos.from(tag)?.identifier` (iOS); ovito v `mobile/lib/services/nfc_service.dart`. Na Androidu NFC seja teče vzporedno s kamero, na iOS jo prekrije sistemsko okno → tam ročni gumb. `equipment.nfc_uid` je **globalno** unikaten (ena fizična nalepka na svetu) — testi zato ne smejo uporabljati fiksnih UID-jev, ker razvojna baza ostane med zagoni.
 - **TypeORM in unije z `null`:** `@Column()` nad poljem tipa `string | null` odpove z `DataTypeNotSupportedError: Data type "Object"` — tip stolpca je treba navesti eksplicitno (`type: 'varchar'`).
+- **Brisljiva polja: `null`, ne `undefined`, sicer se roka/datuma ne da IZBRISATI.** Obrazci gradijo telo z vzorcem `serviceDue: data.serviceDue || undefined`. Prazno polje → `undefined` → `JSON.stringify` ga IZPUSTI → backend `Object.assign(entity, dto)` ga ne prepiše → stara vrednost ostane. Uporabnik ne more počistiti polja. Za polja, ki morajo biti **brisljiva** ob urejanju, pošlji `null` (`data.x || null`); nullable stolpec + `@IsOptional()` (ki spusti `null`) ga počistita. Vzorec je po vsem frontendu (`|| undefined`) — pri NOVEM brisljivem polju vedno `null`. Udarilo 2026-07-21 (servisni datum vozila, feedback Darjan).
 - **Git:** repo na `github.com/RomanEV-prog/GasilskaAPP` (branch `master`). CI (`.github/workflows/ci.yml`) poganja backend E2E + frontend build + `flutter analyze` ob push.
