@@ -39,6 +39,14 @@ export class Organization {
   logoUrl?: string;
 
   /**
+   * Zunanja povezava za fotografije (npr. skupni Google Foto / OneDrive album).
+   * Admin jo nastavi; člani jo odprejo v brskalniku (gledanje + nalaganje slik).
+   * Slik NE hranimo v našem sistemu.
+   */
+  @Column({ name: 'photo_upload_link', nullable: true, length: 500 })
+  photoUploadLink?: string;
+
+  /**
    * Občine za obveščanje o intervencijah SPIN (imena iz odObmocje).
    * Društvo lahko izbere več občin (svojo + sosednje, s katerimi sodeluje).
    * Prazen seznam / null = brez obveščanja.

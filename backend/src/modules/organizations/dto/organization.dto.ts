@@ -38,6 +38,14 @@ export class UpdateOrganizationDto {
   website?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Zunanja povezava za fotografije (Google Foto / OneDrive album). Prazen niz = izbris.',
+  })
+  @IsOptional()
+  @IsString()
+  photoUploadLink?: string;
+
+  @ApiPropertyOptional({
     description: 'Občine za obveščanje o intervencijah SPIN (seznam imen). Prazen seznam = brez obveščanja.',
     type: [String],
   })

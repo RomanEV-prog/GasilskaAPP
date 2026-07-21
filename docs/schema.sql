@@ -14,6 +14,7 @@ CREATE TABLE organizations (
   email         VARCHAR(255),
   website       VARCHAR(255),
   logo_url      VARCHAR(500),
+  photo_upload_link VARCHAR(500),   -- zunanja povezava za fotografije (Google Foto ...)
   spin_obcine   JSONB,
   spin_obcina   VARCHAR(255),   -- zastarelo (nadomeščeno s spin_obcine)
   spin_obcina_id BIGINT,        -- zastarelo
