@@ -19,6 +19,7 @@ import {
   VEHICLE_OZNAKA_GROUPS,
   vehicleTypeLabel,
   type Vehicle,
+  type VehicleWrite,
 } from '../../types';
 
 const schema = z.object({
@@ -102,19 +103,23 @@ export function VehicleFormPage() {
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => {
-      const payload: Partial<Vehicle> = {
+      // Datumska/številska polja rokov pošlji kot `null`, kadar so prazna —
+      // tako se obstoječi rok IZBRIŠE. `undefined` bi backend izpustil in
+      // stari datum bi ostal (hrošč: vnesenega servisnega datuma ni bilo
+      // mogoče počistiti).
+      const payload: VehicleWrite = {
         name: data.name,
         vehicleType: data.vehicleType as Vehicle['vehicleType'],
         licensePlate: data.licensePlate || undefined,
         vin: data.vin || undefined,
         year: data.year ? parseInt(data.year, 10) : undefined,
         mileage: data.mileage ? parseInt(data.mileage, 10) : undefined,
-        registrationExpires: data.registrationExpires || undefined,
-        insuranceExpires: data.insuranceExpires || undefined,
-        serviceDue: data.serviceDue || undefined,
+        registrationExpires: data.registrationExpires || null,
+        insuranceExpires: data.insuranceExpires || null,
+        serviceDue: data.serviceDue || null,
         serviceMileage: data.serviceMileage
           ? parseInt(data.serviceMileage, 10)
-          : undefined,
+          : null,
         notes: data.notes || undefined,
       };
       return isEdit

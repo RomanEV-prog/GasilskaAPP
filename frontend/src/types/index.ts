@@ -151,6 +151,22 @@ export interface Vehicle {
   updatedAt: string;
 }
 
+/**
+ * Telo za create/update vozila. Datumska polja dovolijo `null` za IZBRIS
+ * obstoječega roka — `undefined` bi backend izpustil in datum obdržal.
+ */
+export type VehicleWrite = Partial<
+  Omit<
+    Vehicle,
+    'registrationExpires' | 'insuranceExpires' | 'serviceDue' | 'serviceMileage'
+  >
+> & {
+  registrationExpires?: string | null;
+  insuranceExpires?: string | null;
+  serviceDue?: string | null;
+  serviceMileage?: number | null;
+};
+
 export interface Training {
   id: string;
   organizationId: string;

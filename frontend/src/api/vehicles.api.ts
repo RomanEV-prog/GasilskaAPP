@@ -1,4 +1,4 @@
-import type { Vehicle } from '../types';
+import type { Vehicle, VehicleWrite } from '../types';
 import api from './client';
 
 export const vehiclesApi = {
@@ -9,10 +9,10 @@ export const vehiclesApi = {
   expiring: (days = 30): Promise<Vehicle[]> =>
     api.get('/vehicles/expiring', { params: { days } }),
 
-  create: (data: Partial<Vehicle>): Promise<Vehicle> =>
+  create: (data: VehicleWrite): Promise<Vehicle> =>
     api.post('/vehicles', data),
 
-  update: (id: string, data: Partial<Vehicle>): Promise<Vehicle> =>
+  update: (id: string, data: VehicleWrite): Promise<Vehicle> =>
     api.patch(`/vehicles/${id}`, data),
 
   deactivate: (id: string): Promise<Vehicle> => api.delete(`/vehicles/${id}`),
