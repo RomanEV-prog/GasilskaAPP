@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUrl,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateOrganizationDto {
   @ApiPropertyOptional()
@@ -43,6 +49,14 @@ export class UpdateOrganizationDto {
   })
   @IsOptional()
   @IsString()
+  // Prazen niz (izbris) preskoči; sicer MORA biti http(s) URL — vrednost se
+  // izriše kot klikljiva povezava (splet <a href>, mobilna launchUrl), zato
+  // preprečimo sheme kot javascript:/data: (shranjeni XSS / zloraba).
+  @ValidateIf((o) => o.photoUploadLink !== '' && o.photoUploadLink != null)
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: 'Povezava za fotografije mora biti veljaven http(s) naslov.' },
+  )
   photoUploadLink?: string;
 
   @ApiPropertyOptional({

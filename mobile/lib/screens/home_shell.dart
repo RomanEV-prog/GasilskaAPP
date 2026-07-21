@@ -43,9 +43,15 @@ Future<void> _openPhotos(BuildContext context) async {
     );
     return;
   }
+  // Dovoli SAMO http(s) — prepreči sheme kot javascript:/file:/intent:.
   final uri = Uri.tryParse(link);
-  final ok = uri != null &&
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Povezava za fotografije ni veljavna.')),
+    );
+    return;
+  }
+  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!ok) {
     messenger.showSnackBar(
       const SnackBar(content: Text('Povezave ni bilo mogoče odpreti.')),

@@ -233,7 +233,9 @@ function PhotoLinkCard() {
     queryKey: ['organization', 'me'],
     queryFn: organizationsApi.getMine,
   });
-  const link = org?.photoUploadLink?.trim();
+  const raw = org?.photoUploadLink?.trim();
+  // Izriši SAMO http(s) — prepreči javascript:/data: sheme kot href.
+  const link = raw && /^https?:\/\//i.test(raw) ? raw : null;
   if (!link) return null;
   return (
     <a
