@@ -8,6 +8,7 @@ import '../models/notification.dart';
 import '../providers/auth_provider.dart';
 import '../theme.dart';
 import '../widgets/event_card.dart';
+import '../widgets/org_logo.dart';
 
 class DashboardScreen extends StatefulWidget {
   /// Preklop na zavihek Obvestila (dedup — plošča kaže le povzetek).
@@ -70,12 +71,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                'Pozdravljen, ${user?.firstName ?? ''}!',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  const OrgLogo(size: 44),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Pozdravljen, ${user?.firstName ?? ''}!',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
 

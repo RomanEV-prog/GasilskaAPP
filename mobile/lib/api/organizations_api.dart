@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'api_client.dart';
 
 /// Podatki o mojem društvu (samo branje v mobilni).
@@ -9,4 +11,7 @@ class OrganizationsApi {
     final data = await _client.get('/organizations/me');
     return data as Map<String, dynamic>;
   }
+
+  /// Logotip društva kot bajti (ali null, če ga ni).
+  Future<Uint8List?> logo() => _client.getBytes('/organizations/me/logo');
 }

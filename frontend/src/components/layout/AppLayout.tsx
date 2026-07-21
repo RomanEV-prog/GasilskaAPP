@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import {
   NavLink,
@@ -5,8 +6,27 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom';
+import { organizationsApi } from '../../api/organizations.api';
 import { useFcm } from '../../hooks/useFcm';
 import { useAuth } from '../../stores/auth.store';
+
+/** Logotip društva; če ga ni naloženega, pade nazaj na privzeto ikono. */
+function OrgLogo() {
+  const { data: logoUrl } = useQuery({
+    queryKey: ['organization', 'logo'],
+    queryFn: organizationsApi.getLogoBlobUrl,
+    staleTime: 5 * 60 * 1000,
+  });
+  return logoUrl ? (
+    <img
+      src={logoUrl}
+      alt="Logotip društva"
+      className="h-8 w-8 rounded object-contain"
+    />
+  ) : (
+    <span className="text-2xl">🔥</span>
+  );
+}
 import { useUi } from '../../stores/ui.store';
 import { ROLE_LABELS } from '../../types';
 import { NotificationsBanner } from '../NotificationsBanner';
@@ -110,7 +130,7 @@ function SidebarContent({
     <>
       {showLogo && (
         <div className="flex items-center gap-2 px-5 py-5">
-          <span className="text-2xl">🔥</span>
+          <OrgLogo />
           <span className="text-lg font-bold">Plamen</span>
         </div>
       )}

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -139,6 +141,20 @@ class ApiClient {
       return _unwrap(res);
     } on DioException catch (e) {
       throw _toApiException(e);
+    }
+  }
+
+  /// Surovi bajti (npr. slika/logotip). Vrne null ob 404/napaki.
+  Future<Uint8List?> getBytes(String path) async {
+    try {
+      final res = await _dio.get<List<int>>(
+        path,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final data = res.data;
+      return data == null ? null : Uint8List.fromList(data);
+    } on DioException {
+      return null;
     }
   }
 
