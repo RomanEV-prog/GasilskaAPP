@@ -2,7 +2,6 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { NotificationTarget } from '../notifications/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Organization } from '../organizations/organization.entity';
 import { OBCINE, Obcina } from './obcine.data';
@@ -175,19 +174,18 @@ export class SpinService implements OnModuleInit {
   ): Promise<void> {
     const type = it.spinType ?? 'Intervencija';
     const kraj = it.obcina ?? matchedObcina;
-    await this.notificationsService.create(org.id, null, {
+    // Samo push, brez zapisa v obvestila — SPIN ima svoj zavihek (mobilna).
+    // FCM data mora biti Record<string,string>, zato izpustimo prazne vrednosti.
+    const data: Record<string, string> = { spinGuid: it.spinGuid };
+    if (it.link) data.link = it.link;
+    if (it.obcina) data.obcina = it.obcina;
+    if (it.occurredAt) data.occurredAt = it.occurredAt.toISOString();
+    await this.notificationsService.sendSpinPush(org.id, {
       title: `🚨 SPIN: ${type}`,
       body: kraj ? `${type} — ${kraj}` : type,
-      type: 'spin',
-      target: NotificationTarget.OPERATIVE,
-      data: {
-        spinGuid: it.spinGuid,
-        link: it.link,
-        obcina: it.obcina,
-        occurredAt: it.occurredAt?.toISOString(),
-      },
+      data,
     });
-    this.logger.log(`SPIN obvestilo (${type}, ${kraj}) → ${org.slug}`);
+    this.logger.log(`SPIN push (${type}, ${kraj}) → ${org.slug}`);
   }
 
   /**

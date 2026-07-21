@@ -106,18 +106,52 @@ export class NotificationsService {
       { notificationId: notification.id, type: notification.type },
     );
 
-    // Počisti neveljavne (odjavljene) FCM žetone iz uporabnikov.
-    if (invalidTokens.length > 0) {
-      await this.usersRepo
-        .createQueryBuilder()
-        .update()
-        .set({ fcmToken: () => 'NULL' })
-        .where('fcm_token IN (:...tokens)', { tokens: invalidTokens })
-        .execute();
-    }
+    await this.cleanupInvalidTokens(invalidTokens);
 
     notification.sentAt = new Date();
     return this.notificationsRepo.save(notification);
+  }
+
+  /**
+   * Pošlje SPIN push BREZ shranjevanja obvestila v tabelo.
+   * SPIN intervencije se namenoma NE pojavijo v seznamu obvestil — zavihek
+   * SPIN v mobilni ima svoj vir (spin_interventions). Operativci z vklopljenimi
+   * SPIN obvestili dobijo samo push. (Odločitev 2026-07-21, feedback Darjan.)
+   */
+  async sendSpinPush(
+    organizationId: string,
+    args: { title: string; body: string; data?: Record<string, string> },
+  ): Promise<{ successCount: number }> {
+    // Začasna (NEshranjena) instanca samo za razreševanje prejemnikov.
+    const transient = this.notificationsRepo.create({
+      organizationId,
+      title: args.title,
+      body: args.body,
+      type: 'spin',
+      target: NotificationTarget.OPERATIVE,
+    });
+    const recipients = await this.resolveRecipients(organizationId, transient);
+    const tokens = recipients
+      .map((u) => u.fcmToken)
+      .filter((t): t is string => !!t);
+    const { successCount, invalidTokens } =
+      await this.firebaseService.sendToTokens(tokens, args.title, args.body, {
+        type: 'spin',
+        ...(args.data ?? {}),
+      });
+    await this.cleanupInvalidTokens(invalidTokens);
+    return { successCount };
+  }
+
+  /** Počisti neveljavne (odjavljene) FCM žetone iz uporabnikov. */
+  private async cleanupInvalidTokens(invalidTokens: string[]): Promise<void> {
+    if (invalidTokens.length === 0) return;
+    await this.usersRepo
+      .createQueryBuilder()
+      .update()
+      .set({ fcmToken: () => 'NULL' })
+      .where('fcm_token IN (:...tokens)', { tokens: invalidTokens })
+      .execute();
   }
 
   /**
