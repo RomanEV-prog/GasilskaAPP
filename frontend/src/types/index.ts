@@ -329,6 +329,8 @@ export interface Organization {
   email?: string;
   website?: string;
   logoUrl?: string;
+  /** Zunanja povezava za fotografije (Google Foto / OneDrive album). */
+  photoUploadLink?: string;
   spinObcine?: string[] | null;
   isActive: boolean;
 }

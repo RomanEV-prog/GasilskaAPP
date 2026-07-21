@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { sl } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '../../api/dashboard.api';
+import { organizationsApi } from '../../api/organizations.api';
 import {
   Badge,
   Card,
@@ -161,6 +162,10 @@ function MemberDashboardView() {
     );
   if (isLoading || !data) return <Spinner />;
 
+  // Dedup (feedback Darjan): prijave (RSVP) so odslej vidne v zavihku Dogodki
+  // in v koledarju, obvestila v svojem zavihku — nadzorna plošča kaže povzetek.
+  const unread = data.myNotifications.filter((n) => !n.isRead).length;
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
@@ -172,37 +177,20 @@ function MemberDashboardView() {
           )}
         </Card>
 
-        <Card title="Moje prijave (RSVP)">
-          {data.myRsvps.length === 0 ? (
-            <EmptyState message="Ni prijav na dogodke." />
+        <Link
+          to="/notifications"
+          className="block rounded-xl bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <p className="text-sm font-semibold text-gray-700">Obvestila</p>
+          {unread > 0 ? (
+            <p className="mt-2 text-sm">
+              <Badge color="red">{unread} neprebranih</Badge>
+            </p>
           ) : (
-            data.myRsvps.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center justify-between border-b border-gray-100 py-2 last:border-0"
-              >
-                <p className="text-sm font-medium">{r.event?.title}</p>
-                <Badge
-                  color={
-                    r.status === 'attending'
-                      ? 'green'
-                      : r.status === 'not_attending'
-                        ? 'red'
-                        : 'yellow'
-                  }
-                >
-                  {r.status === 'attending'
-                    ? 'Pridem'
-                    : r.status === 'not_attending'
-                      ? 'Ne pridem'
-                      : r.status === 'late'
-                        ? 'Zamudim'
-                        : 'Morda'}
-                </Badge>
-              </div>
-            ))
+            <p className="mt-2 text-sm text-gray-500">Ni novih obvestil.</p>
           )}
-        </Card>
+          <p className="mt-2 text-xs text-gray-400">Odpri zavihek Obvestila →</p>
+        </Link>
 
         <Card title="Moja usposabljanja">
           {data.myTrainings.length === 0 ? (
@@ -234,26 +222,34 @@ function MemberDashboardView() {
             ))
           )}
         </Card>
-
-        <Card title="Obvestila">
-          {data.myNotifications.length === 0 ? (
-            <EmptyState message="Ni obvestil." />
-          ) : (
-            data.myNotifications.map((n) => (
-              <div
-                key={n.id}
-                className="border-b border-gray-100 py-2 last:border-0"
-              >
-                <p className={`text-sm ${n.isRead ? '' : 'font-semibold'}`}>
-                  {n.title}
-                </p>
-                <p className="text-xs text-gray-500">{n.body}</p>
-              </div>
-            ))
-          )}
-        </Card>
       </div>
     </div>
+  );
+}
+
+/** Gumb za skupni foto-album društva (če je admin nastavil povezavo). */
+function PhotoLinkCard() {
+  const { data: org } = useQuery({
+    queryKey: ['organization', 'me'],
+    queryFn: organizationsApi.getMine,
+  });
+  const link = org?.photoUploadLink?.trim();
+  if (!link) return null;
+  return (
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 rounded-xl bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+    >
+      <span className="text-2xl">📷</span>
+      <div>
+        <p className="text-sm font-semibold text-gray-700">Fotografije</p>
+        <p className="text-xs text-gray-400">
+          Odpri skupni album društva (gledanje in nalaganje slik) →
+        </p>
+      </div>
+    </a>
   );
 }
 
@@ -266,6 +262,9 @@ export function DashboardPage() {
         Pozdravljen, {user?.firstName}!
       </h1>
       {isLeadership ? <AdminDashboardView /> : <MemberDashboardView />}
+      <div className="mt-6">
+        <PhotoLinkCard />
+      </div>
     </div>
   );
 }

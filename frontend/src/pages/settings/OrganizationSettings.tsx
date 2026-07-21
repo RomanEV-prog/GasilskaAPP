@@ -23,6 +23,7 @@ type FormData = {
   phone: string;
   email: string;
   website: string;
+  photoUploadLink: string;
 };
 
 function LogoBlock({ canEdit }: { canEdit: boolean }) {
@@ -126,6 +127,7 @@ export function OrganizationSettings() {
         phone: org.phone ?? '',
         email: org.email ?? '',
         website: org.website ?? '',
+        photoUploadLink: org.photoUploadLink ?? '',
       });
       setSelectedObcine(org.spinObcine ?? []);
     }
@@ -202,7 +204,19 @@ export function OrganizationSettings() {
             {...register('email')}
           />
           <Input label="Spletna stran" readOnly={readOnly} {...register('website')} />
+          <Input
+            label="Povezava za fotografije"
+            placeholder="https://photos.google.com/share/..."
+            readOnly={readOnly}
+            {...register('photoUploadLink')}
+          />
         </div>
+        {!readOnly && (
+          <p className="-mt-2 text-xs text-gray-400">
+            Povezava do skupnega albuma (npr. Google Foto, OneDrive), kjer člani
+            gledajo in nalagajo slike. V aplikaciji se odpre v brskalniku.
+          </p>
+        )}
 
         <div className="rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700">
