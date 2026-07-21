@@ -48,6 +48,7 @@ dependencies:
   table_calendar: ^3.2.0
   flutter_local_notifications: ^20.1.0
   nfc_manager: ^4.0.2
+  url_launcher: ^6.3.0            # odpiranje zunanjih povezav (foto album)
   # FCM je aktiven šele, ko lib/firebase_options.dart vsebuje prave vrednosti
   # (ustvari z `flutterfire configure`). Do takrat se init gracefully preskoči.
 

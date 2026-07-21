@@ -67,6 +67,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final selectedEvents = _eventsForDay(_selectedDay);
     final df = DateFormat('HH:mm', 'sl');
 
+    // Povzetek pod koledarjem (feedback Darjan): dogodek na današnji dan in
+    // naslednji prihajajoči dogodek — brez brskanja po koledarju.
+    final todayEvents = _eventsForDay(now);
+    final upcoming = _events.where((e) => e.startsAt.isAfter(now)).toList()
+      ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+    final nextEvent = upcoming.isEmpty ? null : upcoming.first;
+    final dfFull = DateFormat('EEEE, d. MMMM · HH:mm', 'sl');
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -124,11 +132,69 @@ class _CalendarScreenState extends State<CalendarScreen> {
             )
           else
             ...selectedEvents.map((e) => _dayEvent(e, df)),
+
+          // Povzetek: danes + naslednji prihajajoči.
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          _summaryTitle('Danes'),
+          if (todayEvents.isEmpty)
+            _summaryHint('Danes ni dogodkov.')
+          else
+            ...todayEvents.map((e) => _summaryTile(e, dfFull)),
+          _summaryTitle('Naslednji dogodek'),
+          if (nextEvent == null)
+            _summaryHint('Ni prihajajočih dogodkov.')
+          else
+            _summaryTile(nextEvent, dfFull),
+
           const SizedBox(height: 24),
         ],
       ),
     );
   }
+
+  Widget _summaryTitle(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        child: Text(
+          text.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: GasilColors.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
+      );
+
+  Widget _summaryHint(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Text(
+          text,
+          style: const TextStyle(color: GasilColors.textMuted),
+        ),
+      );
+
+  Widget _summaryTile(Event e, DateFormat fmt) => Card(
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: ListTile(
+          title: Text(e.title),
+          subtitle: Text(
+            '${fmt.format(e.startsAt)} · ${e.typeLabel}'
+            '${e.location != null ? ' · ${e.location}' : ''}',
+          ),
+          trailing: e.isCancelled
+              ? const Text(
+                  'ODPOVEDANO',
+                  style: TextStyle(
+                    color: GasilColors.danger,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              : const Icon(Icons.chevron_right, color: GasilColors.textMuted),
+          onTap: () => context.push('/events/${e.id}', extra: e),
+        ),
+      );
 
   Widget _dayEvent(Event e, DateFormat timeFmt) {
     return Card(

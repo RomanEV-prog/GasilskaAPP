@@ -12,6 +12,9 @@ const equipmentManageRoles = [
   'assistant_breathing_apparatus',
 ];
 
+// Vloge, odgovorne za vozila — zrcali backend @Roles (vehicles.controller).
+const vehicleManageRoles = ['org_admin', 'chief_machinist'];
+
 const availabilityLabels = {
   'available': 'Dosegljiv',
   'at_home': 'Doma',
@@ -53,6 +56,9 @@ class AuthUser {
 
   /// Sme urejati opremo (in povezovati NFC oznake).
   bool get canManageEquipment => roles.any(equipmentManageRoles.contains);
+
+  /// Odgovoren za vozila — vidi zavihek Vozila v mobilni.
+  bool get canManageVehicles => roles.any(vehicleManageRoles.contains);
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as String,

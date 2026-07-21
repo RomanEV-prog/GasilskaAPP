@@ -10,7 +10,9 @@ import '../theme.dart';
 import '../widgets/event_card.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  /// Preklop na zavihek Obvestila (dedup — plošča kaže le povzetek).
+  final VoidCallback? onOpenNotifications;
+  const DashboardScreen({this.onOpenNotifications, super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -60,6 +62,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
               .toList();
           final trainings = data['myTrainings'] as List<dynamic>;
+          // Plošča je povzetek/razdelilnik (dedup — feedback Darjan):
+          // naslednji dogodek, usposabljanja, obvestila kot povezava na zavihek.
+          final unread = notifications.where((n) => !n.isRead).length;
+          final nextEvent = events.isEmpty ? null : events.first;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -73,15 +79,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Prihajajoči dogodki
-              const _SectionTitle('Prihajajoči dogodki'),
-              if (events.isEmpty)
+              // Naslednji dogodek (samo prvi — celoten seznam je v zavihku Dogodki)
+              const _SectionTitle('Naslednji dogodek'),
+              if (nextEvent == null)
                 const _EmptyHint('Ni prihajajočih dogodkov.')
               else
-                ...events.map((e) => EventCard(
-                      event: e,
-                      onTap: () => context.push('/events/${e.id}', extra: e),
-                    )),
+                EventCard(
+                  event: nextEvent,
+                  onTap: () =>
+                      context.push('/events/${nextEvent.id}', extra: nextEvent),
+                ),
+              const SizedBox(height: 12),
+
+              // Obvestila — samo povzetek, tap odpre zavihek
+              const _SectionTitle('Obvestila'),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: Text(
+                    unread > 0 ? '$unread neprebranih' : 'Ni novih obvestil',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: widget.onOpenNotifications,
+                ),
+              ),
               const SizedBox(height: 12),
 
               // Moja usposabljanja (povzetek)
@@ -109,30 +130,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-              const SizedBox(height: 12),
-
-              // Zadnja obvestila
-              const _SectionTitle('Obvestila'),
-              if (notifications.isEmpty)
-                const _EmptyHint('Ni obvestil.')
-              else
-                ...notifications.take(3).map((n) => Card(
-                      child: ListTile(
-                        title: Text(
-                          n.title,
-                          style: TextStyle(
-                            fontWeight: n.isRead
-                                ? FontWeight.normal
-                                : FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          n.body,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )),
             ],
           );
         },

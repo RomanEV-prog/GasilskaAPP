@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../api/organizations_api.dart';
 import '../api/users_api.dart';
 import '../providers/auth_provider.dart';
 import '../services/fcm_service.dart';
@@ -18,6 +20,37 @@ class HomeShell extends StatefulWidget {
 
   @override
   State<HomeShell> createState() => _HomeShellState();
+}
+
+/// Odpre skupni foto-album društva (zunanja povezava) v brskalniku.
+Future<void> _openPhotos(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  String? link;
+  try {
+    final org = await OrganizationsApi().me();
+    link = (org['photoUploadLink'] as String?)?.trim();
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Povezave ni bilo mogoče naložiti.')),
+    );
+    return;
+  }
+  if (link == null || link.isEmpty) {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Društvo še ni nastavilo povezave za fotografije.'),
+      ),
+    );
+    return;
+  }
+  final uri = Uri.tryParse(link);
+  final ok = uri != null &&
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!ok) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Povezave ni bilo mogoče odpreti.')),
+    );
+  }
 }
 
 /// Dialog z osebno nastavitvijo prejemanja SPIN obvestil.
@@ -108,6 +141,10 @@ class _HomeShellState extends State<HomeShell> {
             onSelected: (value) {
               if (value == 'my-equipment') {
                 context.push('/moja-oprema');
+              } else if (value == 'vozila') {
+                context.push('/vozila');
+              } else if (value == 'photos') {
+                _openPhotos(context);
               } else if (value == 'password') {
                 showChangePasswordDialog(context);
               } else if (value == 'spin') {
@@ -116,47 +153,70 @@ class _HomeShellState extends State<HomeShell> {
                 context.read<AuthProvider>().logout();
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'my-equipment',
-                child: ListTile(
-                  leading: Icon(Icons.checkroom_outlined),
-                  title: Text('Moja oprema'),
-                  contentPadding: EdgeInsets.zero,
+            itemBuilder: (_) {
+              final canManageVehicles =
+                  context.read<AuthProvider>().user?.canManageVehicles ?? false;
+              return [
+                const PopupMenuItem(
+                  value: 'my-equipment',
+                  child: ListTile(
+                    leading: Icon(Icons.checkroom_outlined),
+                    title: Text('Moja oprema'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'spin',
-                child: ListTile(
-                  leading: Icon(Icons.local_fire_department_outlined),
-                  title: Text('SPIN obvestila'),
-                  contentPadding: EdgeInsets.zero,
+                if (canManageVehicles)
+                  const PopupMenuItem(
+                    value: 'vozila',
+                    child: ListTile(
+                      leading: Icon(Icons.fire_truck_outlined),
+                      title: Text('Vozila'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                const PopupMenuItem(
+                  value: 'photos',
+                  child: ListTile(
+                    leading: Icon(Icons.photo_library_outlined),
+                    title: Text('Fotografije'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'password',
-                child: ListTile(
-                  leading: Icon(Icons.lock_outline),
-                  title: Text('Spremeni geslo'),
-                  contentPadding: EdgeInsets.zero,
+                const PopupMenuItem(
+                  value: 'spin',
+                  child: ListTile(
+                    leading: Icon(Icons.local_fire_department_outlined),
+                    title: Text('SPIN obvestila'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'logout',
-                child: ListTile(
-                  leading: Icon(Icons.logout),
-                  title: Text('Odjava'),
-                  contentPadding: EdgeInsets.zero,
+                const PopupMenuItem(
+                  value: 'password',
+                  child: ListTile(
+                    leading: Icon(Icons.lock_outline),
+                    title: Text('Spremeni geslo'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-            ],
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: ListTile(
+                    leading: Icon(Icons.logout),
+                    title: Text('Odjava'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ];
+            },
           ),
         ],
       ),
       body: IndexedStack(
         index: _index,
         children: [
-          const DashboardScreen(),
+          DashboardScreen(
+            onOpenNotifications: () => setState(() => _index = 4),
+          ),
           EventsScreen(onOpenCalendar: () => setState(() => _index = 2)),
           const CalendarScreen(),
           const InterventionsScreen(),
