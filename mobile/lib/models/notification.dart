@@ -24,7 +24,8 @@ class AppNotification {
         body: json['body'] as String,
         type: json['type'] as String? ?? 'general',
         target: json['target'] as String? ?? 'all',
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        // UTC → lokalni čas (sicer je čas obvestila zamaknjen).
+        createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
         isRead: json['isRead'] as bool? ?? false,
       );
 }

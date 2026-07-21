@@ -51,9 +51,11 @@ class Event {
         description: json['description'] as String?,
         location: json['location'] as String?,
         eventType: json['eventType'] as String? ?? 'other',
-        startsAt: DateTime.parse(json['startsAt'] as String),
+        // Backend vrne UTC (timestamptz); .toLocal() prikaže lokalni čas.
+        // Brez tega je dogodek ob 9:00 CEST prikazan kot 7:00.
+        startsAt: DateTime.parse(json['startsAt'] as String).toLocal(),
         endsAt: json['endsAt'] != null
-            ? DateTime.parse(json['endsAt'] as String)
+            ? DateTime.parse(json['endsAt'] as String).toLocal()
             : null,
         requiresRsvp: json['requiresRsvp'] as bool? ?? true,
         isCancelled: json['isCancelled'] as bool? ?? false,

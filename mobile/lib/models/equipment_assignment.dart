@@ -19,7 +19,7 @@ class MyEquipmentAssignment {
         id: json['id'] as String,
         issuedAt: json['issuedAt'] == null
             ? null
-            : DateTime.tryParse(json['issuedAt'] as String),
+            : DateTime.tryParse(json['issuedAt'] as String)?.toLocal(),
         issueNotes: json['issueNotes'] as String?,
         equipment: json['equipment'] is Map<String, dynamic>
             ? Equipment.fromJson(json['equipment'] as Map<String, dynamic>)
