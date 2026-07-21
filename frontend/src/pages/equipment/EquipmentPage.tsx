@@ -17,8 +17,10 @@ import { useAuth } from '../../stores/auth.store';
 import {
   EQUIPMENT_CONDITION_LABELS,
   EQUIPMENT_MANAGE_ROLES,
+  type Equipment,
   type EquipmentCondition,
 } from '../../types';
+import { AssignEquipmentModal } from './AssignEquipmentModal';
 
 const conditionColor: Record<
   EquipmentCondition,
@@ -54,6 +56,11 @@ export function EquipmentPage() {
   const [category, setCategory] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  // Hitro zadolževanje/vračanje neposredno iz seznama (brez odpiranja kosa).
+  const [assign, setAssign] = useState<{
+    equipment: Equipment;
+    mode: 'issue' | 'return';
+  } | null>(null);
 
   const { data: equipment, isLoading, isError, refetch } = useQuery({
     queryKey: ['equipment'],
@@ -226,12 +233,34 @@ export function EquipmentPage() {
                   <td className="px-4 py-3">{inspectionBadge(e.expiryDate)}</td>
                   <td className="px-4 py-3 text-right">
                     {canManage && (
-                      <Link
-                        to={`/equipment/${e.id}/edit`}
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Uredi
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        {e.isActive &&
+                          (e.currentHolder ? (
+                            <button
+                              onClick={() =>
+                                setAssign({ equipment: e, mode: 'return' })
+                              }
+                              className="text-sm font-medium text-primary hover:underline"
+                            >
+                              Vrni
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setAssign({ equipment: e, mode: 'issue' })
+                              }
+                              className="text-sm font-medium text-primary hover:underline"
+                            >
+                              Zadolži
+                            </button>
+                          ))}
+                        <Link
+                          to={`/equipment/${e.id}/edit`}
+                          className="text-sm text-gray-500 hover:underline"
+                        >
+                          Uredi
+                        </Link>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -244,6 +273,14 @@ export function EquipmentPage() {
       <p className="mt-3 text-xs text-gray-400">
         {filtered.length} od {equipment?.length ?? 0} kosov opreme
       </p>
+
+      {assign && (
+        <AssignEquipmentModal
+          equipment={assign.equipment}
+          mode={assign.mode}
+          onClose={() => setAssign(null)}
+        />
+      )}
     </div>
   );
 }
