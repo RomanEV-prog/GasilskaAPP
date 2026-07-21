@@ -42,6 +42,10 @@ class _OrgLogoState extends State<OrgLogo> {
             width: widget.size,
             height: widget.size,
             fit: BoxFit.contain,
+            // Neveljavni/pokvarjeni bajti ne smejo pokazati rdeče napake —
+            // gracefully pade na privzeto ikono.
+            errorBuilder: (context, error, stack) =>
+                Text('🔥', style: TextStyle(fontSize: widget.size * 0.7)),
           ),
         );
       },

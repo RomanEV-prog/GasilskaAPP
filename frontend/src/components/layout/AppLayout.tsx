@@ -10,17 +10,19 @@ import { organizationsApi } from '../../api/organizations.api';
 import { useFcm } from '../../hooks/useFcm';
 import { useAuth } from '../../stores/auth.store';
 
-/** Logotip društva; če ga ni naloženega, pade nazaj na privzeto ikono. */
+/** Logotip društva; če ga ni ali je neveljaven, pade nazaj na privzeto ikono. */
 function OrgLogo() {
+  const [failed, setFailed] = useState(false);
   const { data: logoUrl } = useQuery({
     queryKey: ['organization', 'logo'],
     queryFn: organizationsApi.getLogoBlobUrl,
     staleTime: 5 * 60 * 1000,
   });
-  return logoUrl ? (
+  return logoUrl && !failed ? (
     <img
       src={logoUrl}
       alt="Logotip društva"
+      onError={() => setFailed(true)}
       className="h-8 w-8 rounded object-contain"
     />
   ) : (
