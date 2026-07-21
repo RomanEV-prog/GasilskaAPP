@@ -65,21 +65,16 @@ class EventCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: GasilColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  event.typeLabel,
-                  style: const TextStyle(
-                    color: GasilColors.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _chip(event.typeLabel, GasilColors.primary),
+                  // Moj odziv, viden brez odpiranja dogodka.
+                  if (event.requiresRsvp && !event.isCancelled) ...[
+                    const SizedBox(height: 6),
+                    _chip(_rsvpLabel, _rsvpColor),
+                  ],
+                ],
               ),
             ],
           ),
@@ -87,4 +82,38 @@ class EventCard extends StatelessWidget {
       ),
     );
   }
+
+  String get _rsvpLabel =>
+      event.myRsvpStatus == null
+          ? 'Brez odziva'
+          : (rsvpLabels[event.myRsvpStatus] ?? event.myRsvpStatus!);
+
+  Color get _rsvpColor {
+    switch (event.myRsvpStatus) {
+      case 'attending':
+        return GasilColors.success;
+      case 'late':
+        return GasilColors.warning;
+      case 'not_attending':
+        return GasilColors.danger;
+      default:
+        return GasilColors.textMuted;
+    }
+  }
+
+  static Widget _chip(String label, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
 }

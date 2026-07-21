@@ -13,7 +13,7 @@ import {
   Spinner,
 } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
-import { EVENT_TYPE_LABELS, type Event } from '../../types';
+import { EVENT_TYPE_LABELS, type Event, type RsvpStatus } from '../../types';
 
 const typeColor: Record<string, 'blue' | 'red' | 'green' | 'yellow' | 'gray'> =
   {
@@ -22,6 +22,20 @@ const typeColor: Record<string, 'blue' | 'red' | 'green' | 'yellow' | 'gray'> =
     competition: 'green',
     meeting: 'yellow',
   };
+
+// Usklajeno z EventDetailPage (isti izbor barv/oznak za odziv).
+const rsvpBadge: Record<RsvpStatus, 'green' | 'yellow' | 'red' | 'gray'> = {
+  attending: 'green',
+  late: 'yellow',
+  maybe: 'gray',
+  not_attending: 'red',
+};
+const rsvpLabel: Record<RsvpStatus, string> = {
+  attending: 'Pridem',
+  late: 'Zamudim',
+  maybe: 'Morda',
+  not_attending: 'Ne pridem',
+};
 
 function EventCard({ event }: { event: Event }) {
   const past = isPast(new Date(event.startsAt));
@@ -49,9 +63,17 @@ function EventCard({ event }: { event: Event }) {
             {event.location ? ` · ${event.location}` : ''}
           </p>
         </div>
-        <Badge color={typeColor[event.eventType] ?? 'gray'}>
-          {EVENT_TYPE_LABELS[event.eventType]}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge color={typeColor[event.eventType] ?? 'gray'}>
+            {EVENT_TYPE_LABELS[event.eventType]}
+          </Badge>
+          {/* Moj odziv, viden brez odpiranja dogodka. */}
+          {event.requiresRsvp && !event.isCancelled && (
+            <Badge color={event.myRsvpStatus ? rsvpBadge[event.myRsvpStatus] : 'gray'}>
+              {event.myRsvpStatus ? rsvpLabel[event.myRsvpStatus] : 'Brez odziva'}
+            </Badge>
+          )}
+        </div>
       </div>
     </Link>
   );
