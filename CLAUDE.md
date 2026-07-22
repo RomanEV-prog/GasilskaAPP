@@ -129,8 +129,14 @@ Navaden `member` vidi samo:
 ## Stanje projekta
 
 **Vse tri faze so dokončane; produkcija teče na https://gasilapp.eu od 7. 7. 2026.**
-Backend ima 13 modulov, web portal pokriva vse module, mobilna je v beta
-razdeljevanju (Android 1.0.9+10, ime aplikacije »Plamen«). Novo delo je
+Backend ima 13 modulov, web portal pokriva vse module. Mobilna (ime »Plamen«) je
+od 21. 7. 2026 na **Google Play — interno preizkušanje, različica 1.0.11 (koda 12)**,
+poleg beta razdeljevanja na `gasilapp.eu/beta`. Trgovinska stran in vse izjave o
+vsebini so izpolnjene in **poslane v Googlov pregled**; do zaključka pregleda
+testerji vidijo začasno ime `si.gasilapp.gasilapp_mobile (unreviewed)` (info, ne
+napaka), nato se zamenja s »Plamen«. Play IDji: developer 5046106616640158875,
+app 4973541200399618968, interni track 4701224842560389717, opt-in
+`https://play.google.com/apps/internaltest/4701224842560389717`. Novo delo je
 **nadgradnja obstoječega**, ne postavljanje od začetka — poglej obstoječi modul
 kot vzorec, preden pišeš nov.
 
