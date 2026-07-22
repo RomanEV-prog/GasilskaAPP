@@ -66,7 +66,11 @@ export function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#F8F8F8] py-8">
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-md">
         <div className="mb-6 text-center">
-          <span className="text-4xl">🔥</span>
+          <img
+            src="/plamen-icon.png"
+            alt="Plamen"
+            className="mx-auto h-16 w-16 rounded-2xl shadow-sm"
+          />
           <h1 className="mt-2 text-2xl font-bold">Registracija društva</h1>
           <p className="text-sm text-gray-500">
             Ustvari nov račun za svoje gasilsko društvo

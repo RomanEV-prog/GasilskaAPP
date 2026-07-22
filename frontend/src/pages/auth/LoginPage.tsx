@@ -66,7 +66,11 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#F8F8F8] p-4">
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-md sm:p-8">
         <div className="mb-6 text-center">
-          <span className="text-4xl">🔥</span>
+          <img
+            src="/plamen-icon.png"
+            alt="Plamen"
+            className="mx-auto h-16 w-16 rounded-2xl shadow-sm"
+          />
           <h1 className="mt-2 text-2xl font-bold">Plamen</h1>
           <p className="text-sm text-gray-500">
             Portal za gasilska društva

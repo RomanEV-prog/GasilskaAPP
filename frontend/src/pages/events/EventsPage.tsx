@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { format, isPast } from 'date-fns';
+import { differenceInCalendarDays, format, isPast } from 'date-fns';
 import { sl } from 'date-fns/locale';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -37,8 +37,21 @@ const rsvpLabel: Record<RsvpStatus, string> = {
   not_attending: 'Ne pridem',
 };
 
+/** Odštevanje do dogodka: danes / jutri / čez N dni. Null za pretekle. */
+function eventCountdown(
+  startsAt: string,
+): { text: string; color: 'red' | 'yellow' | 'blue' } | null {
+  const days = differenceInCalendarDays(new Date(startsAt), new Date());
+  if (days < 0) return null;
+  if (days === 0) return { text: 'danes', color: 'red' };
+  if (days === 1) return { text: 'jutri', color: 'red' };
+  return { text: `čez ${days} dni`, color: days <= 7 ? 'yellow' : 'blue' };
+}
+
 function EventCard({ event }: { event: Event }) {
   const past = isPast(new Date(event.startsAt));
+  const countdown =
+    !past && !event.isCancelled ? eventCountdown(event.startsAt) : null;
   return (
     <Link
       to={`/events/${event.id}`}
@@ -64,6 +77,7 @@ function EventCard({ event }: { event: Event }) {
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
+          {countdown && <Badge color={countdown.color}>{countdown.text}</Badge>}
           <Badge color={typeColor[event.eventType] ?? 'gray'}>
             {EVENT_TYPE_LABELS[event.eventType]}
           </Badge>

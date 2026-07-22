@@ -23,4 +23,12 @@ export class SpinController {
   settings(@CurrentUser('organizationId') organizationId: string) {
     return this.spinService.obcineForOrg(organizationId);
   }
+
+  @Get('interventions')
+  @ApiOperation({
+    summary: 'Nedavne SPIN intervencije za občine društva (spletni zavihek)',
+  })
+  interventions(@CurrentUser('organizationId') organizationId: string) {
+    return this.spinService.interventionsForOrg(organizationId);
+  }
 }

@@ -52,6 +52,7 @@ const navItems: NavItem[] = [
   { to: '/equipment', label: 'Oprema', icon: '🧰' },
   { to: '/moja-oprema', label: 'Moja oprema', icon: '🎽' },
   { to: '/trainings', label: 'Usposabljanja', icon: '🎓' },
+  { to: '/spin', label: 'SPIN', icon: '🚨' },
   { to: '/notifications', label: 'Obvestila', icon: '🔔' },
   { to: '/settings', label: 'Nastavitve', icon: '⚙️' },
 ];

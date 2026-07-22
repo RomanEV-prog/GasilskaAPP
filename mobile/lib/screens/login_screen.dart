@@ -109,7 +109,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('🔥', style: TextStyle(fontSize: 40)),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(
+                          'assets/plamen-icon.png',
+                          width: 64,
+                          height: 64,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       const Text(
                         'Plamen',

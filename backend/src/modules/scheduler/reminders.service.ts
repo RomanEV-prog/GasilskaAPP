@@ -16,11 +16,19 @@ import { VehiclesService } from '../vehicles/vehicles.service';
 const TRAINING_REMINDER_DAYS = 30;
 
 /**
- * Roki vozil in pregledi opreme: opomnik na točno toliko dni pred iztekom
+ * Pregledi opreme: opomnik na točno toliko dni pred iztekom
  * (predlog PGD Pekre: teden prej in še 3 dni prej). Ker se pošlje samo na
  * točen dan, ni vsakodnevnega ponavljanja in ni potreben "poslano" zaznamek.
  */
 const DEADLINE_REMINDER_DAYS = [7, 3];
+
+/**
+ * Roki vozil (registracija, zavarovanje, servis): opomnik **vsakih 5 dni**,
+ * ko je do izteka 30 dni ali manj (predlog Darjan, 22. 7. 2026). Ker se pošlje
+ * samo na točne dneve (30, 25, ... 5), tudi tu ni vsakodnevnega ponavljanja
+ * in "poslano" zaznamek ni potreben.
+ */
+const VEHICLE_DEADLINE_DAYS = [30, 25, 20, 15, 10, 5];
 
 /** Prejemniki opomnikov za roke vozil: administratorji + glavni strojnik. */
 const VEHICLE_REMINDER_ROLES: SystemRole[] = [
@@ -105,17 +113,17 @@ export class RemindersService {
   }
 
   /**
-   * Roki vozil (registracija, zavarovanje, servis): opomnik na točno
-   * 7 in 3 dni pred iztekom → administratorji + glavni strojnik.
+   * Roki vozil (registracija, zavarovanje, servis): opomnik vsakih 5 dni,
+   * ko je do izteka ≤ 30 dni (30, 25, ... 5) → administratorji + glavni strojnik.
    */
   private async checkVehicles(organizationId: string): Promise<void> {
-    const maxDays = Math.max(...DEADLINE_REMINDER_DAYS);
+    const maxDays = Math.max(...VEHICLE_DEADLINE_DAYS);
     const vehicles = await this.vehiclesService.findExpiring(
       organizationId,
       maxDays,
     );
 
-    for (const days of DEADLINE_REMINDER_DAYS) {
+    for (const days of VEHICLE_DEADLINE_DAYS) {
       const onDate = isoInDays(days);
       const lines = vehicles
         .map((v) => {

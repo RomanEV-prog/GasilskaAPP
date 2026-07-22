@@ -68,6 +68,11 @@ class EventCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // Odštevanje do dogodka (danes / jutri / čez N dni).
+                  if (_countdown != null) ...[
+                    _chip(_countdown!.text, _countdown!.color),
+                    const SizedBox(height: 6),
+                  ],
                   _chip(event.typeLabel, GasilColors.primary),
                   // Moj odziv, viden brez odpiranja dogodka.
                   if (event.requiresRsvp && !event.isCancelled) ...[
@@ -80,6 +85,26 @@ class EventCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Odštevanje do dogodka: danes / jutri / čez N dni. Null za pretekle/odpovedane.
+  ({String text, Color color})? get _countdown {
+    if (event.isCancelled) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final ev = DateTime(
+      event.startsAt.year,
+      event.startsAt.month,
+      event.startsAt.day,
+    );
+    final days = ev.difference(today).inDays;
+    if (days < 0) return null;
+    if (days == 0) return (text: 'danes', color: GasilColors.danger);
+    if (days == 1) return (text: 'jutri', color: GasilColors.danger);
+    return (
+      text: 'čez $days dni',
+      color: days <= 7 ? GasilColors.warning : GasilColors.textMuted,
     );
   }
 

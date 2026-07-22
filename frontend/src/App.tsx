@@ -18,6 +18,7 @@ import { NotificationsPage } from './pages/notifications/NotificationsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { TrainingsPage } from './pages/trainings/TrainingsPage';
 import { VehicleFormPage } from './pages/vehicles/VehicleFormPage';
+import { SpinPage } from './pages/spin/SpinPage';
 import { VehiclesPage } from './pages/vehicles/VehiclesPage';
 import { useAuth } from './stores/auth.store';
 
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="/equipment/:id" element={<EquipmentDetailPage />} />
         <Route path="/moja-oprema" element={<MyEquipmentPage />} />
         <Route path="/trainings" element={<TrainingsPage />} />
+        <Route path="/spin" element={<SpinPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

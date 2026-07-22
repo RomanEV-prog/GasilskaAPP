@@ -304,4 +304,50 @@ export class SpinService implements OnModuleInit {
     const org = await this.orgsRepo.findOne({ where: { id: organizationId } });
     return { obcine: org?.spinObcine ?? [] };
   }
+
+  /**
+   * Nedavne intervencije za občine društva — za **spletni** zavihek SPIN
+   * (brskalnik SPIN feeda geo-omejeno ne doseže, zato bere iz predpomnjene
+   * tabele, ki jo polni cron prek relaya). Mobilna bere feed neposredno.
+   */
+  async interventionsForOrg(
+    organizationId: string,
+  ): Promise<SpinInterventionView[]> {
+    const org = await this.orgsRepo.findOne({ where: { id: organizationId } });
+    const obcine = org?.spinObcine ?? [];
+    if (obcine.length === 0) return [];
+    const recent = await this.interventionsRepo
+      .createQueryBuilder('i')
+      .orderBy('i.occurred_at', 'DESC', 'NULLS LAST')
+      .limit(300)
+      .getMany();
+    return recent
+      .filter((it) =>
+        this.matchedObcina(
+          { guid: it.spinGuid, title: it.title, description: it.description },
+          obcine as string[],
+        ),
+      )
+      .slice(0, 100)
+      .map((it) => ({
+        id: it.id,
+        spinType: it.spinType ?? null,
+        obcina: it.obcina ?? null,
+        title: it.title,
+        description: it.description ?? null,
+        link: it.link ?? null,
+        occurredAt: it.occurredAt ? it.occurredAt.toISOString() : null,
+      }));
+  }
+}
+
+/** Projekcija intervencije za odjemalce (usklajeno z mobilnim modelom). */
+export interface SpinInterventionView {
+  id: string;
+  spinType: string | null;
+  obcina: string | null;
+  title: string;
+  description: string | null;
+  link: string | null;
+  occurredAt: string | null;
 }
