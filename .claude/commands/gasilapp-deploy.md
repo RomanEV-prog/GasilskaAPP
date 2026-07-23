@@ -109,6 +109,15 @@ brez prijave v račun pravega društva.
   tester pa je videl staro — vzrok je bil predpomnjen prenos, ne build.
 - **`git push` pred `git pull` na strežniku** — sicer prod potegne staro kodo in
   vse ostalo (migracija, verifikacija) izgleda uspešno, a teče stara koda.
+- **Netracked datoteka na strežniku tiho blokira `git pull` → rebuild zgradi
+  STARO kodo.** Če na prod ročno `scp`-jaš datoteko (npr. `izbris-racuna.html`
+  v `frontend/public/`), ki jo kasneje tudi commitaš, `git pull` odpove z
+  »untracked working tree files would be overwritten by merge … Aborting«, a
+  če v isti verigi slepo poženeš rebuild, ta zgradi **nespremenjeno** kodo in
+  vse izgleda uspešno. Rešitev: `ssh … 'cd /opt/gasilapp && rm -f <pot> &&
+  git pull'` (vsebina je identična commitani), nato **rebuild ZNOVA**. Vedno
+  preveri `git log -1` na strežniku, da je HEAD res tvoj zadnji commit, PREDEN
+  zaupaš rebuildu. Udarilo 2026-07-23 (Darjanov sklop popravkov).
 - **Vsebnik baze je `gasilapp-db-1`, splet pa `gasilapp-web`** (brez `-1`).
   Preveri z `docker ps --format "{{.Names}}"`, preden pišeš ukaze na pamet.
 - **Prijava v račun pravega društva za test ni potrebna in ni zaželena** —
