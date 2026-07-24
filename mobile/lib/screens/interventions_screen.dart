@@ -25,7 +25,11 @@ class _InterventionsScreenState extends State<InterventionsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _api.interventions());
+    // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
+    // sprožil "setState() callback argument returned a Future".
+    setState(() {
+      _future = _api.interventions();
+    });
     await _future;
   }
 

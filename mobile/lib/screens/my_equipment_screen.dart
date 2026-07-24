@@ -19,7 +19,11 @@ class _MyEquipmentScreenState extends State<MyEquipmentScreen> {
   late Future<List<MyEquipmentAssignment>> _future = _api.myAssignments();
 
   Future<void> _refresh() async {
-    setState(() => _future = _api.myAssignments());
+    // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
+    // sprožil "setState() callback argument returned a Future".
+    setState(() {
+      _future = _api.myAssignments();
+    });
     await _future;
   }
 

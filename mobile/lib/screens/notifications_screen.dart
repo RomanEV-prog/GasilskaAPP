@@ -25,7 +25,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _api.mine());
+    // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
+    // sprožil "setState() callback argument returned a Future".
+    setState(() {
+      _future = _api.mine();
+    });
     await _future;
   }
 
@@ -33,7 +37,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (n.isRead) return;
     try {
       await _api.markRead(n.id);
-      _refresh();
+      await _refresh();
     } catch (_) {}
   }
 

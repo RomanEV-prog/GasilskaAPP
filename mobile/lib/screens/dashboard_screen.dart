@@ -30,7 +30,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _dashboardApi.member());
+    // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
+    // sprožil "setState() callback argument returned a Future".
+    setState(() {
+      _future = _dashboardApi.member();
+    });
     await _future;
   }
 

@@ -18,7 +18,11 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   late Future<List<Vehicle>> _future = _api.list();
 
   Future<void> _refresh() async {
-    setState(() => _future = _api.list());
+    // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
+    // sprožil "setState() callback argument returned a Future".
+    setState(() {
+      _future = _api.list();
+    });
     await _future;
   }
 

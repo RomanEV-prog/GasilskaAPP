@@ -26,7 +26,11 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _eventsApi.list());
+    // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
+    // sprožil "setState() callback argument returned a Future".
+    setState(() {
+      _future = _eventsApi.list();
+    });
     await _future;
   }
 
