@@ -10,7 +10,14 @@ import { organizationsApi } from '../../api/organizations.api';
 import { useFcm } from '../../hooks/useFcm';
 import { useAuth } from '../../stores/auth.store';
 
-/** Logotip društva; če ga ni ali je neveljaven, pade nazaj na privzeto ikono. */
+/** Ikona znamke — privzetek povsod, kjer logotipa društva ni. */
+function BrandIcon({ className = 'h-8 w-8' }: { className?: string }) {
+  return (
+    <img src="/plamen-icon.png" alt="Plamen" className={`${className} rounded-lg`} />
+  );
+}
+
+/** Logotip društva; če ga ni ali je neveljaven, pade nazaj na ikono znamke. */
 function OrgLogo() {
   const [failed, setFailed] = useState(false);
   const { data: logoUrl } = useQuery({
@@ -26,7 +33,7 @@ function OrgLogo() {
       className="h-8 w-8 rounded object-contain"
     />
   ) : (
-    <span className="text-2xl">🔥</span>
+    <BrandIcon />
   );
 }
 import { useUi } from '../../stores/ui.store';
@@ -233,7 +240,7 @@ export function AppLayout() {
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[#2D2D2D] pt-[env(safe-area-inset-top)] text-white shadow-xl">
             <div className="flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">🔥</span>
+                <BrandIcon className="h-7 w-7" />
                 <span className="text-lg font-bold">Plamen</span>
               </div>
               <button

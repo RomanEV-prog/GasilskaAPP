@@ -6,6 +6,7 @@ export function tourStorageKey(userId: string): string {
 }
 
 interface Step {
+  /** Emoji, ali pot do slike (vrednost se začne z '/') — npr. ikona znamke. */
   icon: string;
   title: string;
   /** Kaj funkcija je / čemu služi. */
@@ -18,7 +19,7 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    icon: '🔥',
+    icon: '/plamen-icon.png',
     title: 'Dobrodošli v Plamen',
     kaj: 'Plamen je interna organizacijska platforma vašega društva — člani, dogodki, vozila, oprema, usposabljanja, obvestila in intervencije SPIN na enem mestu.',
     kako: 'Ta kratek vodič vas v nekaj korakih popelje skozi glavne funkcije. Kadar koli ga lahko znova odprete z gumbom “❓ Vodič” spodaj levo.',
@@ -126,7 +127,11 @@ export function OnboardingTour({
         {/* Glava */}
         <div className="flex items-start justify-between bg-primary px-6 py-5 text-white">
           <div className="flex items-center gap-3">
-            <span className="text-4xl leading-none">{step.icon}</span>
+            {step.icon.startsWith('/') ? (
+              <img src={step.icon} alt="" className="h-10 w-10 rounded-lg" />
+            ) : (
+              <span className="text-4xl leading-none">{step.icon}</span>
+            )}
             <div>
               <p className="text-xs uppercase tracking-wide text-white/70">
                 Korak {index + 1} / {steps.length}

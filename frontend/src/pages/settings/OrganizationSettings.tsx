@@ -57,7 +57,7 @@ function LogoBlock({ canEdit }: { canEdit: boolean }) {
             className="h-full w-full object-contain"
           />
         ) : (
-          <span className="text-3xl">🔥</span>
+          <img src="/plamen-icon.png" alt="Plamen" className="h-14 w-14 rounded-lg" />
         )}
       </div>
       {canEdit && (
