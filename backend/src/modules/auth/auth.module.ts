@@ -21,8 +21,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET'),
+        // Varen kratkoživ privzetek: če kak sign() ne poda svojega expiresIn,
+        // žeton dobi 1h (JWT_ACCESS_EXPIRES), ne 7 dni. Dostopni in refresh
+        // žeton v AuthService itak podata svoj expiresIn (1h oz. 30d).
         signOptions: {
-          expiresIn: config.get<string>('JWT_EXPIRES_IN', '7d'),
+          expiresIn: config.get<string>('JWT_ACCESS_EXPIRES', '1h'),
         },
       }),
     }),

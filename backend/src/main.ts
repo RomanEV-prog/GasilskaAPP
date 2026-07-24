@@ -12,8 +12,17 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // CORS za web portal / mobilno app.
+  // Produkcija: strogo zaklenjeno na točni FRONTEND_URL (varnostna meja).
+  // Dev: dovoli localhost na katerem koli portu — Vite zna izbrati drug port
+  // (npr. ko je 3000 zaseden), brskalniška orodja za testiranje pa tečejo na
+  // poljubnih portih. Mobilna app ne pošilja Origin (CORS je stvar brskalnika).
+  const frontendUrl = config.get<string>('FRONTEND_URL', 'http://localhost:3000');
+  const isProd = config.get<string>('NODE_ENV') === 'production';
+  const localhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
   app.enableCors({
-    origin: config.get<string>('FRONTEND_URL', 'http://localhost:3000'),
+    origin: isProd
+      ? frontendUrl
+      : (origin, callback) => callback(null, !origin || localhostOrigin.test(origin)),
     credentials: true,
   });
 
