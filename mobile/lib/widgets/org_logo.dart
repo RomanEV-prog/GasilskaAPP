@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../api/organizations_api.dart';
 
-/// Logotip društva; če ga ni naloženega, pade nazaj na privzeto ikono 🔥.
+/// Logotip društva; če ga ni naloženega, pade nazaj na ikono znamke Plamen
+/// (enako kot prijavni zaslon — emoji 🔥 je bil vizualno tuj).
 /// Bajti se prenesejo enkrat na sejo (statični predpomnilnik).
 class OrgLogo extends StatefulWidget {
   final double size;
@@ -26,6 +27,17 @@ class _OrgLogoState extends State<OrgLogo> {
     return _cached;
   }
 
+  /// Ikona znamke — privzetek, kadar društvo nima (veljavnega) logotipa.
+  Widget _brandIcon() => ClipRRect(
+        borderRadius: BorderRadius.circular(widget.size * 0.22),
+        child: Image.asset(
+          'assets/plamen-icon.png',
+          width: widget.size,
+          height: widget.size,
+          fit: BoxFit.contain,
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Uint8List?>(
@@ -33,7 +45,7 @@ class _OrgLogoState extends State<OrgLogo> {
       builder: (context, snap) {
         final bytes = snap.data;
         if (bytes == null || bytes.isEmpty) {
-          return Text('🔥', style: TextStyle(fontSize: widget.size * 0.7));
+          return _brandIcon();
         }
         return ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -43,9 +55,8 @@ class _OrgLogoState extends State<OrgLogo> {
             height: widget.size,
             fit: BoxFit.contain,
             // Neveljavni/pokvarjeni bajti ne smejo pokazati rdeče napake —
-            // gracefully pade na privzeto ikono.
-            errorBuilder: (context, error, stack) =>
-                Text('🔥', style: TextStyle(fontSize: widget.size * 0.7)),
+            // gracefully pade na ikono znamke.
+            errorBuilder: (context, error, stack) => _brandIcon(),
           ),
         );
       },
