@@ -38,8 +38,11 @@ android {
         applicationId = "si.gasilapp.gasilapp_mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // mobile_scanner v7 zahteva minSdk 23.
-        minSdk = 23
+        // mobile_scanner v7 zahteva minSdk 23, flutter.minSdkVersion je 21
+        // (FlutterExtension.kt). Gol literal 23 Flutter migrator ob buildu
+        // prepiše nazaj na flutter.minSdkVersion — maxOf(...) tega ne dira in
+        // hkrati zagotovi ≥23, tudi če Flutter privzetek pozneje dvigne.
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
