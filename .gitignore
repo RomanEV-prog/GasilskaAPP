@@ -50,3 +50,6 @@ mobile/android/upload-keystore.jks
 *.keystore
 # Produkcijske skrivnosti
 .env.prod
+
+# Lokalni arhiv release artefaktov (APK/AAB) — glej /gasilapp-play-izdaja
+build-arhiv/
