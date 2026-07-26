@@ -144,7 +144,8 @@ Skilli projekta (`.claude/commands/`, kliči z `/ime`):
 
 | Skill | Kdaj |
 |---|---|
-| `/gasilapp-deploy` | objava na produkcijo — vrstni red, override za Caddy, verifikacija |
+| `/gasilapp-deploy` | objava backend+splet na produkcijo — vrstni red, override za Caddy, verifikacija |
+| `/gasilapp-play-izdaja` | nova mobilna izdaja — bump, build, beta scp, Google Play interno (ID-ji + pasti) |
 | `/gasilapp-shema` | nova tabela ali stolpec — migracije, indeksi, e2e izolacija |
 | `/ikona-aplikacije` | zamenjava ikone — izrez motiva, adaptive icon, preverba v APK |
 | `/preimenovanje-znamke` | sprememba imena — kaj zamenjati in kaj bi zlomilo sistem |
