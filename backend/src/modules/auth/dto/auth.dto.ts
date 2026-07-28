@@ -110,13 +110,5 @@ export class ResetPasswordDto {
   password: string;
 }
 
-export class CreateRegistrationCodesDto {
-  @ApiPropertyOptional({ example: 1, description: 'Št. kod (največ 20).' })
-  @IsOptional()
-  count?: number;
-
-  @ApiPropertyOptional({ example: 'PGD Radvanje — g. Kovač' })
-  @IsOptional()
-  @IsString()
-  note?: string;
-}
+// Izdaja kod je v PlatformModule (IssueCodesDto) — enak DTO uporabljata
+// endpoint z master ključem in stran za upravitelja platforme.

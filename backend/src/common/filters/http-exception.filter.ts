@@ -8,6 +8,17 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+/** `PAYMENT_REQUIRED` → `Payment Required` (oznaka napake iz HTTP statusa). */
+function statusPhrase(status: number): string {
+  const name = HttpStatus[status];
+  if (typeof name !== 'string') return 'Error';
+  return name
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 /**
  * Poenoten format napak. Sporočila so v slovenščini (za gasilce).
  */
@@ -32,6 +43,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const res = exception.getResponse();
       if (typeof res === 'string') {
         message = res;
+        // `new HttpException('sporočilo', status)` ne prinese oznake napake —
+        // izpelji jo iz statusa, sicer bi tudi 402 pisalo »Internal Server Error«.
+        error = statusPhrase(status);
       } else if (typeof res === 'object' && res !== null) {
         const r = res as Record<string, any>;
         message = r.message ?? message;

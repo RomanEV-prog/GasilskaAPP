@@ -2,6 +2,8 @@
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Patch,
   Post,
   Res,
@@ -18,9 +20,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { AllowExpired } from '../../common/decorators/allow-expired.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../../common/enums/roles.enum';
+import { RedeemCodeDto } from '../platform/dto/platform.dto';
+import { PlatformService } from '../platform/platform.service';
 import { UpdateOrganizationDto } from './dto/organization.dto';
 import { OrganizationsService } from './organizations.service';
 
@@ -28,7 +33,10 @@ import { OrganizationsService } from './organizations.service';
 @ApiBearerAuth()
 @Controller('organizations')
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService,
+    private readonly platformService: PlatformService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Podatki o mojem društvu' })
@@ -44,6 +52,25 @@ export class OrganizationsController {
     @Body() dto: UpdateOrganizationDto,
   ) {
     return this.organizationsService.update(orgId, dto);
+  }
+
+  /**
+   * Podaljšanje naročnine z aktivacijsko kodo.
+   *
+   * `@AllowExpired`, ker je to edina pot iz poteklega društva nazaj v
+   * delujoče stanje — brez tega bi ga SubscriptionGuard zaklenil v slepo ulico.
+   */
+  @Post('me/redeem-code')
+  @Roles(SystemRole.ORG_ADMIN)
+  @AllowExpired()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Podaljšaj naročnino z aktivacijsko kodo' })
+  redeemCode(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') userId: string,
+    @Body() dto: RedeemCodeDto,
+  ) {
+    return this.platformService.redeemForOrganization(orgId, dto.code, userId);
   }
 
   @Post('me/logo')

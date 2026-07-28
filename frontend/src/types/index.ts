@@ -333,6 +333,117 @@ export interface Organization {
   photoUploadLink?: string;
   spinObcine?: string[] | null;
   isActive: boolean;
+  /** Do kdaj velja naročnina; null = neomejeno. Po poteku samo za branje. */
+  subscriptionExpiresAt?: string | null;
+}
+
+/** Društvo, kot ga vidi upravitelj platforme (`GET /platform/organizations`). */
+export interface PlatformOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  city?: string;
+  email?: string;
+  phone?: string;
+  isActive: boolean;
+  subscriptionExpiresAt: string | null;
+  subscriptionPlan: SubscriptionPlan | null;
+  expired: boolean;
+  /** Dni do poteka; null pri neomejeni naročnini. Negativno = potekla. */
+  daysLeft: number | null;
+  memberCount: number;
+  createdAt: string;
+}
+
+/**
+ * Oznaka »društva«, pod katerim živi upravitelj platforme.
+ *
+ * Ni pravo društvo — obstaja samo zato, ker je vsak uporabnik vezan na
+ * organizacijo. Portal zanj skrije zavihke društva (člani, vozila ...), ker
+ * so prazni, in ga ob prijavi pošlje naravnost na stran Platforma.
+ */
+export const PLATFORM_ORG_SLUG = 'plamen-platforma';
+
+/** Paket naročnine. Ne vpliva na dostop — služi pregledu in računom. */
+export type SubscriptionPlan = 'yearly' | 'monthly' | 'pilot' | 'unlimited';
+
+export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
+  yearly: 'Letni',
+  monthly: 'Mesečni',
+  pilot: 'Pilot (brezplačno)',
+  unlimited: 'Neomejeno',
+};
+
+export type InvoiceStatus = 'open' | 'paid' | 'overdue' | 'cancelled';
+
+export interface InvoiceTotals {
+  net: number;
+  vat: number;
+  gross: number;
+}
+
+export interface PlatformInvoice {
+  id: string;
+  number: string;
+  organizationId: string;
+  organizationName: string;
+  issuedAt: string;
+  dueAt: string;
+  periodFrom: string;
+  periodTo: string;
+  months: number;
+  amount: string;
+  vatRate: string;
+  note?: string | null;
+  paidAt?: string | null;
+  cancelledAt?: string | null;
+  totals: InvoiceTotals;
+  status: InvoiceStatus;
+}
+
+export interface InvoiceSummary {
+  openCount: number;
+  overdueCount: number;
+  outstanding: number;
+  paidCount: number;
+}
+
+/** Podatki izdajatelja iz nastavitev strežnika (env). */
+export interface InvoiceIssuer {
+  name: string;
+  address: string;
+  post: string;
+  taxNumber: string;
+  registrationNumber?: string;
+  vatId?: string;
+  iban: string;
+  bank?: string;
+  email: string;
+  phone?: string;
+  website?: string;
+  vatRate: number;
+  footerNote: string;
+  paymentDays: number;
+  yearlyPrice: number;
+  monthlyPrice: number;
+  /** Katera obvezna polja še niso izpolnjena. */
+  missing: string[];
+}
+
+export type RegistrationCodeStatus = 'available' | 'used' | 'revoked';
+
+export interface RegistrationCode {
+  id: string;
+  code: string;
+  note?: string;
+  /** Mesecev naročnine, ki jih koda odklene; null = neomejeno. */
+  validMonths: number | null;
+  usedAt: string | null;
+  usedByOrganizationId: string | null;
+  usedByOrganizationName: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  status: RegistrationCodeStatus;
 }
 
 /**

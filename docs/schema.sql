@@ -20,9 +20,17 @@ CREATE TABLE organizations (
   spin_obcina_id BIGINT,        -- zastarelo
   settings      JSONB DEFAULT '{}',
   is_active     BOOLEAN DEFAULT true,
+  -- Do kdaj velja naročnina; NULL = neomejeno (pilotna društva).
+  -- Po poteku je dostop samo za branje (SubscriptionGuard).
+  subscription_expires_at TIMESTAMPTZ,
+  -- yearly | monthly | pilot | unlimited; NULL = ni določen.
+  subscription_plan VARCHAR(20),
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX idx_organizations_subscription_expires
+  ON organizations (subscription_expires_at);
 
 CREATE TYPE membership_status AS ENUM ('operative','veteran','youth','trainee','support','honorary');
 CREATE TYPE availability_status AS ENUM ('available','at_home','at_work','on_leave','sick','unavailable');
@@ -68,10 +76,43 @@ CREATE TABLE registration_codes (
   id                       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   code                     VARCHAR(32) UNIQUE NOT NULL,
   note                     VARCHAR(255),
+  -- Koliko mesecev dostopa odklene koda; NULL = neomejeno.
+  valid_months             INTEGER,
   used_at                  TIMESTAMPTZ,
   used_by_organization_id  UUID,
+  redeemed_by_user_id      UUID,
+  revoked_at               TIMESTAMPTZ,
+  issued_by_user_id        UUID,
   created_at               TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX idx_registration_codes_created
+  ON registration_codes (created_at DESC);
+
+-- Izdani računi za naročnine (evidenca upravitelja platforme).
+CREATE TABLE platform_invoices (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  number              VARCHAR(20) UNIQUE NOT NULL,   -- YYYY-NNN
+  organization_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+  issued_at           DATE NOT NULL DEFAULT CURRENT_DATE,
+  due_at              DATE NOT NULL,
+  period_from         DATE NOT NULL,
+  period_to           DATE NOT NULL,
+  months              INTEGER NOT NULL,
+  amount              NUMERIC(10,2) NOT NULL,
+  vat_rate            NUMERIC(5,2) NOT NULL DEFAULT 0,  -- 0 = nezavezanec (94. člen ZDDV-1)
+  note                VARCHAR(500),
+  paid_at             DATE,
+  registration_code_id UUID,
+  cancelled_at        TIMESTAMPTZ,
+  created_by_user_id  UUID,
+  created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_platform_invoices_unpaid
+  ON platform_invoices (due_at) WHERE paid_at IS NULL AND cancelled_at IS NULL;
+CREATE INDEX idx_platform_invoices_org
+  ON platform_invoices (organization_id, issued_at DESC);
 
 CREATE TABLE user_roles (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

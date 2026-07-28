@@ -22,6 +22,7 @@ pomočnik za zaščito dihal (oprema).
 | POST | `/auth/register` | Registracija novega društva | ❌ |
 | POST | `/auth/forgot-password` | Pošlji reset link | ❌ |
 | POST | `/auth/reset-password` | Nastavi novo geslo | ❌ |
+| POST | `/auth/registration-codes` | Izdaj aktivacijske kode (glava `x-master-key`) | 🔑 |
 | PATCH | `/auth/fcm-token` | Posodobi Firebase token | ✅ |
 
 ### POST `/auth/login`
@@ -45,9 +46,14 @@ pomočnik za zaščito dihal (oprema).
   "firstName": "Darjan",
   "lastName": "Štajnmc",
   "email": "darjan@pgd-pekre.si",
-  "password": "GasilApp123!"
+  "password": "GasilApp123!",
+  "activationCode": "GASIL-A1B2-C3D4"
 }
 ```
+
+Aktivacijska koda je obvezna. Njen `validMonths` določi trajanje naročnine
+novega društva (12 = letna, 2 = preizkus, brez vrednosti = neomejeno).
+Neveljavna, preklicana ali že porabljena koda → **401**.
 
 ---
 
@@ -314,9 +320,49 @@ Vračilo brez odprte zadolžitve → **404**. Član iz drugega društva → **40
 
 | Metoda | Pot | Opis | Vloge |
 |--------|-----|------|-------|
-| GET | `/organizations/me` | Podatki o mojem društvu | vsi |
+| GET | `/organizations/me` | Podatki o mojem društvu (vklj. `subscriptionExpiresAt`) | vsi |
 | PATCH | `/organizations/me` | Uredi društvo (vklj. `spinObcine: string[]`) | admin |
 | POST | `/organizations/me/logo` | Naloži logotip | admin |
+| POST | `/organizations/me/redeem-code` | Podaljšaj naročnino z aktivacijsko kodo | admin |
+
+`POST /organizations/me/redeem-code` — telo `{ "code": "GASIL-XXXX-XXXX" }`.
+Meseci se **prištejejo obstoječemu roku**, če ta še ni potekel (predčasno
+podaljšanje ne požre preostanka). Deluje tudi, ko je naročnina že potekla —
+edini endpoint za pisanje, ki ga zaklep na branje spusti skozi.
+
+---
+
+## PLATFORM `/platform`
+
+Upravljanje platforme — **samo `super_admin`** (glej `docs/MODULES.md §14`).
+Edini del API-ja, ki namenoma seže čez meje tenanta.
+
+| Metoda | Pot | Opis |
+|--------|-----|------|
+| GET | `/platform/organizations` | Vsa društva: naročnina, paket, št. članov (razvrščeno po poteku) |
+| PATCH | `/platform/organizations/:id/subscription` | Ročno: `{ addMonths }`, `{ expiresAt }`, `{ unlimited: true }` ali `{ plan }` |
+| GET | `/platform/codes` | Izdane kode (status `available` / `used` / `revoked`) |
+| POST | `/platform/codes` | Izdaj kode: `{ count, validMonths, note }` |
+| POST | `/platform/codes/:id/revoke` | Prekliči še neporabljeno kodo |
+| GET | `/platform/issuer` | Podatki izdajatelja računov + seznam manjkajočih polj |
+| GET | `/platform/invoices` | Izdani računi (`open` / `paid` / `overdue` / `cancelled`) |
+| GET | `/platform/invoices/summary` | Odprt dolg, št. neplačanih in zapadlih |
+| GET | `/platform/invoices/:id` | Račun s podatki društva in izdajatelja (za izpis) |
+| POST | `/platform/invoices` | Izdaj račun: `{ organizationId, months, amount, vatRate?, periodFrom?, dueDays?, note? }` |
+| POST | `/platform/invoices/:id/paid` | Označi plačilo; privzeto **podaljša naročnino** za obdobje računa |
+| POST | `/platform/invoices/:id/cancel` | Storniraj neplačan račun |
+
+`plan`: `yearly` \| `monthly` \| `pilot` \| `unlimited` — samo oznaka za pregled
+in račune, dostopa ne spreminja (to počne le `subscriptionExpiresAt`).
+
+Označitev plačila **ne** omeji društva z neomejeno naročnino nazaj na končni
+rok; plačilo se vseeno zabeleži.
+
+`validMonths`: 12 = letna naročnina, 2 = preizkus, `null`/izpuščeno =
+neomejeno. Največ 20 kod naenkrat, največ 60 mesecev.
+
+Vlogo `super_admin` prek aplikacije ni mogoče dodeliti (namerno) — dodeli se
+s skripto: `npm run super-admin -- <e-pošta ali prijavno ime>`.
 
 ---
 
@@ -353,6 +399,7 @@ neposredno s telefona in filtrira po teh občinah.
 | 201 | Created |
 | 400 | Bad Request (validacija) |
 | 401 | Unauthorized (ni tokena) |
+| 402 | Payment Required (naročnina društva je potekla — dovoljeno je samo branje) |
 | 403 | Forbidden (napačna vloga) |
 | 404 | Not Found |
 | 409 | Conflict (duplikat) |

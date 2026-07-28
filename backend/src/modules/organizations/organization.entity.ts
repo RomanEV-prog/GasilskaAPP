@@ -64,6 +64,27 @@ export class Organization {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  /**
+   * Do kdaj velja naročnina društva. `null` = neomejeno (pilotna društva in
+   * vsa, ki so obstajala pred uvedbo naročnin).
+   * Po poteku SubscriptionGuard blokira vse spreminjanje — dostop ostane
+   * samo za branje, podatki se ne izgubijo.
+   */
+  @Column({
+    name: 'subscription_expires_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  subscriptionExpiresAt?: Date | null;
+
+  /**
+   * Paket naročnine: `yearly` | `monthly` | `pilot` | `unlimited`.
+   * Ne vpliva na dostop (to počne le `subscriptionExpiresAt`) — služi za
+   * pregled in izdajo računov.
+   */
+  @Column({ name: 'subscription_plan', type: 'varchar', length: 20, nullable: true })
+  subscriptionPlan?: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

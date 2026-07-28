@@ -18,7 +18,7 @@ import { UsersService } from '../users/users.service';
 import { RegistrationCode } from './registration-code.entity';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
-import { randomBytes } from 'crypto';
+import { addMonths } from '../../common/utils/subscription.util';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -173,29 +173,6 @@ export class AuthService {
   }
 
   /**
-   * Izda nove aktivacijske kode za registracijo društev.
-   * Kliče se prek zaščitenega endpointa (master ključ) — glej AuthController.
-   */
-  async createRegistrationCodes(
-    count = 1,
-    note?: string,
-  ): Promise<string[]> {
-    const codes: string[] = [];
-    for (let i = 0; i < Math.min(count, 20); i++) {
-      // Berljiva oblika: GASIL-XXXX-XXXX (brez dvoumnih znakov).
-      const raw = randomBytes(8)
-        .toString('base64url')
-        .replace(/[-_]/g, '')
-        .toUpperCase()
-        .slice(0, 8);
-      const code = `GASIL-${raw.slice(0, 4)}-${raw.slice(4, 8)}`;
-      await this.codesRepo.save(this.codesRepo.create({ code, note }));
-      codes.push(code);
-    }
-    return codes;
-  }
-
-  /**
    * Registracija novega društva — zahteva veljavno (še neporabljeno)
    * aktivacijsko kodo; ustvari organizacijo + org_admin. Vse v eni transakciji.
    */
@@ -211,7 +188,7 @@ export class AuthService {
     const code = await this.codesRepo.findOne({
       where: { code: dto.activationCode.trim().toUpperCase() },
     });
-    if (!code || code.usedAt) {
+    if (!code || code.usedAt || code.revokedAt) {
       throw new UnauthorizedException(
         'Aktivacijska koda je neveljavna ali že porabljena. Za kodo nas kontaktirajte.',
       );
@@ -227,7 +204,7 @@ export class AuthService {
         // se organizacija ne ustvari.
         const consumed = await manager.update(
           RegistrationCode,
-          { id: code.id, usedAt: IsNull() },
+          { id: code.id, usedAt: IsNull(), revokedAt: IsNull() },
           { usedAt: new Date() },
         );
         if (consumed.affected !== 1) {
@@ -239,12 +216,14 @@ export class AuthService {
         const org = manager.create(Organization, {
           name: dto.organizationName,
           slug,
+          // Koda določi trajanje naročnine (12 mesecev = letna, 2 = preizkus).
+          // null = neomejeno.
+          subscriptionExpiresAt:
+            code.validMonths === null || code.validMonths === undefined
+              ? null
+              : addMonths(new Date(), code.validMonths),
         });
         const savedOrg = await manager.save(org);
-
-        await manager.update(RegistrationCode, code.id, {
-          usedByOrganizationId: savedOrg.id,
-        });
 
         const newUser = manager.create(User, {
           organizationId: savedOrg.id,
@@ -256,6 +235,12 @@ export class AuthService {
           lastName: dto.lastName,
         });
         const savedUser = await manager.save(newUser);
+
+        // Sledljivost: katero društvo in kdo je kodo porabil.
+        await manager.update(RegistrationCode, code.id, {
+          usedByOrganizationId: savedOrg.id,
+          redeemedByUserId: savedUser.id,
+        });
 
         // Prvi uporabnik društva je org_admin.
         const roleEntity = manager.create(UserRole, {

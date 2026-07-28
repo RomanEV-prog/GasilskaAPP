@@ -6,6 +6,7 @@ process.env.REGISTRATION_KEY = 'test-master-key';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 
 /**
@@ -993,6 +994,430 @@ describe('GasilApp E2E', () => {
         .get(`/api/v1/equipment/nfc/${uid}`)
         .set(auth(tokenB))
         .expect(404);
+    });
+  });
+  // ─── Naročnine in aktivacijske kode (2026-07-28) ──────────────────────
+  describe('Naročnine društev', () => {
+    let dataSource: DataSource;
+    let orgCId = '';
+    let tokenC = '';
+    /** Koda za podaljšanje društva C (12 mesecev). */
+    let renewCode = '';
+
+    const orgC = {
+      organizationName: 'PGD E2E C',
+      organizationSlug: `e2e-c-${stamp}`,
+      firstName: 'Cvetka',
+      lastName: 'Admin',
+      email: `admin@e2e-c-${stamp}.si`,
+      password: pass,
+      activationCode: '',
+    };
+
+    /** Izda kodo prek endpointa z master ključem. */
+    const issueCode = async (body: Record<string, unknown>) => {
+      const res = await request(http)
+        .post('/api/v1/auth/registration-codes')
+        .set('x-master-key', 'test-master-key')
+        .send(body)
+        .expect(201);
+      return res.body.data.codes[0] as string;
+    };
+
+    beforeAll(async () => {
+      dataSource = app.get(DataSource);
+      orgC.activationCode = await issueCode({ count: 1, validMonths: 2 });
+    });
+
+    it('registracija s kodo za 2 meseca nastavi rok naročnine', async () => {
+      const res = await request(http)
+        .post('/api/v1/auth/register')
+        .send(orgC)
+        .expect(201);
+      tokenC = res.body.data.accessToken;
+      orgCId = res.body.data.user.organizationId;
+
+      const me = await request(http)
+        .get('/api/v1/organizations/me')
+        .set(auth(tokenC))
+        .expect(200);
+      const expires = new Date(me.body.data.subscriptionExpiresAt).getTime();
+      const days = (expires - Date.now()) / (24 * 60 * 60 * 1000);
+      expect(days).toBeGreaterThan(55);
+      expect(days).toBeLessThan(63);
+    });
+
+    it('registracija s kodo brez veljavnosti da neomejeno naročnino', async () => {
+      const code = await issueCode({ count: 1 });
+      const res = await request(http)
+        .post('/api/v1/auth/register')
+        .send({
+          organizationName: 'PGD E2E D',
+          organizationSlug: `e2e-d-${stamp}`,
+          firstName: 'Damjan',
+          lastName: 'Admin',
+          email: `admin@e2e-d-${stamp}.si`,
+          password: pass,
+          activationCode: code,
+        })
+        .expect(201);
+
+      const me = await request(http)
+        .get('/api/v1/organizations/me')
+        .set(auth(res.body.data.accessToken))
+        .expect(200);
+      expect(me.body.data.subscriptionExpiresAt).toBeNull();
+    });
+
+    it('po poteku naročnine je pisanje blokirano (402), branje pa deluje', async () => {
+      await dataSource.query(
+        "UPDATE organizations SET subscription_expires_at = NOW() - INTERVAL '1 day' WHERE id = $1",
+        [orgCId],
+      );
+
+      await request(http).get('/api/v1/events').set(auth(tokenC)).expect(200);
+
+      await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenC))
+        .send({
+          title: 'Vaja po poteku',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+        })
+        .expect(402);
+    });
+
+    it('označitev obvestila prebranim ni blokirana po poteku', async () => {
+      // Neobstoječe obvestilo → 404 (in NE 402): guard je endpoint spustil skozi.
+      await request(http)
+        .patch('/api/v1/notifications/00000000-0000-0000-0000-000000000000/read')
+        .set(auth(tokenC))
+        .expect(404);
+    });
+
+    it('podaljšanje s kodo odklene društvo', async () => {
+      renewCode = await issueCode({
+        count: 1,
+        validMonths: 12,
+        note: 'e2e obnova',
+      });
+
+      const res = await request(http)
+        .post('/api/v1/organizations/me/redeem-code')
+        .set(auth(tokenC))
+        .send({ code: renewCode })
+        .expect(200);
+      const expires = new Date(res.body.data.subscriptionExpiresAt).getTime();
+      expect(expires).toBeGreaterThan(Date.now());
+
+      await request(http)
+        .post('/api/v1/events')
+        .set(auth(tokenC))
+        .send({
+          title: 'Vaja po podaljšanju',
+          eventType: 'drill',
+          startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+        })
+        .expect(201);
+    });
+
+    it('iste kode ni mogoče unovčiti dvakrat (400)', async () => {
+      await request(http)
+        .post('/api/v1/organizations/me/redeem-code')
+        .set(auth(tokenC))
+        .send({ code: renewCode })
+        .expect(400);
+    });
+
+    it('navaden član ne more podaljšati naročnine (403)', async () => {
+      await request(http)
+        .post('/api/v1/organizations/me/redeem-code')
+        .set(auth(memberToken))
+        .send({ code: 'GASIL-XXXX-XXXX' })
+        .expect(403);
+    });
+
+    it('preklicane kode ni mogoče uporabiti za registracijo (401)', async () => {
+      const code = await issueCode({ count: 1, validMonths: 12 });
+      await dataSource.query(
+        'UPDATE registration_codes SET revoked_at = NOW() WHERE code = $1',
+        [code],
+      );
+      await request(http)
+        .post('/api/v1/auth/register')
+        .send({
+          organizationName: 'PGD E2E E',
+          organizationSlug: `e2e-e-${stamp}`,
+          firstName: 'Eva',
+          lastName: 'Admin',
+          email: `admin@e2e-e-${stamp}.si`,
+          password: pass,
+          activationCode: code,
+        })
+        .expect(401);
+    });
+
+    it('stran platforme je za org_admina prepovedana (403)', async () => {
+      await request(http)
+        .get('/api/v1/platform/organizations')
+        .set(auth(tokenA))
+        .expect(403);
+      await request(http)
+        .post('/api/v1/platform/codes')
+        .set(auth(tokenA))
+        .send({ count: 1, validMonths: 12 })
+        .expect(403);
+    });
+
+    it('super_admin vidi vsa društva in izda kode', async () => {
+      // Vloge super_admin se prek aplikacije ne da dodeliti (namerno) — v
+      // testu jo vpišemo neposredno in se znova prijavimo, da pride v žeton.
+      const [{ id: userId }] = await dataSource.query(
+        'SELECT id FROM users WHERE email = $1',
+        [orgC.email],
+      );
+      await dataSource.query(
+        `INSERT INTO user_roles (user_id, organization_id, role)
+         VALUES ($1, $2, 'super_admin')`,
+        [userId, orgCId],
+      );
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: orgC.email, password: pass })
+        .expect(200);
+      const superToken = login.body.data.accessToken;
+
+      const orgs = await request(http)
+        .get('/api/v1/platform/organizations')
+        .set(auth(superToken))
+        .expect(200);
+      expect(orgs.body.data.length).toBeGreaterThanOrEqual(3);
+      expect(orgs.body.data[0]).toHaveProperty('memberCount');
+
+      const issued = await request(http)
+        .post('/api/v1/platform/codes')
+        .set(auth(superToken))
+        .send({ count: 2, validMonths: 12, note: 'e2e platform' })
+        .expect(201);
+      expect(issued.body.data).toHaveLength(2);
+      expect(issued.body.data[0].code).toMatch(
+        /^GASIL-[A-Z2-9]{4}-[A-Z2-9]{4}$/,
+      );
+
+      const codes = await request(http)
+        .get('/api/v1/platform/codes')
+        .set(auth(superToken))
+        .expect(200);
+      expect(
+        codes.body.data.some((c: { status: string }) => c.status === 'used'),
+      ).toBe(true);
+
+      // Preklic še neporabljene kode.
+      await request(http)
+        .post(`/api/v1/platform/codes/${issued.body.data[0].id}/revoke`)
+        .set(auth(superToken))
+        .expect(200);
+    });
+  });
+  // ─── Računi za naročnine (2026-07-28) ────────────────────────────────
+  describe('Računi za naročnine', () => {
+    let dataSource: DataSource;
+    let superToken = '';
+    let orgFId = '';
+    let invoiceId = '';
+    let invoiceNumber = '';
+
+    const orgF = {
+      organizationName: 'PGD E2E F',
+      organizationSlug: `e2e-f-${stamp}`,
+      firstName: 'Franc',
+      lastName: 'Admin',
+      email: `admin@e2e-f-${stamp}.si`,
+      password: pass,
+      activationCode: '',
+    };
+
+    beforeAll(async () => {
+      dataSource = app.get(DataSource);
+
+      const codeRes = await request(http)
+        .post('/api/v1/auth/registration-codes')
+        .set('x-master-key', 'test-master-key')
+        .send({ count: 1, validMonths: 2 })
+        .expect(201);
+      orgF.activationCode = codeRes.body.data.codes[0];
+
+      const reg = await request(http)
+        .post('/api/v1/auth/register')
+        .send(orgF)
+        .expect(201);
+      orgFId = reg.body.data.user.organizationId;
+
+      // super_admin za dostop do /platform.
+      const [{ id: userId }] = await dataSource.query(
+        'SELECT id FROM users WHERE email = $1',
+        [orgF.email],
+      );
+      await dataSource.query(
+        `INSERT INTO user_roles (user_id, organization_id, role)
+         VALUES ($1, $2, 'super_admin')`,
+        [userId, orgFId],
+      );
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: orgF.email, password: pass })
+        .expect(200);
+      superToken = login.body.data.accessToken;
+    });
+
+    it('izda račun z zaporedno številko YYYY-NNN', async () => {
+      const res = await request(http)
+        .post('/api/v1/platform/invoices')
+        .set(auth(superToken))
+        .send({
+          organizationId: orgFId,
+          months: 12,
+          amount: 120,
+          note: 'Letna naročnina Plamen',
+        })
+        .expect(201);
+
+      invoiceId = res.body.data.id;
+      invoiceNumber = res.body.data.number;
+      expect(invoiceNumber).toMatch(/^\d{4}-\d{3}$/);
+      expect(res.body.data.months).toBe(12);
+      expect(res.body.data.paidAt).toBeNull();
+    });
+
+    it('druga številka je zaporedna in unikatna', async () => {
+      const res = await request(http)
+        .post('/api/v1/platform/invoices')
+        .set(auth(superToken))
+        .send({ organizationId: orgFId, months: 1, amount: 12 })
+        .expect(201);
+
+      const prev = parseInt(invoiceNumber.slice(5), 10);
+      expect(parseInt(res.body.data.number.slice(5), 10)).toBe(prev + 1);
+
+      // Storniraj, da ne visi v odprtem dolgu.
+      await request(http)
+        .post(`/api/v1/platform/invoices/${res.body.data.id}/cancel`)
+        .set(auth(superToken))
+        .expect(200);
+    });
+
+    it('račun šteje v odprt dolg, dokler ni plačan', async () => {
+      const res = await request(http)
+        .get('/api/v1/platform/invoices/summary')
+        .set(auth(superToken))
+        .expect(200);
+      expect(res.body.data.openCount).toBeGreaterThanOrEqual(1);
+      expect(res.body.data.outstanding).toBeGreaterThanOrEqual(120);
+    });
+
+    it('označitev plačila podaljša naročnino društva', async () => {
+      const before = await request(http)
+        .get('/api/v1/platform/organizations')
+        .set(auth(superToken))
+        .expect(200);
+      const orgBefore = before.body.data.find(
+        (o: { id: string }) => o.id === orgFId,
+      );
+      const expiryBefore = new Date(orgBefore.subscriptionExpiresAt).getTime();
+
+      await request(http)
+        .post(`/api/v1/platform/invoices/${invoiceId}/paid`)
+        .set(auth(superToken))
+        .send({})
+        .expect(200);
+
+      const after = await request(http)
+        .get('/api/v1/platform/organizations')
+        .set(auth(superToken))
+        .expect(200);
+      const orgAfter = after.body.data.find(
+        (o: { id: string }) => o.id === orgFId,
+      );
+      const expiryAfter = new Date(orgAfter.subscriptionExpiresAt).getTime();
+
+      // 12 mesecev več kot prej (dopust nekaj dni zaradi dolžine mesecev).
+      const daysAdded = (expiryAfter - expiryBefore) / (24 * 60 * 60 * 1000);
+      expect(daysAdded).toBeGreaterThan(360);
+      expect(daysAdded).toBeLessThan(370);
+    });
+
+    it('istega računa ni mogoče plačati dvakrat (400)', async () => {
+      await request(http)
+        .post(`/api/v1/platform/invoices/${invoiceId}/paid`)
+        .set(auth(superToken))
+        .send({})
+        .expect(400);
+    });
+
+    it('plačanega računa ni mogoče stornirati (400)', async () => {
+      await request(http)
+        .post(`/api/v1/platform/invoices/${invoiceId}/cancel`)
+        .set(auth(superToken))
+        .expect(400);
+    });
+
+    it('izpis računa vrne podatke društva in izdajatelja', async () => {
+      const res = await request(http)
+        .get(`/api/v1/platform/invoices/${invoiceId}`)
+        .set(auth(superToken))
+        .expect(200);
+      expect(res.body.data.organization.id).toBe(orgFId);
+      expect(res.body.data.totals.gross).toBeGreaterThan(0);
+      expect(res.body.data.issuer).toHaveProperty('missing');
+    });
+
+    it('paket naročnine je mogoče nastaviti', async () => {
+      const res = await request(http)
+        .patch(`/api/v1/platform/organizations/${orgFId}/subscription`)
+        .set(auth(superToken))
+        .send({ plan: 'monthly' })
+        .expect(200);
+      expect(res.body.data.subscriptionPlan).toBe('monthly');
+    });
+
+    it('neveljaven paket zavrnjen (400)', async () => {
+      await request(http)
+        .patch(`/api/v1/platform/organizations/${orgFId}/subscription`)
+        .set(auth(superToken))
+        .send({ plan: 'zastonj' })
+        .expect(400);
+    });
+
+    it('plačilo ne omeji društva z neomejeno naročnino', async () => {
+      await dataSource.query(
+        'UPDATE organizations SET subscription_expires_at = NULL WHERE id = $1',
+        [orgFId],
+      );
+      const created = await request(http)
+        .post('/api/v1/platform/invoices')
+        .set(auth(superToken))
+        .send({ organizationId: orgFId, months: 12, amount: 120 })
+        .expect(201);
+
+      await request(http)
+        .post(`/api/v1/platform/invoices/${created.body.data.id}/paid`)
+        .set(auth(superToken))
+        .send({})
+        .expect(200);
+
+      const [org] = await dataSource.query(
+        'SELECT subscription_expires_at FROM organizations WHERE id = $1',
+        [orgFId],
+      );
+      expect(org.subscription_expires_at).toBeNull();
+    });
+
+    it('org_admin ne vidi računov (403)', async () => {
+      await request(http)
+        .get('/api/v1/platform/invoices')
+        .set(auth(tokenA))
+        .expect(403);
     });
   });
 });

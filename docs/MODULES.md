@@ -378,16 +378,94 @@ in SPIN obvestila se ne prikazujejo v seznamu obvestil (filter v
 `NotificationsService.resolveRecipients` + `findMine` za `type='spin'`).
 Mobilni zavihek SPIN (neposredni feed) ostane viden ne glede na nastavitev.
 
+## 14. Platform modul (`/modules/platform`)
+
+Upravljanje platforme — **samo `super_admin`**. Edini modul, ki namerno seže
+čez meje tenanta (vidi vsa društva).
+
+### Kaj pokriva
+- **Aktivacijske kode** — izdaja, pregled, preklic. Koda je oblike
+  `GASIL-XXXX-XXXX` iz abecede brez dvoumnih znakov (brez I, O, 0, 1), ker se
+  prepisuje ročno iz e-pošte.
+- **Naročnine društev** — pregled stanja in ročno urejanje
+  (`+N mesecev`, točen datum ali neomejeno).
+
+### Naročnina
+`organizations.subscription_expires_at`; `null` = neomejeno. Vrednost nastavi
+`registration_codes.valid_months` ob unovčenju kode:
+
+| Pot | Kdaj | Kdo |
+|---|---|---|
+| `POST /auth/register` | ob nastanku društva (v isti transakciji) | javno, s kodo |
+| `POST /organizations/me/redeem-code` | podaljšanje obstoječega društva | `org_admin` |
+| `PATCH /platform/organizations/:id/subscription` | ročni popravek brez kode | `super_admin` |
+
+Pri podaljšanju se meseci **prištejejo obstoječemu roku**, če ta še ni potekel.
+
+### Po poteku
+`SubscriptionGuard` (globalni `APP_GUARD`) vrne **402** za vse
+POST/PUT/PATCH/DELETE; branje ostane nedotaknjeno, podatki se ne izgubijo.
+Izjeme nosijo `@AllowExpired()`: unovčenje kode, `PATCH /auth/fcm-token`,
+označitev obvestila kot prebranega. `super_admin` je izvzet.
+
+Guard bere rok iz baze ob vsaki spreminjajoči zahtevi (ne iz JWT) — sicer bi
+po podaljšanju društvo ostalo zaklenjeno do izteka žetona.
+
+### Računi (`platform_invoices`)
+
+Rok poteka sam pove le »do kdaj«, ne pa ali je društvo plačalo. Zanka:
+
+```
+izdaš račun → društvo plača → označiš »Plačano« → naročnina se podaljša
+```
+
+- Zaporedna številka `YYYY-NNN`, dodeljena v transakciji s
+  `pg_advisory_xact_lock` — brez zaklepa bi dva hkratna računa prebrala isti
+  maksimum in trčila ob unikatni indeks.
+- Obdobje se privzeto začne tam, kjer se naročnina izteče (ne danes), da račun
+  pokriva pravo prihodnje obdobje.
+- Označitev plačila **ne** omeji društva z neomejeno naročnino na končni rok.
+- Storniranje je mogoče samo pri neplačanem računu; za plačanega se izda
+  dobropis (ročno, sistem ga še ne pozna).
+- `GET /platform/invoices/summary` da odprt dolg in število zapadlih.
+
+Podatki izdajatelja so v okolju (`INVOICE_ISSUER_*`, glej `.env.example`), ker
+se med razvojem in produkcijo razlikujejo in ne sodijo v git. Če manjkajo,
+portal to izpiše — račun se izda, a izpis ni veljaven.
+
+**Pošiljanja e-pošte sistem ne opravlja** (SMTP ni nastavljen). Račun se natisne
+prek brskalnika (»Natisni → Shrani kot PDF«), besedilo e-pošte pa se kopira ali
+odpre v odjemalcu (`mailto:`).
+
+Davčno potrjevanje računov (FURS) velja za gotovinsko poslovanje; plačila po
+nakazilu vanj ne sodijo.
+
+### Bootstrap
+Vloge `super_admin` prek aplikacije ni mogoče dodeliti (`UsersService`
+to zavrne), zato:
+
+```bash
+npm run super-admin -- admin@pgd-pekre.si      # dodeli
+npm run super-admin -- admin.pekre --odvzemi   # odvzame
+```
+
+Na sveži namestitvi, kjer super_admina še ni, prvo kodo izda
+`POST /auth/registration-codes` z glavo `x-master-key` (`REGISTRATION_KEY`).
+
+---
+
 ## 10. Common (`/common`)
 
 ### Guards
 - `JwtAuthGuard` — preverja JWT token, podpira `@Public()` decorator
 - `RolesGuard` — preverja vloge, SuperAdmin gre skozi vedno
+- `SubscriptionGuard` — po poteku naročnine dovoli samo branje (402)
 
 ### Decorators
 - `@CurrentUser()` — izvleče user iz req (id, email, organizationId, roles)
 - `@Roles(...roles)` — nastavi zahtevane vloge
 - `@Public()` — izvzame endpoint iz JWT preverjanja
+- `@AllowExpired()` — spusti endpoint skozi tudi ob potekli naročnini
 
 ### Filters
 - `HttpExceptionFilter` — uniformni error format

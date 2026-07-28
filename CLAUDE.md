@@ -102,7 +102,9 @@ datoteka v `docs/migrations/` (za obstoječe baze). Glej `/gasilapp-shema`.
 ## Vloge (SystemRole)
 
 ```
-super_admin   → admin platforme (Anthropic/mi)
+super_admin   → admin platforme (mi) — zavihek »Platforma«: aktivacijske kode
+                in naročnine vseh društev. Vloge NI mogoče dodeliti prek
+                aplikacije; samo `npm run super-admin -- <email>` na strežniku.
 org_admin     → admin društva — EDINA vloga z upravljavskimi pravicami
 member        → navaden član
 
@@ -129,7 +131,19 @@ Navaden `member` vidi samo:
 ## Stanje projekta
 
 **Vse tri faze so dokončane; produkcija teče na https://gasilapp.eu od 7. 7. 2026.**
-Backend ima 13 modulov, web portal pokriva vse module. Mobilna (ime »Plamen«) je
+Backend ima 14 modulov, web portal pokriva vse module.
+
+**Naročnine (od 28. 7. 2026):** aktivacijska koda ne odklene le registracije,
+ampak določi tudi trajanje dostopa (`registration_codes.valid_months` →
+`organizations.subscription_expires_at`; `null` = neomejeno). Po poteku
+`SubscriptionGuard` vrne **402** za vsako pisanje — branje ostane. Izjeme
+označi `@AllowExpired()`. Kode izdaja `super_admin` v portalu (zavihek
+Platforma), društvo podaljša z `POST /organizations/me/redeem-code`.
+Ista stran vodi **evidenco računov** (`platform_invoices`): izdaja s
+številko `YYYY-NNN`, odprt dolg, natisljiv izpis; klik »Plačano« podaljša
+naročnino. Podatki izdajatelja so v env (`INVOICE_ISSUER_*`) — **SMTP ni
+nastavljen, e-pošte sistem ne pošilja sam.**
+Podrobno: `docs/MODULES.md §14`, `infra/DEPLOY.md §9`. Mobilna (ime »Plamen«) je
 od 21. 7. 2026 na **Google Play — interno preizkušanje, različica 1.0.11 (koda 12)**,
 poleg beta razdeljevanja na `gasilapp.eu/beta`. Trgovinska stran in vse izjave o
 vsebini so izpolnjene in **poslane v Googlov pregled**; do zaključka pregleda

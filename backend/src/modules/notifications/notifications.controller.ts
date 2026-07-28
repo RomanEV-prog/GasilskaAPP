@@ -8,6 +8,7 @@
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AllowExpired } from '../../common/decorators/allow-expired.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../../common/enums/roles.enum';
@@ -47,7 +48,10 @@ export class NotificationsController {
     return this.notificationsService.create(orgId, userId, dto);
   }
 
+  // Branje obvestil ni urejanje podatkov društva — ostane dovoljeno tudi,
+  // ko naročnina poteče (sicer bi značka neprebranih obvisela za vedno).
   @Patch(':id/read')
+  @AllowExpired()
   @ApiOperation({ summary: 'Označi obvestilo kot prebrano' })
   markRead(
     @CurrentUser('organizationId') orgId: string,

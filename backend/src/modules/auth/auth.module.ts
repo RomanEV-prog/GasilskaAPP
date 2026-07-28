@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from '../organizations/organization.entity';
+import { PlatformModule } from '../platform/platform.module';
 import { RegistrationCode } from './registration-code.entity';
 import { UserRole } from '../users/user-role.entity';
 import { User } from '../users/user.entity';
@@ -30,6 +31,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
     }),
     UsersModule,
+    // Izdaja kod z master ključem uporablja isti servis kot stran platforme.
+    PlatformModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

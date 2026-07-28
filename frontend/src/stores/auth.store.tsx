@@ -22,6 +22,8 @@ interface RegisterData {
 interface AuthContextValue {
   user: AuthUser | null;
   isLeadership: boolean;
+  /** Upravitelj platforme — vidi stran /platform (izdaja aktivacijskih kod). */
+  isSuperAdmin: boolean;
   login: (
     username: string,
     password: string,
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLeadership:
         user?.roles.some((r) => LEADERSHIP_ROLES.includes(r)) ?? false,
+      isSuperAdmin: user?.roles.includes('super_admin') ?? false,
       login,
       register,
       logout,

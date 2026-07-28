@@ -1,5 +1,9 @@
+import { useQuery } from '@tanstack/react-query';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { organizationsApi } from './api/organizations.api';
 import { AppLayout } from './components/layout/AppLayout';
+import { Spinner } from './components/ui';
+import { PLATFORM_ORG_SLUG } from './types';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
@@ -15,6 +19,8 @@ import { MemberDetailPage } from './pages/members/MemberDetailPage';
 import { MemberFormPage } from './pages/members/MemberFormPage';
 import { MembersPage } from './pages/members/MembersPage';
 import { NotificationsPage } from './pages/notifications/NotificationsPage';
+import { InvoicePage } from './pages/platform/InvoicePage';
+import { PlatformPage } from './pages/platform/PlatformPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { TrainingsPage } from './pages/trainings/TrainingsPage';
 import { VehicleFormPage } from './pages/vehicles/VehicleFormPage';
@@ -38,6 +44,28 @@ function RequireLeadership({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Upravljanje platforme — samo super_admin (backend to zahteva tudi sam). */
+function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
+  const { isSuperAdmin } = useAuth();
+  if (!isSuperAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+/**
+ * Domača stran. Upravitelj platforme nima svojega društva, zato mu nadzorna
+ * plošča ne pove ničesar — pošljemo ga na Platformo.
+ */
+function HomeRoute() {
+  const { data: org, isLoading } = useQuery({
+    queryKey: ['organization', 'me'],
+    queryFn: organizationsApi.getMine,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (isLoading) return <Spinner />;
+  if (org?.slug === PLATFORM_ORG_SLUG) return <Navigate to="/platform" replace />;
+  return <DashboardPage />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -50,7 +78,7 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/" element={<HomeRoute />} />
         <Route
           element={
             <RequireLeadership>
@@ -81,6 +109,16 @@ export default function App() {
         <Route path="/spin" element={<SpinPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          element={
+            <RequireSuperAdmin>
+              <Outlet />
+            </RequireSuperAdmin>
+          }
+        >
+          <Route path="/platform" element={<PlatformPage />} />
+          <Route path="/platform/racun/:id" element={<InvoicePage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

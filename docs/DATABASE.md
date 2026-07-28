@@ -46,8 +46,24 @@ CREATE TABLE organizations (
   spin_obcina_id BIGINT,                -- zastarelo
   settings      JSONB DEFAULT '{}',
   is_active     BOOLEAN DEFAULT true,
+  subscription_expires_at TIMESTAMPTZ,  -- naročnina; NULL = neomejeno, po poteku samo branje
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Aktivacijske kode za registracijo in podaljšanje naročnine.
+-- Izda jih super_admin (portal → Platforma) ali endpoint z master ključem.
+CREATE TABLE registration_codes (
+  id                       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code                     VARCHAR(32) UNIQUE NOT NULL,  -- GASIL-XXXX-XXXX
+  note                     VARCHAR(255),
+  valid_months             INTEGER,      -- mesecev naročnine; NULL = neomejeno
+  used_at                  TIMESTAMPTZ,
+  used_by_organization_id  UUID,
+  redeemed_by_user_id      UUID,
+  revoked_at               TIMESTAMPTZ,  -- preklicane kode ni mogoče unovčiti
+  issued_by_user_id        UUID,
+  created_at               TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ─── USERS ───────────────────────────────────────────────

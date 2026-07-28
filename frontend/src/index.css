@@ -5,3 +5,22 @@
 body {
   @apply bg-[#F8F8F8] text-[#2D2D2D] antialiased;
 }
+
+/*
+ * Tiskanje (uporablja se za račune: Natisni → Shrani kot PDF).
+ * Meni in zgornja vrstica na papir ne sodita.
+ */
+@media print {
+  aside,
+  header {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}

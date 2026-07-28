@@ -108,25 +108,70 @@ flutter build appbundle --release --dart-define=API_URL=https://<DOMAIN>/api/v1
 
 Podpisovanje in objava na Google Play: glej `mobile/MOBILE.md` → Release.
 
-## 9. Aktivacijske kode za nova društva
+## 9. Aktivacijske kode in naročnine društev
 
-Registracija društva zahteva aktivacijsko kodo. Izdaš jo z master ključem
-(`REGISTRATION_KEY` v `.env.prod`):
+Registracija društva zahteva aktivacijsko kodo. Koda hkrati določi, **koliko
+časa** društvo lahko uporablja platformo: 12 mesecev (letna naročnina),
+2 meseca (preizkus), poljubno število mesecev ali neomejeno.
+
+### Redna pot — portal (od 28. 7. 2026)
+
+Prijavi se kot `super_admin` → zavihek **Platforma**. Tam:
+izdaš kode (trajanje + opomba + kopiranje besedila za e-pošto), vidiš vsa
+društva s stanjem naročnine in prekličeš napačno poslano kodo.
+
+Vloge `super_admin` prek aplikacije **ni** mogoče dodeliti (namerno — sicer bi
+si jo lahko podelil vsak admin društva). Enkratna nastavitev na strežniku:
+
+```bash
+docker exec -it $(docker ps -qf name=gasilapp-api) node dist/grant-super-admin.js tvoj@email.si
+```
+
+Uporabnik se mora nato **znova prijaviti**, da vloga pride v žeton.
+
+### Zasilna pot — master ključ
+
+Na sveži namestitvi, kjer super_admina še ni:
 
 ```bash
 ssh root@<IP> 'KEY=$(grep REGISTRATION_KEY /opt/gasilapp/.env.prod | cut -d= -f2); \
   curl -s https://gasilapp.eu/api/v1/auth/registration-codes -X POST \
   -H "x-master-key: $KEY" -H "Content-Type: application/json" \
-  -d "{\"count\":1,\"note\":\"PGD Ime — kontaktna oseba\"}"'
+  -d "{\"count\":1,\"validMonths\":12,\"note\":\"PGD Ime — kontaktna oseba\"}"'
 ```
 
-Vrne `{"codes": ["GASIL-XXXX-XXXX"]}` — kodo pošlješ društvu; vsaka je enkratna.
-Pregled izdanih/porabljenih kod:
+Vrne `{"codes": ["GASIL-XXXX-XXXX"]}`. Brez `validMonths` je naročnina
+neomejena. Pregled iz baze:
 
 ```bash
 docker exec $(docker ps -qf name=gasilapp-db) psql -U postgres -d gasilapp \
-  -c "SELECT code, note, used_at FROM registration_codes ORDER BY created_at DESC;"
+  -c "SELECT code, note, valid_months, used_at, revoked_at FROM registration_codes ORDER BY created_at DESC;"
 ```
+
+### Računi
+
+Zavihek Platforma vodi tudi evidenco izdanih računov: odprt dolg, zapadli
+računi, izdaja z zaporedno številko `YYYY-NNN` in natisljiv izpis (brskalnikov
+»Natisni → Shrani kot PDF«). Klik na **Plačano** podaljša naročnino društva za
+obdobje računa.
+
+Podatki tvoje firme, ki gredo na račun, so v `.env.prod`
+(`INVOICE_ISSUER_NAME`, `_ADDRESS`, `_POST`, `_TAX`, `_IBAN`, `_EMAIL`,
+neobvezno `_REG`, `_VAT_ID`, `_BANK`, `_PHONE`, `_WEBSITE`, ter
+`INVOICE_VAT_RATE`, `INVOICE_PAYMENT_DAYS`, `INVOICE_YEARLY_PRICE`,
+`INVOICE_MONTHLY_PRICE`). Celoten seznam s komentarji je v
+`backend/.env.example`. Dokler niso izpolnjeni, portal na to opozori.
+
+**E-pošte sistem ne pošilja sam** — SMTP ni nastavljen. Na računu sta gumba za
+kopiranje besedila in odpiranje v tvojem e-poštnem odjemalcu.
+
+### Kaj se zgodi ob poteku
+
+Društvo **ne izgubi ničesar**: vsi podatki ostanejo vidni, blokirano je le
+vnašanje in urejanje (API vrne **402**). Portal in aplikacija 30 dni prej
+prikažeta opozorilno pasico; administrator društva podaljša kar tam z novo
+kodo. Obstoječa društva imajo po migraciji `subscription_expires_at = NULL`
+(neomejeno) — posodobitev nikomur ne ugasne dostopa.
 
 ## 10. SPIN push obvestila — slovenski relay
 

@@ -37,8 +37,9 @@ function OrgLogo() {
   );
 }
 import { useUi } from '../../stores/ui.store';
-import { ROLE_LABELS } from '../../types';
+import { PLATFORM_ORG_SLUG, ROLE_LABELS } from '../../types';
 import { NotificationsBanner } from '../NotificationsBanner';
+import { SubscriptionBanner } from '../SubscriptionBanner';
 import { OnboardingTour, tourStorageKey } from '../OnboardingTour';
 
 type NavItem = {
@@ -48,6 +49,8 @@ type NavItem = {
   end?: boolean;
   /** Vidno samo vodstvu (imenik članov — feedback Darjan, 20. 7. 2026). */
   leadershipOnly?: boolean;
+  /** Vidno samo upravitelju platforme (aktivacijske kode, naročnine). */
+  superAdminOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -62,14 +65,28 @@ const navItems: NavItem[] = [
   { to: '/spin', label: 'SPIN', icon: '🚨' },
   { to: '/notifications', label: 'Obvestila', icon: '🔔' },
   { to: '/settings', label: 'Nastavitve', icon: '⚙️' },
+  { to: '/platform', label: 'Platforma', icon: '🔑', superAdminOnly: true },
 ];
 
 /**
  * Vnosi menija za dano vlogo. Skrivanje je zgolj vmesniško — prava meja
  * je strežniška projekcija v `users.service.ts` plus `LeadershipRoute`.
  */
-function visibleNavItems(isLeadership: boolean): NavItem[] {
-  return isLeadership ? navItems : navItems.filter((i) => !i.leadershipOnly);
+function visibleNavItems(
+  isLeadership: boolean,
+  isSuperAdmin: boolean,
+  isPlatformOrg: boolean,
+): NavItem[] {
+  // Upravitelj platforme nima svojega društva — zavihki članov, vozil in
+  // opreme bi bili prazni, zato mu ostaneta samo Platforma in Nastavitve.
+  if (isPlatformOrg) {
+    return navItems.filter((i) => i.superAdminOnly || i.to === '/settings');
+  }
+  return navItems.filter(
+    (i) =>
+      (!i.leadershipOnly || isLeadership) &&
+      (!i.superAdminOnly || isSuperAdmin),
+  );
 }
 
 /** Klasičen seznam — ikona + naziv v vrstici. */
@@ -130,11 +147,20 @@ function SidebarContent({
   onOpenTour: () => void;
   showLogo?: boolean;
 }) {
-  const { user, isLeadership } = useAuth();
+  const { user, isLeadership, isSuperAdmin } = useAuth();
   const { navStyle } = useUi();
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const items = visibleNavItems(isLeadership);
+  const { data: org } = useQuery({
+    queryKey: ['organization', 'me'],
+    queryFn: organizationsApi.getMine,
+    staleTime: 5 * 60 * 1000,
+  });
+  const items = visibleNavItems(
+    isLeadership,
+    isSuperAdmin,
+    org?.slug === PLATFORM_ORG_SLUG,
+  );
 
   return (
     <>
@@ -286,6 +312,7 @@ export function AppLayout() {
         </header>
 
         <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-8">
+          <SubscriptionBanner />
           <NotificationsBanner />
           {!isTopLevel && (
             <button

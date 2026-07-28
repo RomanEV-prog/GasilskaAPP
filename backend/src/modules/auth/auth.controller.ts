@@ -15,13 +15,15 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { AllowExpired } from '../../common/decorators/allow-expired.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { IssueCodesDto } from '../platform/dto/platform.dto';
+import { PlatformService } from '../platform/platform.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
-  CreateRegistrationCodesDto,
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
@@ -36,6 +38,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
+    private readonly platformService: PlatformService,
   ) {}
 
   @Public()
@@ -73,9 +76,12 @@ export class AuthController {
   }
 
   /**
-   * Izdaja aktivacijskih kod — samo za upravitelja platforme.
-   * Zaščiteno z master ključem (env REGISTRATION_KEY) v glavi x-master-key;
-   * če ključ ni nastavljen, je endpoint izklopljen.
+   * Izdaja aktivacijskih kod z master ključem (env REGISTRATION_KEY v glavi
+   * x-master-key); če ključ ni nastavljen, je endpoint izklopljen.
+   *
+   * Ohranjen kot zasilna pot: z njim se izda prva koda na sveži namestitvi,
+   * ko super_admin računa še ni. Redno izdajanje teče prek `/platform/codes`
+   * v portalu.
    */
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -84,17 +90,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Izdaj aktivacijske kode (master ključ)' })
   async createRegistrationCodes(
     @Headers('x-master-key') masterKey: string,
-    @Body() dto: CreateRegistrationCodesDto,
+    @Body() dto: IssueCodesDto,
   ) {
     const expected = process.env.REGISTRATION_KEY;
     if (!expected || masterKey !== expected) {
       throw new UnauthorizedException('Neveljaven master ključ.');
     }
-    const codes = await this.authService.createRegistrationCodes(
-      dto.count ?? 1,
-      dto.note,
-    );
-    return { codes };
+    const issued = await this.platformService.issueCodes(dto, null);
+    return { codes: issued.map((c) => c.code) };
   }
 
   @Public()
@@ -133,7 +136,10 @@ export class AuthController {
     );
   }
 
+  // Naprava mora osvežiti žeton tudi v poteklem društvu, sicer po podaljšanju
+  // ne bi prejemala push obvestil.
   @Patch('fcm-token')
+  @AllowExpired()
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Posodobi Firebase FCM žeton' })
