@@ -162,6 +162,11 @@ neobvezno `_REG`, `_VAT_ID`, `_BANK`, `_PHONE`, `_WEBSITE`, ter
 `INVOICE_MONTHLY_PRICE`). Celoten seznam s komentarji je v
 `backend/.env.example`. Dokler niso izpolnjeni, portal na to opozori.
 
+⚠️ `docker-compose.prod.yml` spremenljivke **našteva** (nima `env_file`) —
+vnos v `.env.prod` brez ustrezne vrstice v `environment:` v vsebnik **ne pride**
+in račun ostane brez podatkov, brez vsakega opozorila v dnevniku. Ob dodajanju
+nove spremenljivke jo dodaj na obeh mestih.
+
 **E-pošte sistem ne pošilja sam** — SMTP ni nastavljen. Na računu sta gumba za
 kopiranje besedila in odpiranje v tvojem e-poštnem odjemalcu.
 
