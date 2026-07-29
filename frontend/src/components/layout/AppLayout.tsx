@@ -211,7 +211,7 @@ export function AppLayout() {
   const { user, isLeadership } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: myOrg } = useQuery({
+  const { data: myOrg, isPending: orgPending } = useQuery({
     queryKey: ['organization', 'me'],
     queryFn: organizationsApi.getMine,
     staleTime: 5 * 60 * 1000,
@@ -227,13 +227,15 @@ export function AppLayout() {
   const [tourOpen, setTourOpen] = useState(false);
   useEffect(() => {
     // Vodič govori o vodenju društva — upravitelju platforme ne pove ničesar.
-    if (!user || isPlatformOrg) return;
+    // Počakaj na odgovor o društvu: dokler se nalaga, je `isPlatformOrg` še
+    // `false` in vodič bi se odprl, preden bi izvedeli, da ne sodi sem.
+    if (!user || orgPending || isPlatformOrg) return;
     try {
       if (!localStorage.getItem(tourStorageKey(user.id))) setTourOpen(true);
     } catch {
       /* localStorage nedosegljiv — vodič preprosto preskočimo */
     }
-  }, [user, isPlatformOrg]);
+  }, [user, orgPending, isPlatformOrg]);
 
   const closeTour = () => {
     setTourOpen(false);
