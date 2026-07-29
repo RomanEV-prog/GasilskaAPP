@@ -12,9 +12,10 @@
 DNS **A zapis** domene → IP strežnika. Brez domene HTTPS (in s tem FCM push
 + Play objava) ne deluje.
 
-**Produkcija teče na `gasilapp.eu`** (ne `.si` — ta je bila prvotno načrtovana,
-a ni v uporabi). Ime aplikacije je od 20. 7. 2026 »Plamen«, domena pa ostaja
-`gasilapp.eu`; neujemanje je zavestno.
+**Produkcija teče na `plamenapp.si` IN `gasilapp.eu` hkrati** (od 29. 7. 2026).
+Primarna je `plamenapp.si` — ujema se z imenom »Plamen«. Stara `gasilapp.eu`
+**mora ostati delujoča**, ker imajo nameščene mobilne aplikacije njen naslov
+vgrajen v build. Podrobno in s postopkom: **§11**.
 
 ## 3. Priprava strežnika (enkratno)
 
@@ -224,3 +225,60 @@ docker logs $(docker ps -qf name=gasilapp-backend) 2>&1 | grep -i SPIN | tail
 Odslej cron vsaki 2 min pošlje FCM push operativcem ob novi intervenciji v
 občini njihovega društva. Preizkus: v feedu se pojavi nova intervencija v
 nastavljeni občini → operativci s prijavljeno aplikacijo dobijo obvestilo.
+
+## 11. Domeni `plamenapp.si` in `gasilapp.eu` (od 29. 7. 2026)
+
+Blagovna znamka je »Plamen«, zato je primarna domena **`plamenapp.si`**.
+**`gasilapp.eu` ostane delujoča vzporedno — NE preusmeritev.**
+
+### Zakaj stara domena ne sme ugasniti
+
+Mobilna aplikacija ima naslov strežnika **vgrajen v build**
+(`--dart-define=API_URL=…`), ne v nastavitvah. Vsi obstoječi namestitve —
+beta APK in Play interno testiranje — kličejo `https://gasilapp.eu/api/v1`.
+Ugasnjena stara domena pomeni, da se **vsakemu testerju aplikacija ustavi na
+prijavi**. Preusmeritev ne pomaga: Dio je pri POST z avtorizacijsko glavo ne
+sledi zanesljivo.
+
+Enako velja za PWA: kdor si je portal namestil z `gasilapp.eu`, ostane vezan
+na ta izvor. Web push žeton je prav tako vezan na izvor — uporabnik na novi
+domeni mora obvestila dovoliti znova (nov FCM žeton, stari ostane veljaven za
+staro domeno).
+
+Stara domena se sme spremeniti v preusmeritev šele, ko je mobilna izdaja z
+novim naslovom razširjena med **vsemi** testerji.
+
+### Postavitev (zunanji eversum Caddy)
+
+Prod teče za `eversum-caddy-1`; site bloki so v `/opt/eversum/Caddyfile`.
+Obe domeni kažeta na isti vsebnik:
+
+```caddy
+gasilapp.eu, plamenapp.si, www.plamenapp.si {
+    reverse_proxy gasilapp-web:80
+}
+```
+
+Pred spremembo naredi kopijo, po spremembi **preveri, preden naložiš**:
+
+```bash
+ssh root@178.104.67.229 'cp /opt/eversum/Caddyfile /root/backup/Caddyfile-$(date +%Y%m%d-%H%M) && \
+  docker exec eversum-caddy-1 caddy validate --config /etc/caddy/Caddyfile && \
+  docker exec eversum-caddy-1 caddy reload --config /etc/caddy/Caddyfile'
+```
+
+`caddy validate` je pomemben: v isti datoteki živi tudi eversum, zato napačna
+vrstica vzame dol **oba** projekta.
+
+**Bloka ne dodajaj, dokler DNS ne kaže na strežnik.** Caddy bi takoj začel
+poskušati pridobiti certifikat, vsak poskus bi padel, Let's Encrypt pa omejuje
+neuspela preverjanja — s tem si zamakneš pravi certifikat.
+
+### Ostalo ob preklopu
+
+- `.env.prod`: `DOMAIN=plamenapp.si` (vpliva le na `FRONTEND_URL`; splet
+  uporablja **relativni** `/api/v1`, zato CORS ni ovira — klici so istega izvora)
+- Nova mobilna izdaja: `--dart-define=API_URL=https://plamenapp.si/api/v1`
+- Play Console: URL politike zasebnosti in izbrisa računa (ročno)
+- Firebase `projectId`/`authDomain` ostaneta `gasilapp` — to je ime projekta,
+  ne domena (glej CLAUDE.md)

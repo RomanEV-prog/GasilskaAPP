@@ -20,7 +20,8 @@ manifest PWA, prijavni zaslon, beta stran). Vse spodnje ostane `gasilapp` in
 | `si.gasilapp.gasilapp_mobile` (applicationId, namespace, `MainActivity.kt`) | Play Console ga po prvi objavi ne dovoli spremeniti — nov ID = nova aplikacija |
 | `pubspec.yaml` `name: gasilapp_mobile` | Dart ime paketa; sprememba zahteva popravek vsakega `import 'package:...'` |
 | Firebase `projectId: 'gasilapp'`, `authDomain`, `storageBucket` | pravi Firebase projekt |
-| `gasilapp.eu`, `/opt/gasilapp`, `gasilapp-db-1`, `gasilapp-web`, ime baze | domena in produkcija ostaneta |
+| `/opt/gasilapp`, `gasilapp-db-1`, `gasilapp-web`, ime baze | produkcija ostane |
+| `gasilapp.eu` kot **delujoča** domena | od 29. 7. 2026 je primarna `plamenapp.si`, a stara MORA ostati živa — nameščene mobilne app imajo njen naslov vgrajen v build (`--dart-define=API_URL`). Ugasnjena = vsem testerjem se app ustavi na prijavi. Glej `infra/DEPLOY.md §11` |
 | ključ `gasilapp.tour.v1.<userId>` (`OnboardingTour.tsx`) | v localStorage; nov ključ = uvodni vodič se znova prikaže vsem |
 
 Ikona: `infra/brand/` hrani izvorni logotip. Ikone se generirajo iz njega —
@@ -130,7 +131,8 @@ Navaden `member` vidi samo:
 
 ## Stanje projekta
 
-**Vse tri faze so dokončane; produkcija teče na https://gasilapp.eu od 7. 7. 2026.**
+**Vse tri faze so dokončane; produkcija teče od 7. 7. 2026 — od 29. 7. 2026 na
+https://plamenapp.si (primarna) in https://gasilapp.eu (obvezno ohranjena).**
 Backend ima 14 modulov, web portal pokriva vse module.
 
 **Naročnine (od 28. 7. 2026):** aktivacijska koda ne odklene le registracije,
