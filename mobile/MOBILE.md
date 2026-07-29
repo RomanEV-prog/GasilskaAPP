@@ -93,6 +93,10 @@ flutter run              # na priklopljeni napravi/emulatorju
   vnos v meniju računa (glej vzorec spodaj)
 - ✅ Fotografije — vnos v meniju odpre album društva (`photoUploadLink`) prek
   `url_launcher`
+- ✅ Tap na push obvestilo (`FcmService.handleTap`): SPIN obvestilo odpre svojo
+  stran na `spin3.sos112.si` (`data.link`), sicer preklopi zavihek prek
+  `providers/app_nav.dart`. Pokrito v ospredju (payload lokalnega obvestila),
+  ozadju (`onMessageOpenedApp`) in ob zagonu iz obvestila (`getInitialMessage`).
 - ✅ Firebase FCM — koda vgrajena (`firebase_core`/`firebase_messaging`,
   `FcmService`, žeton se pošlje ob prijavi). Aktivira se, ko `flutterfire configure`
   prepiše `lib/firebase_options.dart` s pravimi vrednostmi. Do takrat gracefully no-op.

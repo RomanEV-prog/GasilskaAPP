@@ -157,6 +157,21 @@ export class EventsService {
     return this.withMyRsvp(await this.findAll(organizationId, query), userId);
   }
 
+  /**
+   * Prihajajoči dogodki z odzivom uporabnika — za nadzorno ploščo (mobilna
+   * kartica »Naslednji dogodek« mora pokazati, kaj je član že izbral).
+   */
+  async findUpcomingWithMyRsvp(
+    organizationId: string,
+    userId?: string,
+    limit = 5,
+  ): Promise<(Event & { myRsvpStatus?: string })[]> {
+    return this.withMyRsvp(
+      await this.findUpcoming(organizationId, limit),
+      userId,
+    );
+  }
+
   async findOneWithMyRsvp(
     organizationId: string,
     id: string,

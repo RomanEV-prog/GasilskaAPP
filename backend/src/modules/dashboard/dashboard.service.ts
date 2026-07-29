@@ -74,7 +74,8 @@ export class DashboardService {
   async memberDashboard(organizationId: string, userId: string) {
     const [upcomingEvents, myTrainings, myNotifications, me, myRsvps] =
       await Promise.all([
-        this.eventsService.findUpcoming(organizationId, 5),
+        // Z `myRsvpStatus` — plošča kaže izbrani odziv na kartici dogodka.
+        this.eventsService.findUpcomingWithMyRsvp(organizationId, userId, 5),
         this.trainingsService.findByUser(organizationId, userId),
         this.notificationsService.findMine(organizationId, userId),
         // Surova entiteta — beremo le `availability`, v odgovor gre samo to polje.

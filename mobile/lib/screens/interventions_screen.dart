@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/spin_api.dart';
 import '../models/spin_intervention.dart';
@@ -31,6 +32,30 @@ class _InterventionsScreenState extends State<InterventionsScreen> {
       _future = _api.interventions();
     });
     await _future;
+  }
+
+  /// Odpre originalno stran dogodka na spin3.sos112.si v brskalniku.
+  /// `link` je iz feeda, `id` je `<guid>`, ki je pri SPIN prav tako URL —
+  /// zato je rezerva, če `<link>` manjka.
+  Future<void> _openSpin(SpinIntervention it) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final raw = (it.link?.trim().isNotEmpty ?? false) ? it.link!.trim() : it.id;
+    final uri = Uri.tryParse(raw);
+    // Dovoli SAMO http(s) — feed je zunanji vir.
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Za to intervencijo ni povezave na SPIN.'),
+        ),
+      );
+      return;
+    }
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Povezave ni bilo mogoče odpreti.')),
+      );
+    }
   }
 
   IconData _iconFor(String? type) {
@@ -116,16 +141,34 @@ class _InterventionsScreenState extends State<InterventionsScreen> {
                           child: Text(it.description!),
                         ),
                       const SizedBox(height: 4),
-                      Text(
-                        it.occurredAt != null ? df.format(it.occurredAt!) : '',
-                        style: const TextStyle(
-                          color: GasilColors.textMuted,
-                          fontSize: 11,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            it.occurredAt != null
+                                ? df.format(it.occurredAt!)
+                                : '',
+                            style: const TextStyle(
+                              color: GasilColors.textMuted,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const Spacer(),
+                          const Text(
+                            'Odpri na SPIN',
+                            style: TextStyle(
+                              color: GasilColors.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Icon(Icons.open_in_new,
+                              size: 13, color: GasilColors.primary),
+                        ],
                       ),
                     ],
                   ),
                   isThreeLine: true,
+                  onTap: () => _openSpin(it),
                 ),
               );
             }).toList(),

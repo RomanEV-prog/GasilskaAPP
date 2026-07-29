@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../api/organizations_api.dart';
 import '../api/users_api.dart';
+import '../providers/app_nav.dart';
 import '../providers/auth_provider.dart';
 import '../services/fcm_service.dart';
 import '../widgets/change_password_dialog.dart';
@@ -120,6 +121,31 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     // Uporabnik je prijavljen — registriraj FCM žeton na backendu.
     FcmService.registerToken();
+    // Tap na push obvestilo lahko zahteva določen zavihek. Zahteva je lahko
+    // vložena že pred gradnjo tega zaslona (app zagnalo obvestilo), zato jo
+    // preverimo tudi takoj.
+    requestedHomeTab.addListener(_applyRequestedTab);
+    _applyRequestedTab(initial: true);
+  }
+
+  @override
+  void dispose() {
+    requestedHomeTab.removeListener(_applyRequestedTab);
+    super.dispose();
+  }
+
+  void _applyRequestedTab({bool initial = false}) {
+    final requested = requestedHomeTab.value;
+    if (requested == null) return;
+    // Porabljeno — sicer bi se zavihek vsilil ob vsaki naslednji gradnji.
+    requestedHomeTab.value = null;
+    if (requested < 0 || requested >= _titles.length) return;
+    if (initial) {
+      // Med initState zaslon še ni zgrajen — dovolj je nastaviti vrednost.
+      _index = requested;
+      return;
+    }
+    if (mounted) setState(() => _index = requested);
   }
 
   static const _titles = [

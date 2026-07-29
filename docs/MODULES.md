@@ -440,6 +440,19 @@ odpre v odjemalcu (`mailto:`).
 Davčno potrjevanje računov (FURS) velja za gotovinsko poslovanje; plačila po
 nakazilu vanj ne sodijo.
 
+### Opomniki pred potekom
+
+`RemindersService.checkSubscription` (dnevno ob 08:00) obvesti **administratorje
+društva** 30, 7 in 1 dan pred potekom ter na dan poteka (`type:
+'subscription_reminder'`). Neomejena naročnina opomnika nima.
+
+Šteje se po **koledarskih dneh**, ne po urah: opomniki tečejo ob 08:00, zato bi
+društvo z rokom ob 09:00 padlo v napačen predal — 30 dni prej bi izračun po
+urah dal 31 in opomnik bi izpadel, na dan poteka pa bi pisalo »jutri«.
+
+Pasica v portalu opozarja le prijavljenega; administrator, ki se teden ne
+prijavi, bi za potek izvedel šele, ko bi mu člani javili, da ne morejo vnašati.
+
 ### Bootstrap
 Vloge `super_admin` prek aplikacije ni mogoče dodeliti (`UsersService`
 to zavrne), zato:

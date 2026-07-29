@@ -5,6 +5,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../api/events_api.dart';
 import '../models/event.dart';
+import '../providers/events_bus.dart';
 import '../theme.dart';
 import '../widgets/rsvp_buttons.dart';
 
@@ -29,20 +30,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void initState() {
     super.initState();
     _load();
+    eventsChanged.addListener(_reloadQuietly);
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    eventsChanged.removeListener(_reloadQuietly);
+    super.dispose();
+  }
+
+  /// Osvežitev brez vrtiljaka — ob oddanem odzivu (tu ali v drugem zavihku)
+  /// ne želimo, da koledar izgine in se znova sestavi.
+  Future<void> _reloadQuietly() => _load(silent: true);
+
+  Future<void> _load({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final events = await _eventsApi.list();
+      if (!mounted) return;
       setState(() {
         _events = events;
         _loading = false;
+        _error = null;
       });
     } catch (e) {
+      if (!mounted) return;
+      // Tiha osvežitev ne sme povoziti prikazanega koledarja s sporočilom o napaki.
+      if (silent) return;
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -192,7 +212,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 )
               : const Icon(Icons.chevron_right, color: GasilColors.textMuted),
-          onTap: () => context.push('/events/${e.id}', extra: e),
+          onTap: () async {
+            await context.push('/events/${e.id}', extra: e);
+            if (context.mounted) await _reloadQuietly();
+          },
         ),
       );
 
@@ -205,7 +228,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             InkWell(
-              onTap: () => context.push('/events/${e.id}', extra: e),
+              onTap: () async {
+                await context.push('/events/${e.id}', extra: e);
+                if (context.mounted) await _reloadQuietly();
+              },
               child: Row(
                 children: [
                   Expanded(
@@ -249,6 +275,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             if (e.requiresRsvp && !e.isCancelled) ...[
               const SizedBox(height: 10),
               RsvpButtons(
+                // Ključ po dogodku: brez njega Flutter ob menjavi dneva
+                // ohrani stanje gumbov na istem mestu in kljukica ostane
+                // pri napačnem dogodku.
+                key: ValueKey(e.id),
                 eventId: e.id,
                 compact: true,
                 initialStatus: e.myRsvpStatus,

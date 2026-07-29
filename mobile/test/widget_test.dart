@@ -8,7 +8,8 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
     // Naslov in gumb se prikažeta že ob prvem izrisu (neodvisno od omrežja).
-    expect(find.text('GasilApp'), findsOneWidget);
+    // Znamka se je 20. 7. 2026 preimenovala iz »GasilApp« v »Plamen«.
+    expect(find.text('Plamen'), findsOneWidget);
     expect(find.text('Prijava'), findsOneWidget);
 
     // initState sproži omrežni klic (javni seznam društev), ki v testu spodleti.

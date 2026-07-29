@@ -47,6 +47,34 @@ const EQUIPMENT_REMINDER_ROLES: SystemRole[] = [
   SystemRole.ASSISTANT_BREATHING_APPARATUS,
 ];
 
+/**
+ * Naročnina društva: opomnik na točno toliko dni pred potekom.
+ * `0` = na dan poteka, ko dostop pade na samo branje — takrat je opozorilo
+ * najbolj potrebno, ker se stanje aplikacije dejansko spremeni.
+ */
+const SUBSCRIPTION_REMINDER_DAYS = [30, 7, 1, 0];
+
+/**
+ * Prejemniki: samo administratorji društva. Naročnina je poslovna stvar
+ * društva, ne operativna informacija za vse člane.
+ */
+const SUBSCRIPTION_REMINDER_ROLES: SystemRole[] = [SystemRole.ORG_ADMIN];
+
+/**
+ * Razlika v **koledarskih dneh** do datuma (danes = 0, jutri = 1).
+ *
+ * Namenoma ne šteje po urah: opomniki tečejo ob 08:00, zato bi društvo z
+ * rokom ob 09:00 padlo v napačen predal — 30 dni prej bi izračun dal 31 in
+ * opomnik bi izpadel, na dan poteka pa bi pisalo »jutri«.
+ */
+function calendarDaysUntil(target: Date, now: Date = new Date()): number {
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.round(
+    (startOfDay(target) - startOfDay(now)) / (24 * 60 * 60 * 1000),
+  );
+}
+
 /** Datum (YYYY-MM-DD) čez `days` dni — za primerjavo z DATE stolpci. */
 function isoInDays(days: number): string {
   const d = new Date();
@@ -103,6 +131,7 @@ export class RemindersService {
         await this.checkEquipment(org.id);
         await this.checkEquipmentExpiry(org.id);
         await this.checkTrainings(org.id);
+        await this.checkSubscription(org);
       } catch (err) {
         this.logger.error(
           `Opomniki za ${org.slug} niso uspeli: ${(err as Error).message}`,
@@ -110,6 +139,44 @@ export class RemindersService {
       }
     }
     this.logger.log('Dnevni pregled končan.');
+  }
+
+  /**
+   * Naročnina društva: opomnik 30, 7 in 1 dan pred potekom ter na dan poteka.
+   *
+   * Pasica v portalu opozarja le tistega, ki je prijavljen; administrator, ki
+   * se teden ne prijavi, bi za potek izvedel šele, ko bi mu člani javili, da
+   * ne morejo vnašati. Zato push in obvestilo.
+   *
+   * Neomejena naročnina (`null`) opomnika nima — ni kaj obnavljati.
+   */
+  private async checkSubscription(org: Organization): Promise<void> {
+    if (!org.subscriptionExpiresAt) return;
+    const daysLeft = calendarDaysUntil(org.subscriptionExpiresAt);
+    if (!SUBSCRIPTION_REMINDER_DAYS.includes(daysLeft)) return;
+
+    const datum = org.subscriptionExpiresAt.toLocaleDateString('sl-SI');
+    const naslov =
+      daysLeft === 0
+        ? '🔒 Naročnina društva poteče danes'
+        : daysLeft === 1
+          ? '⏳ Naročnina društva poteče jutri'
+          : `⏳ Naročnina društva poteče čez ${daysLeft} dni`;
+
+    const telo =
+      daysLeft === 0
+        ? `Naročnina poteče danes (${datum}). Po poteku podatki ostanejo vidni, ` +
+          'vnašanje in urejanje pa nista več mogoča. Dostop odklenete z novo ' +
+          'aktivacijsko kodo v Nastavitvah.'
+        : `Naročnina poteče ${datum}. Po poteku bo dostop samo za branje — ` +
+          'podatki ostanejo, vnašanje in urejanje pa se zaklene. Za podaljšanje ' +
+          'vnesite aktivacijsko kodo v Nastavitvah.';
+
+    await this.notificationsService.createForRoles(
+      org.id,
+      SUBSCRIPTION_REMINDER_ROLES,
+      { title: naslov, body: telo, type: 'subscription_reminder' },
+    );
   }
 
   /**

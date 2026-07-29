@@ -6,6 +6,7 @@ import '../api/users_api.dart';
 import '../models/event.dart';
 import '../models/notification.dart';
 import '../providers/auth_provider.dart';
+import '../providers/events_bus.dart';
 import '../theme.dart';
 import '../widgets/event_card.dart';
 import '../widgets/org_logo.dart';
@@ -27,9 +28,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _future = _dashboardApi.member();
+    // Odziv, oddan v Dogodkih ali Koledarju, mora biti viden tudi tukaj.
+    eventsChanged.addListener(_refresh);
+  }
+
+  @override
+  void dispose() {
+    eventsChanged.removeListener(_refresh);
+    super.dispose();
   }
 
   Future<void> _refresh() async {
+    if (!mounted) return;
     // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
     // sprožil "setState() callback argument returned a Future".
     setState(() {
@@ -99,8 +109,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               else
                 EventCard(
                   event: nextEvent,
-                  onTap: () =>
-                      context.push('/events/${nextEvent.id}', extra: nextEvent),
+                  // Po vrnitvi z detajla osveži — plošča je v IndexedStack in
+                  // sicer obdrži star odziv (»Brez odziva« po oddani prijavi).
+                  onTap: () async {
+                    await context.push('/events/${nextEvent.id}',
+                        extra: nextEvent);
+                    if (context.mounted) await _refresh();
+                  },
                 ),
               const SizedBox(height: 12),
 

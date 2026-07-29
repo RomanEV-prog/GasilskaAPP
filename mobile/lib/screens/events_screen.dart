@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../api/events_api.dart';
 import '../models/event.dart';
+import '../providers/events_bus.dart';
 import '../theme.dart';
 import '../widgets/event_card.dart';
 
@@ -23,9 +24,17 @@ class _EventsScreenState extends State<EventsScreen> {
   void initState() {
     super.initState();
     _future = _eventsApi.list();
+    eventsChanged.addListener(_refresh);
+  }
+
+  @override
+  void dispose() {
+    eventsChanged.removeListener(_refresh);
+    super.dispose();
   }
 
   Future<void> _refresh() async {
+    if (!mounted) return;
     // Blokovno telo: arrow (=>) bi vrnil rezultat prireditve (Future) in
     // sprožil "setState() callback argument returned a Future".
     setState(() {
@@ -81,7 +90,10 @@ class _EventsScreenState extends State<EventsScreen> {
               else
                 ...withinMonth.map((e) => EventCard(
                       event: e,
-                      onTap: () => context.push('/events/${e.id}', extra: e),
+                      onTap: () async {
+                        await context.push('/events/${e.id}', extra: e);
+                        if (context.mounted) await _refresh();
+                      },
                     )),
 
               // Za dogodke dlje od enega meseca → Koledar.

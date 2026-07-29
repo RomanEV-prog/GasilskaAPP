@@ -1,10 +1,14 @@
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/auth_api.dart';
 import '../firebase_options.dart';
+import '../providers/app_nav.dart';
 
 /// Obravnava sporočil v ozadju — mora biti top-level funkcija.
 @pragma('vm:entry-point')
@@ -47,6 +51,17 @@ class FcmService {
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(),
         ),
+        // Tap na obvestilo, prikazano v ospredju — podatki so v payloadu.
+        onDidReceiveNotificationResponse: (response) {
+          final payload = response.payload;
+          if (payload == null || payload.isEmpty) return;
+          try {
+            final data = jsonDecode(payload) as Map<String, dynamic>;
+            handleTap(data.map((k, v) => MapEntry(k, '$v')));
+          } catch (e) {
+            debugPrint('FCM payload ni berljiv: $e');
+          }
+        },
       );
       await _local
           .resolvePlatformSpecificImplementation<
@@ -56,9 +71,52 @@ class FcmService {
       // Ko je app v ospredju, FCM ne prikaže obvestila sam — prikažemo ga tu.
       FirebaseMessaging.onMessage.listen(_showForeground);
 
+      // Tap na obvestilo, ko app teče v ozadju.
+      FirebaseMessaging.onMessageOpenedApp.listen(
+        (message) => handleTap(message.data.map((k, v) => MapEntry(k, '$v'))),
+      );
+
+      // Tap na obvestilo, ko app sploh ni tekla — sporočilo, ki jo je zagnalo.
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        handleTap(initial.data.map((k, v) => MapEntry(k, '$v')));
+      }
+
       _initialized = true;
     } catch (e) {
       debugPrint('FCM init napaka: $e');
+    }
+  }
+
+  /// Odziv na tap obvestila. SPIN obvestilo nosi `link` na izvorno stran
+  /// dogodka (spin3.sos112.si) — odpremo jo v brskalniku. Brez povezave
+  /// (ali pri drugih vrstah) samo preklopimo na ustrezen zavihek.
+  @visibleForTesting
+  static Future<void> handleTap(Map<String, String> data) async {
+    final type = data['type'];
+    if (type == 'spin') {
+      final opened = await _openLink(data['link']);
+      if (!opened) requestHomeTab(HomeTab.spin);
+      return;
+    }
+    // Ostala obvestila: odpri zavihek Obvestila.
+    requestHomeTab(HomeTab.notifications);
+  }
+
+  /// Odpre http(s) povezavo v brskalniku. Vrne `false`, če je ni ali ni veljavna
+  /// (zunanji vir — druge sheme, npr. `javascript:`, so prepovedane).
+  static Future<bool> _openLink(String? raw) async {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return false;
+    final uri = Uri.tryParse(value);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return false;
+    }
+    try {
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('FCM: povezave ni bilo mogoče odpreti: $e');
+      return false;
     }
   }
 
@@ -81,6 +139,9 @@ class FcmService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
+      // Podatki sporočila potujejo v payloadu — brez njih ob tapu ne vemo,
+      // katero SPIN stran odpreti.
+      payload: jsonEncode(message.data),
     );
   }
 
