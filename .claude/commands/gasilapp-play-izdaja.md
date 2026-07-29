@@ -1,7 +1,7 @@
 # Plamen — nova mobilna izdaja (beta + Google Play interno)
 
 Celoten cikel objave nove različice mobilne aplikacije Plamen: bump verzije →
-release build → beta APK na gasilapp.eu/beta → nalaganje na Google Play (interno
+release build → beta APK na plamenapp.si/beta → nalaganje na Google Play (interno
 preizkušanje). Zgrajen iz seje 26. 7. 2026 (izdaja 1.0.13+14). Razmejitev:
 `/gasilapp-deploy` je o objavi backend+splet na prod; `/play-release-internal`
 (GreenHeart) je splošna tehnika klikanja po Play Console — **ta skill je
@@ -36,8 +36,8 @@ varnostne kopije → beta scp + verifikacija SHA-256 → Play upload → publish
 
 ```powershell
 Set-Location C:\gasilapp_mobile
-flutter build apk --release --dart-define=API_URL=https://gasilapp.eu/api/v1
-flutter build appbundle --release --dart-define=API_URL=https://gasilapp.eu/api/v1
+flutter build apk --release --dart-define=API_URL=https://plamenapp.si/api/v1
+flutter build appbundle --release --dart-define=API_URL=https://plamenapp.si/api/v1
 ```
 
 - APK (za beta) → `build\app\outputs\flutter-apk\app-release.apk` (~69 MB)
@@ -45,6 +45,10 @@ flutter build appbundle --release --dart-define=API_URL=https://gasilapp.eu/api/
 - Release podpis: `mobile/android/key.properties` mora obstajati (keystore).
   Če ga ni, build tiho podpiše z debug ključem in Play ga zavrne.
 - APK build je dolg (assembleRelease ~8 min), AAB potem hiter (~75 s).
+
+**Naslov strežnika je od 29. 7. 2026 `plamenapp.si`**, ne `gasilapp.eu`.
+Stara domena API še vedno streže (glej `infra/DEPLOY.md §11`) — namescene
+starejše izdaje zato delujejo naprej — nove izdaje pa naj kažejo na novo.
 
 ## 3. Preveri verzijo v artefaktu (aapt2)
 
@@ -81,7 +85,7 @@ scp /tmp/beta-index.html root@178.104.67.229:/opt/gasilapp/downloads/index.html
 # verifikacija: SHA-256 se MORA ujemati (velikost ujame skrajšan prenos, ne tihe okvare)
 sha256sum "C:\gasilapp_mobile\build\app\outputs\flutter-apk\app-release.apk"
 ssh root@178.104.67.229 'sha256sum /opt/gasilapp/downloads/gasilapp.apk'
-curl -s https://gasilapp.eu/beta | grep -o "Različica [0-9.]*"   # nova verzija
+curl -s https://plamenapp.si/beta | grep -o "Različica [0-9.]*"   # nova verzija
 ```
 
 ## 6. Google Play — nalaganje AAB
