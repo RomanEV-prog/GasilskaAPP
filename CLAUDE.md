@@ -165,6 +165,7 @@ Skilli projekta (`.claude/commands/`, kliči z `/ime`):
 | `/gasilapp-shema` | nova tabela ali stolpec — migracije, indeksi, e2e izolacija |
 | `/ikona-aplikacije` | zamenjava ikone — izrez motiva, adaptive icon, preverba v APK |
 | `/preimenovanje-znamke` | sprememba imena — kaj zamenjati in kaj bi zlomilo sistem |
+| `/mobilna-ziva-preverba` | preverba mobilne spremembe na emulatorju — adb posnetki/tapi, testni FCM push, pasti |
 
 Kaj sodi kam: **skill** = ponovljiv postopek s pastmi · **CLAUDE.md** = kar mora
 vedeti vsaka seja že ob zagonu · **`docs/DECISIONS.md`** = arhitekturne odločitve
@@ -191,7 +192,7 @@ Glej `infra/INFRA.md` za celoten seznam.
 
 - **Baza:** `docker compose up -d db` (Postgres 15). Shema se ustvari iz `docs/schema.sql` prek initdb.
 - **Seed:** `cd backend && npm run seed` → ustvari test društvo + **samo admina**.
-- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (`admin.pekre`, org_admin). **Člana seed NE ustvari** — za testiranje pravic ga dodaj prek portala. V trenutni dev bazi sta `janez.novak` in `miha.kranjc`, a ju svež seed ne obnovi (po `docker compose down -v` ju ne bo). **Prijava z uporabniškim imenom** (+ organizationId) ali e-pošto; javni seznam društev: `GET /auth/organizations`.
+- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (`admin.pekre`, org_admin). **Člana seed NE ustvari** — za testiranje pravic ga dodaj prek portala. V trenutni dev bazi sta `janez.novak` in `miha.kranjc`, a ju svež seed ne obnovi (po `docker compose down -v` ju ne bo). **Prijava:** polje je vedno `username` — vanj gre uporabniško ime (takrat je obvezen tudi `organizationId`) **ali e-pošta** (brez `organizationId`). Telesa s poljem `email` backend zavrne. Odgovori so oviti v `data` (`data.accessToken`); javni seznam društev: `GET /auth/organizations` → `data`.
 - **Zagon:** backend `npm run start:dev` (port 4000), frontend `npm run dev` (port 3000).
 - **Preverjanje pred commitom:** backend `npx tsc --noEmit -p tsconfig.json` + `npm run lint`; frontend `npx tsc --noEmit` + `npm run build`; mobile `flutter analyze` **iz `C:\gasilapp_mobile`** (glej Flutter spodaj). Frontend nima ne lint ne test skripte — `build` je edino sito.
 - **Okolje:** Git Bash + PowerShell. `$TMPDIR` NI nastavljen — za log datoteke uporabi absolutno pot.

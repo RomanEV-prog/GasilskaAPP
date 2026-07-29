@@ -102,6 +102,20 @@ flutter run              # na priklopljeni napravi/emulatorju
   prepiše `lib/firebase_options.dart` s pravimi vrednostmi. Do takrat gracefully no-op.
   Navodila: `docs/FIREBASE.md`.
 
+## ⚠️ Zavihki so v `IndexedStack` — sami se ne osvežijo
+
+`home_shell.dart` hrani vseh 5 zavihkov žive hkrati. Vsak naloži podatke v
+`initState` in jih **po prvem nalaganju ne osveži** — sprememba, oddana v enem
+zavihku, v drugem ostane nevidna (tako je bil skrit oddani odziv na dogodek,
+29. 7. 2026). Za podatke, ki jih deli več zavihkov, uporabi signal
+(`providers/events_bus.dart` → `notifyEventsChanged()`, zasloni ga poslušajo v
+`initState`/`dispose`) in osveži tudi ob vrnitvi z detajla
+(`await context.push(...)` → `_refresh()`).
+
+Če se v seznamu vsakemu elementu izriše stanjski gradnik (npr. `RsvpButtons`),
+mu **daj `ValueKey(element.id)`** — brez ključa Flutter ob spremembi seznama
+obdrži stanje na istem mestu in izbira se prikaže pri napačnem elementu.
+
 ## Vzorec: nov pregledni (read-only) zaslon nad obstoječim API-jem
 
 Zgrajen iz zavihka Vozila (2026-07-21). Ko web že upravlja neko entiteto in v
