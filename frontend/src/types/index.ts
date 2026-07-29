@@ -356,6 +356,13 @@ export interface PlatformOrganization {
 }
 
 /**
+ * Naslov za podporo, prikazan uporabnikom (registracija, uvodni vodič).
+ * Statični strani `public/zasebnost.html` in `public/izbris-racuna.html`
+ * ga nosita zapisanega — ob spremembi popravi tudi tam.
+ */
+export const SUPPORT_EMAIL = 'podpora@plamenapp.si';
+
+/**
  * Oznaka »društva«, pod katerim živi upravitelj platforme.
  *
  * Ni pravo društvo — obstaja samo zato, ker je vsak uporabnik vezan na

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { SUPPORT_EMAIL } from '../types';
 
 /** Ključ za pomnjenje, da je uporabnik vodič že videl (po ID-ju uporabnika). */
 export function tourStorageKey(userId: string): string {
@@ -68,7 +69,7 @@ const STEPS: Step[] = [
     icon: '✅',
     title: 'Pripravljeni ste',
     kaj: 'To je osnovni pregled. Vsi podatki, ki jih vnesete, ostanejo shranjeni.',
-    kako: 'Vodič lahko kadar koli znova odprete z gumbom “❓ Vodič” spodaj levo. Za pomoč smo dosegljivi na adlerrroman@gmail.com.',
+    kako: `Vodič lahko kadar koli znova odprete z gumbom “❓ Vodič” spodaj levo. Za pomoč smo dosegljivi na ${SUPPORT_EMAIL}.`,
   },
 ];
 

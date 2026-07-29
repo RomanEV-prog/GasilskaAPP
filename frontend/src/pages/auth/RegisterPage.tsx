@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { errorMessage } from '../../api/client';
 import { Button, Input } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
+import { SUPPORT_EMAIL } from '../../types';
 
 /** Pretvori naziv društva v veljaven slug (č/š/ž → c/s/z, presledki → -). */
 function slugify(input: string): string {
@@ -87,10 +88,10 @@ export function RegisterPage() {
           <p className="-mt-2 text-xs text-gray-400">
             Za aktivacijsko kodo nam pišite na{' '}
             <a
-              href="mailto:adlerrroman@gmail.com"
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="text-primary hover:underline"
             >
-              adlerrroman@gmail.com
+              {SUPPORT_EMAIL}
             </a>
             .
           </p>
