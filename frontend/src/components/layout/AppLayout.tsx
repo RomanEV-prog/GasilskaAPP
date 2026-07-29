@@ -211,6 +211,12 @@ export function AppLayout() {
   const { user, isLeadership } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: myOrg } = useQuery({
+    queryKey: ['organization', 'me'],
+    queryFn: organizationsApi.getMine,
+    staleTime: 5 * 60 * 1000,
+  });
+  const isPlatformOrg = myOrg?.slug === PLATFORM_ORG_SLUG;
   useFcm(); // registrira FCM žeton ob prijavi (no-op brez konfiguracije)
 
   // Predal z menijem na telefonu; ob vsaki navigaciji se zapre.
@@ -220,13 +226,14 @@ export function AppLayout() {
   // Uvodni vodič: samodejno ob prvi prijavi (dokler ni viden), kasneje ročno.
   const [tourOpen, setTourOpen] = useState(false);
   useEffect(() => {
-    if (!user) return;
+    // Vodič govori o vodenju društva — upravitelju platforme ne pove ničesar.
+    if (!user || isPlatformOrg) return;
     try {
       if (!localStorage.getItem(tourStorageKey(user.id))) setTourOpen(true);
     } catch {
       /* localStorage nedosegljiv — vodič preprosto preskočimo */
     }
-  }, [user]);
+  }, [user, isPlatformOrg]);
 
   const closeTour = () => {
     setTourOpen(false);

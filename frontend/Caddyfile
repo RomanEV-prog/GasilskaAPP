@@ -34,6 +34,22 @@
 	# React SPA (statika + fallback na index.html za client-side routing)
 	handle {
 		root * /srv
+
+		# Sredstva imajo zgoščeno vrednost v imenu (index-CbYY9cFt.js), zato je
+		# nova različica vedno novo ime — varno jih je predpomniti za leto dni.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		# Vse ostalo (predvsem index.html) se NE sme predpomniti: kaže na
+		# sredstva z novimi imeni. Brez tega brskalnik po objavi obdrži star
+		# index.html in s tem STARO aplikacijo — na strežniku je nova, uporabnik
+		# pa je ne dobi, dokler ne počisti predpomnilnika. Udarilo 2026-07-29
+		# (platformski račun je videl portal društva).
+		# "no-cache" ne pomeni "ne shrani", ampak "pred uporabo vedno preveri" —
+		# ob nespremenjeni datoteki ETag vrne 304 in prenosa ni.
+		@nocache not path /assets/*
+		header @nocache Cache-Control "no-cache"
+
 		try_files {path} /index.html
 		file_server
 	}
