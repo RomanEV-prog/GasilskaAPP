@@ -90,6 +90,35 @@ brez prijave v račun pravega društva.
   kot APK. V seji sem jo najprej kopiral v napačno mapo — stran se ni spremenila,
   brez napake.
 - **Brez `infra/compose.behind-proxy.yml` rebuild odpove** na zasedenem portu 80.
+- **Nova spremenljivka okolja mora iti na DVE mesti.** `docker-compose.prod.yml`
+  spremenljivke **našteva** (nima `env_file`) — vnos v `.env.prod` brez ustrezne
+  vrstice v `environment:` v vsebnik NE pride. Backend ne javi ničesar, funkcija
+  pa tiho teče brez nastavitve. Udarilo 2026-07-28 (`INVOICE_ISSUER_*` za račune;
+  ujeto pred rebuildom, ker sem prebral compose namesto ugibal). Preveri:
+  `docker exec gasilapp-backend-1 printenv | grep <PREFIX>`.
+
+- **»Uporabnik vidi staro aplikacijo« pri SPLETU = predpomnjen `index.html`.**
+  Sredstva imajo zgoščeno vrednost v imenu (`index-CbYY9cFt.js`), zato nova
+  objava = novo ime; `index.html` pa leži na isti poti in je do 2026-07-29
+  hodil brez glave `Cache-Control`. Brskalnik ga je obdržal in nalagal sredstva
+  PREJŠNJE različice — na strežniku nova koda, uporabnik stara, brez sledi v
+  dnevniku. Popravljeno v `frontend/Caddyfile` (`no-cache` za vse razen
+  `/assets/*`, ki dobijo `immutable` za leto dni). Preveri po objavi:
+  ```bash
+  curl -sI https://gasilapp.eu/ | grep -i cache-control          # no-cache
+  JS=$(curl -s https://gasilapp.eu/ | grep -o '/assets/index-[A-Za-z0-9_-]*\.js')
+  curl -sI "https://gasilapp.eu$JS" | grep -i cache-control      # immutable
+  ```
+  **Popravek glave ne odreši uporabnikov, ki imajo star `index.html` že v
+  predpomnilniku** — ti potrebujejo enkraten Ctrl+Shift+R. Povej jim to
+  naravnost, namesto da čakaš, da »se samo uredi«.
+
+- **Popravek vmesnika, ki je odvisen od poizvedbe, preveri z zakasnjenim
+  odgovorom.** Pogoj `if (!user || isPlatformOrg) return` se je izvedel, dokler
+  je poizvedba še tekla → `isPlatformOrg` je bil `false` → vodič se je odprl in
+  ga poznejša sprememba ni zaprla. Vedno počakaj na `isPending`, kadar odločitev
+  visi na podatku s strežnika. Udarilo 2026-07-29.
+
 - **»Tester ima star build« = najprej posumi na predpomnilnik, ne na objavo.**
   APK vedno leži na ISTI poti `/beta/gasilapp.apk`, zato brskalnik brez
   `Cache-Control` postreže predpomnjeno staro datoteko — objava izgleda
