@@ -90,6 +90,26 @@ brez prijave v račun pravega društva.
   kot APK. V seji sem jo najprej kopiral v napačno mapo — stran se ni spremenila,
   brez napake.
 - **Brez `infra/compose.behind-proxy.yml` rebuild odpove** na zasedenem portu 80.
+- **`sed -i` na datoteki, ki je bind-priklopljena v Docker vsebnik, spremembe
+  NE dostavi.** `sed -i` zapiše novo datoteko in jo preimenuje → nov inode,
+  priklop posamezne datoteke pa je vezan na starega. Gostitelj kaže novo
+  vsebino, vsebnik staro, `caddy reload` javi `config is unchanged` — vse
+  izgleda opravljeno, a ni. Enako velja za `docker cp` na tako pot.
+  Rešitev brez ponovnega zagona (ta bi vzel dol tudi eversum):
+  ```bash
+  ssh root@178.104.67.229 'docker exec -i eversum-caddy-1 \
+    sh -c "cat > /etc/caddy/Caddyfile" < /opt/eversum/Caddyfile'
+  # nato OBVEZNO primerjaj:
+  ssh root@178.104.67.229 'diff <(docker exec eversum-caddy-1 cat /etc/caddy/Caddyfile) /opt/eversum/Caddyfile'
+  ```
+  Udarilo 2026-07-29 pri dodajanju domene `plamenapp.si`.
+
+- **Caddy za novo domeno certifikat pridobi sam, ko DNS zaživi — do 30 dni.**
+  `"will retry" … "max_duration":2592000`. Zato je site blok mogoče dodati
+  vnaprej in ni treba čakati ob računalniku; napaka
+  `SERVFAIL … nameservers may be malfunctioning` v dnevniku je le odsev tega,
+  da delegacija še ne kaže na delujočo cono, in izgine sama.
+
 - **Nova spremenljivka okolja mora iti na DVE mesti.** `docker-compose.prod.yml`
   spremenljivke **našteva** (nima `env_file`) — vnos v `.env.prod` brez ustrezne
   vrstice v `environment:` v vsebnik NE pride. Backend ne javi ničesar, funkcija
