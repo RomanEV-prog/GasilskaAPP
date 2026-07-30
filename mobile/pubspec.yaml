@@ -38,7 +38,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   dio: ^5.7.0                     # HTTP client
-  flutter_secure_storage: ^9.2.2  # varno shranjevanje JWT
+  flutter_secure_storage: ^10.3.1  # varno shranjevanje JWT
   provider: ^6.1.2                # state management
   go_router: ^14.2.7             # navigacija
   intl: ^0.20.2                  # formatiranje datumov (sl_SI); usklajeno s flutter_localizations
