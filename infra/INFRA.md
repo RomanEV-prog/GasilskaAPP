@@ -61,6 +61,13 @@ REGISTRATION_KEY=<master ključ za izdajo aktivacijskih kod>   # DEPLOY.md §9
 # po klientovem IP; brez tega je limit prijave globalen za vse uporabnike.
 TRUST_PROXY_HOPS=0
 
+# ─── SMTP (Brevo) — reset gesla ───────────
+MAIL_HOST=smtp-relay.brevo.com   # brez MAIL_* je pošiljanje no-op
+MAIL_PORT=587                    # 587 STARTTLS (465 = implicitni TLS)
+MAIL_USER=<Brevo SMTP login>
+MAIL_PASS=<Brevo SMTP ključ>
+MAIL_FROM="Plamen <noreply@plamenapp.si>"   # domena rabi SPF+DKIM v Brevo!
+
 # ─── FIREBASE (push obvestila) ────────────
 FIREBASE_PROJECT_ID=gasilapp
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@gasilapp.iam.gserviceaccount.com

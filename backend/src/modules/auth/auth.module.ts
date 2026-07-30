@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { Organization } from '../organizations/organization.entity';
 import { PlatformModule } from '../platform/platform.module';
 import { RegistrationCode } from './registration-code.entity';
@@ -38,6 +39,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     UsersModule,
     // Izdaja kod z master ključem uporablja isti servis kot stran platforme.
     PlatformModule,
+    // MailService za pošiljanje povezave za ponastavitev gesla.
+    NotificationsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

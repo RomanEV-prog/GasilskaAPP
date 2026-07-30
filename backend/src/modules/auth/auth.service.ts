@@ -18,6 +18,7 @@ import {
 import { DataSource, IsNull, Repository } from 'typeorm';
 import { SystemRole } from '../../common/enums/roles.enum';
 import { usernameBase } from '../../common/utils/username.util';
+import { MailService } from '../notifications/mail.service';
 import { Organization } from '../organizations/organization.entity';
 import { UserRole } from '../users/user-role.entity';
 import { User } from '../users/user.entity';
@@ -53,6 +54,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
+    private readonly mailService: MailService,
   ) {}
 
   // Dostopni žeton je kratkoživ; refresh žeton dolgoživ in podpisan z ločeno
@@ -509,8 +511,9 @@ export class AuthService {
   }
 
   /**
-   * Ustvari reset žeton. (MVP: vrne žeton; pošiljanje e-pošte pride pozneje.)
-   * Za neobstoječ e-mail namerno ne razkrijemo napake.
+   * Ustvari reset žeton in pošlje e-pošto s povezavo (MailService; brez
+   * SMTP nastavitev je pošiljanje no-op). Za neobstoječ e-mail namerno ne
+   * razkrijemo napake, odgovor pa je vedno enak — tudi ob napaki SMTP.
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
     const user = await this.usersRepo.findOne({
@@ -525,7 +528,22 @@ export class AuthService {
         passwordResetToken: sha256(token),
         passwordResetExpires: expires,
       });
-      // TODO: pošlji e-pošto z reset povezavo (Notifications modul).
+
+      const base = this.config.get<string>(
+        'FRONTEND_URL',
+        'http://localhost:3000',
+      );
+      const link = `${base}/reset-password?token=${token}`;
+      await this.mailService.sendMail(
+        user.email!,
+        'Ponastavitev gesla — Plamen',
+        `<p>Pozdravljeni, ${user.firstName}!</p>
+         <p>Za ponastavitev gesla v aplikaciji Plamen kliknite spodnjo
+         povezavo. Povezava velja <strong>1 uro</strong>.</p>
+         <p><a href="${link}">${link}</a></p>
+         <p>Če ponastavitve niste zahtevali vi, to sporočilo prezrite —
+         geslo ostane nespremenjeno.</p>`,
+      );
     }
     return {
       message:

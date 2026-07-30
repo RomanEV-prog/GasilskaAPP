@@ -46,6 +46,12 @@ services:
       REGISTRATION_KEY: ${REGISTRATION_KEY}
       # SPIN je geo-omejen na SI IP; na tujem strežniku nastavi na SI relay.
       SPIN_BASE_URL: ${SPIN_BASE_URL:-https://spin3.sos112.si}
+      # SMTP (Brevo) — reset gesla; prazno = pošiljanje izklopljeno.
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}

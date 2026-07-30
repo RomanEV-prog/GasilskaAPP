@@ -179,7 +179,16 @@ export function LoginPage() {
         </form>
         )}
 
-        <p className="mt-6 text-center text-sm text-gray-500">
+        <p className="mt-4 text-center text-sm">
+          <Link
+            to="/forgot-password"
+            className="text-gray-500 hover:underline"
+          >
+            Pozabljeno geslo?
+          </Link>
+        </p>
+
+        <p className="mt-3 text-center text-sm text-gray-500">
           Nimate računa?{' '}
           <Link to="/register" className="text-primary hover:underline">
             Registrirajte društvo

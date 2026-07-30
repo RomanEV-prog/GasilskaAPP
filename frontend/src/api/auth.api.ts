@@ -53,4 +53,13 @@ export const authApi = {
 
   updateFcmToken: (fcmToken: string): Promise<unknown> =>
     api.patch('/auth/fcm-token', { fcmToken }),
+
+  forgotPassword: (email: string): Promise<{ message: string }> =>
+    api.post('/auth/forgot-password', { email }),
+
+  resetPassword: (
+    token: string,
+    password: string,
+  ): Promise<{ message: string }> =>
+    api.post('/auth/reset-password', { token, password }),
 };
