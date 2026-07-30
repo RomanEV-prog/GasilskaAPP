@@ -98,6 +98,31 @@ crontab -e
 
 Obnova: `gunzip -c backup.sql.gz | docker exec -i <db-container> psql -U postgres gasilapp`
 
+### 7a. Off-site šifrirana kopija (od 30. 7. 2026)
+
+Lokalne kopije so na ISTEM disku kot baza — odpoved diska vzame oboje. Zato
+cron **03:30** na produkciji požene `/root/backup/offsite-backup.sh`:
+`pg_dump | gzip | age -r <javni ključ>` → `scp` na SI relay
+(`root@152.89.232.161:/root/gasilapp-backups/`, dediciran ključ
+`/root/.ssh/backup_relay`), retencija **14 dni**, log `/root/backup/offsite.log`.
+
+- **Šifriranje: age z javnim ključem.** Zasebni ključ je SAMO pri Romanu
+  (`C:\Users\adler\.plamen-backup\plamen-backup.key` + kopija v password
+  managerju) — strežnika starih kopij ne moreta brati. Javni ključ:
+  `age1079swxtzlwf044p5r9zrl0mdt2epw67cqlxh77v63tm4es9kzgaqqntel4`.
+- Relay ima ufw (dovoljena 22 + 80).
+
+**Obnova (tudi scenarij »Hetzner izgubljen«):**
+```powershell
+scp root@152.89.232.161:/root/gasilapp-backups/<datoteka>.age .
+# POZOR: age -o, NE '>' — PowerShell preusmeritev pokvari binarno vsebino!
+age -d -i $env:USERPROFILE\.plamen-backup\plamen-backup.key -o dump.sql.gz <datoteka>.age
+# nato: gunzip + psql -f v svež Postgres (docker cp + docker exec, glej §7)
+```
+Test obnove opravljen 30. 7. 2026: count(users/orgs/spin) identičen produkciji.
+**Ob menjavi ključa ali strežnikov test ponovi** — kopija brez preverjenega
+dešifriranja ni kopija.
+
 ## 8. Mobilna aplikacija (release)
 
 Build mora kazati na produkcijski API:
