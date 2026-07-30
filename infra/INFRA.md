@@ -66,12 +66,13 @@ SENTRY_DSN=            # backend; prazno = izklopljeno
 # frontend: VITE_SENTRY_DSN v .env.prod (build arg v docker-compose.prod.yml);
 # CSP v frontend/Caddyfile dovoli https://*.ingest.de.sentry.io (EU regija!)
 
-# ─── SMTP (Brevo) — reset gesla ───────────
-MAIL_HOST=smtp-relay.brevo.com   # brez MAIL_* je pošiljanje no-op
-MAIL_PORT=587                    # 587 STARTTLS (465 = implicitni TLS)
-MAIL_USER=<Brevo SMTP login>
-MAIL_PASS=<Brevo SMTP ključ>
-MAIL_FROM="Plamen <noreply@plamenapp.si>"   # domena rabi SPF+DKIM v Brevo!
+# ─── SMTP — reset gesla (Gmail; brez MAIL_* je pošiljanje no-op) ─────────
+MAIL_HOST=smtp.gmail.com         # 587 STARTTLS (465 = implicitni TLS)
+MAIL_PORT=587
+MAIL_USER=<gmail naslov>
+MAIL_PASS=<Googlovo »geslo za aplikacijo« (myaccount.google.com/apppasswords)>
+MAIL_FROM="Plamen <gmail naslov>"   # Gmail zahteva From = prijavljeni naslov
+# Alternativa s svojo domeno (noreply@plamenapp.si): Brevo/Mailgun + SPF/DKIM.
 
 # ─── FIREBASE (push obvestila) ────────────
 FIREBASE_PROJECT_ID=gasilapp
