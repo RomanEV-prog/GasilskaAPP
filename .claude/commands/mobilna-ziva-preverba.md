@@ -41,6 +41,26 @@ flutter run -d emulator-5554 --dart-define=API_URL=http://10.0.2.2:4000/api/v1
   (`organizationId` takrat ni potreben). Telesa z `email` backend zavrne
   (`property email should not exist`). Odgovor je ovit: `$r.data.accessToken`,
   seznam društev `$r.data`. Prijava je rate-limitana 5/min.
+- **Zamrznjen framebuffer ≠ mrtva aplikacija.** Emulator (posebej po daljšem
+  teku) včasih neha osveževati sliko: `screencap` vrača ISTI star frame, celo
+  po `input keyevent`, aplikacijska logika pa teče naprej. Simptom: tap je
+  dokazano deloval (zahteva v backend logu ob točnem času), posnetek pa še
+  kaže prejšnje stanje. Rešitev: `adb reboot` (cold boot ne pomaga nič bolj);
+  po rebootu pričakuj sistemske ANR dialoge (»System-UI reagiert nicht« —
+  tapni Warten). Resnico o tem, ali je akcija uspela, VEDNO preveri v backend
+  logu, ne le na posnetku. Udarilo 2026-07-30 (test pozabljenega gesla).
+- **Tipkovnica premakne dialog — koordinate gumbov se spremenijo.** Tap na
+  gumb z koordinat s posnetka BREZ tipkovnice po `input text` zgreši (dialog
+  se dvigne; tap pod njim = klik na barrier → dialog se tiho zapre brez
+  akcije, kar izgleda kot uspeh). Vrstni red: odpri dialog → vpiši besedilo →
+  **ŠELE NATO posnetek** → tap po koordinatah s TEGA posnetka.
+- **`adb: more than one device/emulator`** — ko je poleg emulatorja priklopljen
+  še pravi telefon, vsak `adb` ukaz potrebuje `-s emulator-5554` (oz. serijsko
+  številko naprave iz `adb devices`).
+- **`input text` piše v POLJE S FOKUSOM,** ne v polje, ki si ga nazadnje tapnil
+  — če tap ni prijel (animacija, prehod), pristane vse besedilo v napačnem
+  polju (npr. geslo v »Uporabniško ime«). Po tapu na polje počakaj ~1 s in po
+  vnosu preveri s posnetkom, preden nadaljuješ.
 
 ## Nadzorovan testni push (FCM)
 

@@ -83,6 +83,25 @@ curl -s https://gasilapp.eu/beta | grep -o "Različica [0-9.]*"
 Trik z **401-namesto-404** je najhitrejši dokaz, da je nova koda res zagnana,
 brez prijave v račun pravega društva.
 
+### Rate-limit po klientovem IP — test z DVEH IP-jev (po spremembi proxy verige)
+
+Konfiguracija sama ni dokaz. Z lokalnega stroja sproži 6× napačno prijavo
+(šesta → 429), TAKOJ nato z drugega IP (SI relay je pri roki) ena napačna
+prijava → mora vrniti **401, NE 429**:
+```bash
+for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -X POST \
+  https://plamenapp.si/api/v1/auth/login -H "Content-Type: application/json" \
+  -d '{"username":"test@ne-obstaja.si","password":"napacno"}'; done
+ssh root@152.89.232.161 'curl -s -o /dev/null -w "%{http_code}\n" -X POST \
+  https://plamenapp.si/api/v1/auth/login -H "Content-Type: application/json" \
+  -d "{\"username\":\"test@ne-obstaja.si\",\"password\":\"napacno\"}"'
+```
+Če relay dobi 429 → limit je spet globalen. Past (udarila 2026-07-30):
+`TRUST_PROXY_HOPS` na backendu NI dovolj — notranji Caddy (gasilapp-web)
+prejeti `X-Forwarded-For` od eversuma ZAVRŽE, dokler nima v
+`frontend/Caddyfile` globalne opcije `servers { trusted_proxies static
+private_ranges }`. Sprememba Caddyfile = rebuild `web` vsebnika.
+
 ## Gotchas
 
 - **Beta stran gre v `/opt/gasilapp/downloads/index.html`**, ne v
