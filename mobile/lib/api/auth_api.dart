@@ -87,6 +87,12 @@ class AuthApi {
     });
   }
 
+  /// Zahteva ponastavitev gesla — backend pošlje e-pošto s povezavo.
+  /// Odgovor je vedno enak, ne glede na obstoj računa (brez enumeracije).
+  Future<void> forgotPassword(String email) async {
+    await _client.post('/auth/forgot-password', data: {'email': email});
+  }
+
   /// Registrira FCM žeton na backendu (PATCH /auth/fcm-token).
   Future<void> updateFcmToken(String fcmToken) async {
     await _client.patch('/auth/fcm-token', data: {'fcmToken': fcmToken});

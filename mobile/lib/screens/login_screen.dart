@@ -131,6 +131,66 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  /// Dialog za pozabljeno geslo: vnos e-pošte → backend pošlje povezavo.
+  /// Novo geslo se nastavi prek povezave v pošti (odpre spletno stran).
+  Future<void> _forgotPassword() async {
+    final emailCtrl = TextEditingController(
+      text: _usernameCtrl.text.contains('@') ? _usernameCtrl.text.trim() : '',
+    );
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Pozabljeno geslo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Vnesite e-poštni naslov svojega računa. Poslali vam bomo '
+              'povezavo za ponastavitev gesla.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailCtrl,
+              autofocus: true,
+              autocorrect: false,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'E-poštni naslov',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, emailCtrl.text.trim()),
+            child: const Text('Pošlji'),
+          ),
+        ],
+      ),
+    );
+    if (email == null || !email.contains('@') || !mounted) return;
+    try {
+      await _authApi.forgotPassword(email);
+    } catch (_) {
+      // Odgovor je namerno vedno enak — tudi ob napaki ne razkrivamo nič.
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Če račun obstaja, smo poslali navodila za ponastavitev gesla. '
+          'Preverite e-pošto (tudi neželeno).',
+        ),
+        duration: Duration(seconds: 6),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -291,6 +351,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextButton(
                           onPressed: _submitting ? null : _backToLogin,
                           child: const Text('Nazaj na prijavo'),
+                        )
+                      else
+                        TextButton(
+                          onPressed: _submitting ? null : _forgotPassword,
+                          child: const Text('Pozabljeno geslo?'),
                         ),
                     ],
                   ),
