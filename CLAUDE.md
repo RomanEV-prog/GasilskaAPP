@@ -47,7 +47,7 @@ gasilapp/
 │   ├── MODULES.md             ← opis vsakega modula
 │   ├── DECISIONS.md           ← arhitekturne odločitve (ADR)
 │   └── FIREBASE.md            ← FCM konfiguracija
-├── backend/                   ← NestJS API (13 modulov v src/modules/)
+├── backend/                   ← NestJS API (14 modulov v src/modules/)
 │   └── BACKEND.md             ← navodila za backend
 ├── frontend/                  ← React web portal
 │   └── FRONTEND.md            ← navodila za frontend
@@ -55,7 +55,7 @@ gasilapp/
 │   └── MOBILE.md              ← navodila za mobilno
 └── infra/
     ├── INFRA.md               ← docker, env
-    ├── DEPLOY.md              ← postopek objave na prod (§9 kode, §10 SPIN relay)
+    ├── DEPLOY.md              ← objava na prod (§7a kopije, §9 kode, §10 SPIN relay)
     └── beta/index.html        ← stran za beta razdeljevanje APK
 ```
 
@@ -68,15 +68,16 @@ datoteka v `docs/migrations/` (za obstoječe baze). Glej `/gasilapp-shema`.
 
 | Plast | Tehnologija |
 |---|---|
-| Backend API | NestJS + TypeScript |
-| Baza podatkov | PostgreSQL |
-| ORM | TypeORM |
-| Avtentikacija | JWT + RBAC |
-| Push obvestila | Firebase Cloud Messaging |
+| Backend API | NestJS 11 + TypeScript (Node 22, Docker `node:22-alpine`) |
+| Baza podatkov | PostgreSQL 15 |
+| ORM | TypeORM 1.x (`select` kot objekt, ne seznam!) |
+| Avtentikacija | JWT + RBAC + 2FA (TOTP, lastna implementacija) |
+| Push obvestila | Firebase Cloud Messaging (firebase-admin 14, modularni API) |
+| E-pošta | nodemailer prek Gmail SMTP (`MAIL_*` env; brez njih no-op) |
 | Web portal | React + TypeScript + Vite |
 | Mobilna app | Flutter |
 | File storage | Lokalno (MVP), S3 pozneje |
-| Dokumentacija | Swagger (auto-generated) |
+| Dokumentacija | Swagger (samo dev — na produkciji izklopljen) |
 
 ---
 
@@ -121,11 +122,8 @@ member        → navaden član
 # (NotificationTarget.LEADERSHIP, opomniki) — to ni pravica.
 ```
 
-Navaden `member` vidi samo:
-- svoje podatke
-- javne dogodke
-- svoja usposabljanja
-- obvestila
+Navaden `member` vidi samo: svoje podatke, javne dogodke, svoja usposabljanja,
+obvestila.
 
 ---
 
@@ -143,24 +141,26 @@ označi `@AllowExpired()`. Kode izdaja `super_admin` v portalu (zavihek
 Platforma), društvo podaljša z `POST /organizations/me/redeem-code`.
 Ista stran vodi **evidenco računov** (`platform_invoices`): izdaja s
 številko `YYYY-NNN`, odprt dolg, natisljiv izpis; klik »Plačano« podaljša
-naročnino. Podatki izdajatelja so v env (`INVOICE_ISSUER_*`) — **SMTP ni
-nastavljen, e-pošte sistem ne pošilja sam.**
-Podrobno: `docs/MODULES.md §14`, `infra/DEPLOY.md §9`. Mobilna (ime »Plamen«) je
-od 21. 7. 2026 na **Google Play — interno preizkušanje, različica 1.0.11 (koda 12)**,
-poleg beta razdeljevanja na `gasilapp.eu/beta`. Trgovinska stran in vse izjave o
-vsebini so izpolnjene in **poslane v Googlov pregled**; do zaključka pregleda
-testerji vidijo začasno ime `si.gasilapp.gasilapp_mobile (unreviewed)` (info, ne
-napaka), nato se zamenja s »Plamen«. Play IDji: developer 5046106616640158875,
-app 4973541200399618968, interni track 4701224842560389717, opt-in
-`https://play.google.com/apps/internaltest/4701224842560389717`. Novo delo je
-**nadgradnja obstoječega**, ne postavljanje od začetka — poglej obstoječi modul
-kot vzorec, preden pišeš nov.
+naročnino. Podatki izdajatelja so v env (`INVOICE_ISSUER_*`) — račune še
+vedno pošiljaš ročno; samodejno gre le e-pošta za reset gesla.
+Podrobno: `docs/MODULES.md §14`, `infra/DEPLOY.md §9`.
 
-Skilli projekta (`.claude/commands/`, kliči z `/ime`):
+**Mobilna (ime »Plamen«):** Google Play — interno preizkušanje, trenutna
+izdaja **1.0.16 (koda 17, 30. 7. 2026)**; poleg tega beta APK na
+`plamenapp.si/beta`. Trgovinska stran in izjave so poslane v Googlov pregled;
+do zaključka testerji vidijo začasno ime `si.gasilapp.gasilapp_mobile
+(unreviewed)` (info, ne napaka). Play IDji: developer 5046106616640158875,
+app 4973541200399618968, interni track 4701224842560389717, opt-in
+`https://play.google.com/apps/internaltest/4701224842560389717`.
+
+Novo delo je **nadgradnja obstoječega**, ne postavljanje od začetka — poglej
+obstoječi modul kot vzorec, preden pišeš nov (users je najboljši primer).
+
+### Skilli projekta (`.claude/commands/`, kliči z `/ime`)
 
 | Skill | Kdaj |
 |---|---|
-| `/gasilapp-deploy` | objava backend+splet na produkcijo — vrstni red, override za Caddy, verifikacija |
+| `/gasilapp-deploy` | objava backend+splet na produkcijo — vrstni red, override za Caddy, verifikacija (tudi rate-limit z dveh IP-jev) |
 | `/gasilapp-play-izdaja` | nova mobilna izdaja — bump, build, beta scp, Google Play interno (ID-ji + pasti) |
 | `/gasilapp-shema` | nova tabela ali stolpec — migracije, indeksi, e2e izolacija |
 | `/ikona-aplikacije` | zamenjava ikone — izrez motiva, adaptive icon, preverba v APK |
@@ -173,11 +173,60 @@ z razlogi (ADR) · **komentar v kodi** = kar velja le za tisto vrstico.
 
 ---
 
-## ENV spremenljivke (`.env.example`)
+## Razvojno okolje — zagon in ukazi
 
-Glej `infra/INFRA.md` za celoten seznam.
+- **Baza:** `docker compose up -d db` (Postgres 15). Shema se ustvari iz `docs/schema.sql` prek initdb.
+- **Seed:** `cd backend && npm run seed` → ustvari test društvo + **samo admina**.
+- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (`admin.pekre`, org_admin). **Člana seed NE ustvari** — dodaj ga prek portala. V trenutni dev bazi sta `janez.novak` in `miha.kranjc`, a ju svež seed ne obnovi. POZOR: dev admin ima lahko vklopljeno 2FA (Romanov telefon) — za skriptirane teste uporabi račun brez 2FA.
+- **Prijava (API):** polje je vedno `username` — vanj gre uporabniško ime (takrat obvezen `organizationId`) **ali e-pošta** (brez `organizationId`). Telesa s poljem `email` backend zavrne. Odgovori so oviti v `data` (`data.accessToken`); javni seznam društev: `GET /auth/organizations` → `data`.
+- **Zagon:** backend `npm run start:dev` (port 4000), frontend `npm run dev` (port 3000 — če je zaseden, Vite vzame 3001!).
+- **Pred commitom:** backend `npx tsc --noEmit -p tsconfig.json` (lint skripte ni več); frontend `npx tsc --noEmit` + `npm run build`; mobile `flutter analyze` **iz `C:\gasilapp_mobile`** (glej Mobilna spodaj).
+- **Ustavi backend proces:** PowerShell `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*dist*main*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }` (vrne exit 255 tudi ob uspehu — kozmetično).
+- **Git/CI:** repo `github.com/RomanEV-prog/GasilskaAPP` (branch `master`). CI: backend E2E + frontend build + Playwright dimni test + `flutter analyze` (node 22). Dependabot odpira tedenske PR-je.
+
+## Testi
+
+- **Backend E2E:** `cd backend && npm run test:e2e` (Jest+supertest, svež tenant na zagon; throttler off v `NODE_ENV=test`; 101 testov). Ročni curl: prijava je rate-limitana 5/min (429) — za ponavljajoče teste rabi `test:e2e`. Vsak modul preveri tudi multi-tenant izolacijo (drug tenant → 404 / 0 rezultatov).
+- **Playwright dimni test:** `frontend/tests/smoke.spec.ts` (`npm run test:e2e` v frontend). Lokalno OBVEZNO `VITE_API_URL=http://localhost:4000/api/v1` pri buildu (vite sicer bere commitan `.env.production` → kliče produkcijo!) in `PW_USER`/`PW_PASS` račun brez 2FA. CI job `frontend-e2e` teče sam.
+
+## Varnost (od 30. 7. 2026)
+
+- **2FA (TOTP)** za web IN mobilno (od 1.0.15) — vklop v Nastavitvah; prijava vrne `requires2fa`+`pendingToken` → `/auth/2fa/verify`. TOTP je lastna implementacija (`auth/totp.util.ts`) — `otplib` v13 je ESM-only in se lomi v Jest, NE vračaj ga. Glej ADR-011.
+- **`token_version`** v refresh žetonu: sprememba gesla/2FA odjavi vse naprave.
+- **Rate-limit po klientovem IP zahteva DVOJE:** `TRUST_PROXY_HOPS=2` (backend env) **in** `trusted_proxies static private_ranges` v `frontend/Caddyfile` — notranji Caddy sicer prejeti `X-Forwarded-For` zavrže in backend za vse vidi eversumov IP (limit spet globalen). Pri spremembah proxy verige ponovi živ test z dveh IP-jev (`/gasilapp-deploy`).
+- **Reset gesla po e-pošti deluje** (Gmail SMTP prek `MAIL_*` v `.env.prod`; brez njih no-op). `MailService` v `notifications/`. Web strani `/forgot-password` + `/reset-password`; mobilna ima dialog na prijavi.
+- Helmet na backendu, varnostni headerji+CSP v `frontend/Caddyfile`, Swagger na produkciji izklopljen. Sentry pripravljen (vklopi se ob `SENTRY_DSN`/`VITE_SENTRY_DSN`).
+- **Off-site kopije baze:** cron 03:30 na prod → age-šifrirano na SI relay (retencija 14 dni). Zasebni ključ SAMO pri Romanu. Obnova: `infra/DEPLOY.md §7a`.
+
+## Mobilna (Flutter)
+
+- **Pot vsebuje ne-ASCII znake → Android build odpove.** Gradi/zaženi prek ASCII junction-a (`New-Item -ItemType Junction C:\gasilapp_mobile -Target <mobile>`). `flutter run`/build/**analyze** MORA iz PowerShell iz `C:\gasilapp_mobile` — iz Git Bash odpove (`aapt: Illegal byte sequence`; analyze: `FormatException: Unexpected end of input`, od nadgradnje Flutterja 24. 7. 2026).
+- **`minSdk` je `maxOf(flutter.minSdkVersion, 23)`, NE gol `23`** — Flutter migrator gol literal ob vsakem buildu prepiše nazaj na 21; `maxOf(...)` izraza ne dira (25. 7. 2026). `mobile_scanner` v7 rabi `minSdk 23`+`compileSdk 36`.
+- **Dart-define je `API_URL` (NE `API_BASE_URL`!)**. Release: `flutter build appbundle --release --dart-define=API_URL=https://plamenapp.si/api/v1`. Emulator: `http://10.0.2.2:4000/api/v1`. Glej `mobile/MOBILE.md`.
+- **Beta razdeljevanje:** podpisan APK na `plamenapp.si/beta` (Caddy `handle_path /beta` iz `/opt/gasilapp/downloads/`; stran `infra/beta/index.html`). Build iz `C:\gasilapp_mobile`, nato `scp .../app-release.apk root@178.104.67.229:/opt/gasilapp/downloads/gasilapp.apk`. Postopek: `/gasilapp-play-izdaja`.
+- **NFC (oprema):** `nfc_manager` v4 (API prelomno drugačen od v3 — beri README nameščene verzije). UID: `NfcTagAndroid.from(tag)?.id` / `MiFareIos.from(tag)?.identifier`; ovito v `mobile/lib/services/nfc_service.dart`. Android: NFC ob kameri; iOS: sistemsko okno → ročni gumb. `equipment.nfc_uid` je **globalno** unikaten — testi ne smejo uporabljati fiksnih UID-jev.
+
+## Integracije
+
+- **SPIN:** modul `backend/src/modules/spin` bere javni feed spin3.sos112.si. Društvo izbere **več občin** (`organizations.spin_obcine` jsonb; web Nastavitve→Društvo). **SPIN geo-omejuje na SI IP → prod (Hetzner DE) ga NE doseže** — prod uporablja SI relay (Neoserv VPS `152.89.232.161`, nginx) prek env `SPIN_BASE_URL`; mobilni zavihek SPIN bere feed neposredno s telefona. Občine statično v `spin/obcine.data.ts`. Glej `infra/DEPLOY.md §10` + `docs/MODULES.md §9a`.
+- **SSH na strežnike (Windows):** ni `sshpass`/`plink`; za geslo-prijavo `python` + `paramiko`. Hetzner (`178.104.67.229`) + SI relay imata ključ `~/.ssh/id_ed25519` — `ssh root@<IP>` brez gesla.
+
+## Pasti (koda)
+
+- **TypeORM in unije z `null`:** `@Column()` nad `string | null` odpove z `DataTypeNotSupportedError` — tip navedi eksplicitno (`type: 'varchar'`).
+- **TypeORM 1.x:** `select` je objekt (`{ id: true }`), seznam (`['id']`) ne prevede več.
+- **Brisljiva polja: `null`, ne `undefined`.** Vzorec `data.x || undefined` → `JSON.stringify` polje IZPUSTI → backend stare vrednosti ne prepiše → polja se ne da počistiti. Za brisljiva polja pošlji `null` (`data.x || null`); nullable stolpec + `@IsOptional()` ga počistita. Udarilo 2026-07-21 (servisni datum vozila).
+- **Šumniki v testnih podatkih:** curl iz Git Bash pomangla šumnike/emoji v inline argumentih (v bazo pride `�`) — uporabi JSON telo iz UTF-8 datoteke (`curl -d @telo.json`) ali portal/app. Popravek pokvarjenih vrstic: UTF-8 .sql + `docker cp` + `psql -f` iz PowerShell.
+- **Okolje:** Git Bash + PowerShell; `$TMPDIR` NI nastavljen — za log datoteke absolutna pot.
 
 ---
+
+## ENV spremenljivke
+
+Glej `infra/INFRA.md` za celoten seznam (baza, JWT, TRUST_PROXY_HOPS, MAIL_*,
+SENTRY, Firebase, SPIN, INVOICE_*). Nova spremenljivka gre vedno v trojico:
+`.env.example` + `docker-compose.prod.yml` (environment **našteva**!) +
+`infra/INFRA.md`; vrednost v `.env.prod` na strežniku.
 
 ## Ko ne veš kaj narediti
 
@@ -185,30 +234,3 @@ Glej `infra/INFRA.md` za celoten seznam.
 2. Preberi `docs/DATABASE.md` za shemo
 3. Preberi `docs/API.md` za endpoint spec
 4. Poglej obstoječe module kot vzorec (users je najboljši primer)
-
----
-
-## Razvojno okolje (dev)
-
-- **Baza:** `docker compose up -d db` (Postgres 15). Shema se ustvari iz `docs/schema.sql` prek initdb.
-- **Seed:** `cd backend && npm run seed` → ustvari test društvo + **samo admina**.
-- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (`admin.pekre`, org_admin). **Člana seed NE ustvari** — za testiranje pravic ga dodaj prek portala. V trenutni dev bazi sta `janez.novak` in `miha.kranjc`, a ju svež seed ne obnovi (po `docker compose down -v` ju ne bo). **Prijava:** polje je vedno `username` — vanj gre uporabniško ime (takrat je obvezen tudi `organizationId`) **ali e-pošta** (brez `organizationId`). Telesa s poljem `email` backend zavrne. Odgovori so oviti v `data` (`data.accessToken`); javni seznam društev: `GET /auth/organizations` → `data`.
-- **Zagon:** backend `npm run start:dev` (port 4000), frontend `npm run dev` (port 3000).
-- **Preverjanje pred commitom:** backend `npx tsc --noEmit -p tsconfig.json` + `npm run lint`; frontend `npx tsc --noEmit` + `npm run build`; mobile `flutter analyze` **iz `C:\gasilapp_mobile`** (glej Flutter spodaj). Frontend nima ne lint ne test skripte — `build` je edino sito.
-- **Okolje:** Git Bash + PowerShell. `$TMPDIR` NI nastavljen — za log datoteke uporabi absolutno pot.
-- **Ustavi backend proces:** PowerShell `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*dist*main*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }` (vrne exit 255 tudi ob uspehu — kozmetično).
-- **Šumniki v testnih podatkih:** curl iz Git Bash na Windows **pomangla šumnike/emoji** v inline argumentih (v bazo se zapiše U+FFFD `�`) — testne vnose s šumniki delaj prek portala/app ali z JSON telesom iz UTF-8 datoteke (`curl -d @telo.json`), nikoli inline. Popravek pokvarjenih vrstic: UTF-8 .sql datoteka + `docker cp` + `psql -f` (PowerShell, ne Git Bash — path mangling).
-- **Varnost (od 30. 7. 2026):** 2FA (TOTP) za web IN mobilno (od 1.0.15) — vklop v Nastavitvah, prijava vrne `requires2fa`+`pendingToken` → `/auth/2fa/verify`. TOTP je lastna implementacija (`auth/totp.util.ts`) — `otplib` v13 je ESM-only in se lomi v Jest, NE vračaj ga. `token_version` v refresh žetonu: sprememba gesla/2FA odjavi vse naprave. Helmet na backendu, varnostni headerji+CSP v `frontend/Caddyfile`, Swagger na produkciji izklopljen. Glej `docs/DECISIONS.md` ADR-011.
-- **Rate-limit po klientovem IP zahteva DVOJE:** `TRUST_PROXY_HOPS=2` (backend env) **in** `trusted_proxies static private_ranges` v `frontend/Caddyfile` — notranji Caddy sicer prejeti `X-Forwarded-For` zavrže in backend za vse vidi eversumov IP (limit spet globalen). Preverjeno z živim testom z dveh IP-jev; pri spremembah proxy verige test ponovi.
-- **Reset gesla po e-pošti deluje** (Gmail SMTP prek `MAIL_*` v `.env.prod`; brez njih no-op). `MailService` v `notifications/`. Strani `/forgot-password` + `/reset-password`.
-- **Off-site kopije baze:** cron 03:30 na prod → age-šifrirano na SI relay (retencija 14 dni). Zasebni ključ SAMO pri Romanu. Postopek obnove: `infra/DEPLOY.md §7a`.
-- **Playwright dimni test:** `frontend/tests/smoke.spec.ts`; lokalno OBVEZNO `VITE_API_URL=http://localhost:4000/api/v1` pri buildu (vite sicer bere commitan `.env.production` → kliče produkcijo!) in `PW_USER`/`PW_PASS` račun brez 2FA. CI job `frontend-e2e` teče sam.
-- **E2E testi:** `cd backend && npm run test:e2e` (Jest+supertest, svež tenant na zagon; throttler off v `NODE_ENV=test`). Ročni curl vzorec še velja, a **prijava je rate-limitana 5/min (429)** — za ponavljajoče teste rabi `test:e2e`. Vsak modul preveri tudi multi-tenant izolacijo (prijava kot drug tenant → 404 / 0 rezultatov).
-- **Flutter (mobile):** pot vsebuje ne-ASCII znake → Android build odpove. Gradi/zaženi prek ASCII junction-a (`New-Item -ItemType Junction C:\gasilapp_mobile -Target <mobile>`). **`flutter run`/build MORA iz PowerShell iz `C:\gasilapp_mobile`** — iz Git Bash odpove (`aapt: Illegal byte sequence`), ker Git Bash razreši junction nazaj na šumnično pot. **Tudi `flutter analyze` je treba poganjati iz `C:\gasilapp_mobile`** — od nadgradnje Flutterja (24. 7. 2026) iz šumnične poti odpove z `FormatException: Unexpected end of input` (analizatorjev LSP kanal se zaduši ob ne-ASCII poti v `rootUri`). Prej je delovalo neposredno; ta trditev je bila popravljena, ne dodana. `mobile_scanner` v7 rabi `minSdk 23`+`compileSdk 36`. **`minSdk` je `maxOf(flutter.minSdkVersion, 23)`, NE gol `23`** — Flutter migrator ob vsakem buildu prepiše gol literal nazaj na `flutter.minSdkVersion` (= 21, pod zahtevo); `maxOf(...)` izraza ne dira in zagotovi ≥23 (ugotovljeno 25. 7. 2026). Bazni URL prek `10.0.2.2` (emulator). **Dart-define je `API_URL` (NE `API_BASE_URL`!)** — release: `flutter build appbundle --release --dart-define=API_URL=https://gasilapp.eu/api/v1`. Glej `mobile/MOBILE.md`.
-- **SPIN integracija:** modul `backend/src/modules/spin` bere javni feed spin3.sos112.si (intervencije po občinah). Društvo izbere **več občin** (`organizations.spin_obcine` jsonb; nastavitev v webu Nastavitve→Društvo). **SPIN geo-omejuje na SI IP → prod (Hetzner DE) ga NE doseže.** Prod uporablja SI relay (Neoserv VPS `152.89.232.161`, nginx) prek env `SPIN_BASE_URL`; mobilni zavihek SPIN bere feed neposredno s telefona. Seznam občin je vgrajen statično (`spin/obcine.data.ts`). Glej `infra/DEPLOY.md §10` + `docs/MODULES.md §9a`.
-- **Beta razdeljevanje (Android):** podpisan APK na `gasilapp.eu/beta` (Caddy `handle_path /beta` iz host `/opt/gasilapp/downloads/`; stran `infra/beta/index.html`). Nov build: PowerShell iz `C:\gasilapp_mobile`, `flutter build apk --release --dart-define=API_URL=https://gasilapp.eu/api/v1`, nato `scp build/app/outputs/flutter-apk/app-release.apk root@178.104.67.229:/opt/gasilapp/downloads/gasilapp.apk`. Registracijske kode: `infra/DEPLOY.md §9`.
-- **SSH na strežnike (Windows):** ni `sshpass`/`plink`; za geslo-prijavo uporabi `python` + `paramiko` (`pip install paramiko`). Hetzner + SI relay imata dodan ključ `~/.ssh/id_ed25519` (`ssh root@<IP>` deluje brez gesla).
-- **NFC (oprema):** `nfc_manager` v4 (API se od v3 **prelomno** razlikuje — beri README nameščene verzije, ne piši po spominu). UID se bere prek `NfcTagAndroid.from(tag)?.id` (Android) oz. `MiFareIos.from(tag)?.identifier` (iOS); ovito v `mobile/lib/services/nfc_service.dart`. Na Androidu NFC seja teče vzporedno s kamero, na iOS jo prekrije sistemsko okno → tam ročni gumb. `equipment.nfc_uid` je **globalno** unikaten (ena fizična nalepka na svetu) — testi zato ne smejo uporabljati fiksnih UID-jev, ker razvojna baza ostane med zagoni.
-- **TypeORM in unije z `null`:** `@Column()` nad poljem tipa `string | null` odpove z `DataTypeNotSupportedError: Data type "Object"` — tip stolpca je treba navesti eksplicitno (`type: 'varchar'`).
-- **Brisljiva polja: `null`, ne `undefined`, sicer se roka/datuma ne da IZBRISATI.** Obrazci gradijo telo z vzorcem `serviceDue: data.serviceDue || undefined`. Prazno polje → `undefined` → `JSON.stringify` ga IZPUSTI → backend `Object.assign(entity, dto)` ga ne prepiše → stara vrednost ostane. Uporabnik ne more počistiti polja. Za polja, ki morajo biti **brisljiva** ob urejanju, pošlji `null` (`data.x || null`); nullable stolpec + `@IsOptional()` (ki spusti `null`) ga počistita. Vzorec je po vsem frontendu (`|| undefined`) — pri NOVEM brisljivem polju vedno `null`. Udarilo 2026-07-21 (servisni datum vozila, feedback Darjan).
-- **Git:** repo na `github.com/RomanEV-prog/GasilskaAPP` (branch `master`). CI (`.github/workflows/ci.yml`) poganja backend E2E + frontend build + `flutter analyze` ob push.
