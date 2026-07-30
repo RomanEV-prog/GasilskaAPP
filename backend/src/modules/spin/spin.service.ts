@@ -107,7 +107,7 @@ export class SpinService implements OnModuleInit {
         (
           await this.interventionsRepo.find({
             where: { spinGuid: In(items.map((i) => i.guid)) },
-            select: ['spinGuid'],
+            select: { spinGuid: true },
           })
         ).map((r) => r.spinGuid),
       );

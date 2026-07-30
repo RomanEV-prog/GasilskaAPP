@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as admin from 'firebase-admin';
+// firebase-admin v13+ je opustil imenski prostor `admin.*` — modularni API.
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 
 /**
  * Ovoj za Firebase Cloud Messaging.
@@ -26,9 +28,9 @@ export class FirebaseService implements OnModuleInit {
       return;
     }
 
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert({
           projectId,
           clientEmail,
           // .env hrani \n kot dobesedni niz.
@@ -65,7 +67,7 @@ export class FirebaseService implements OnModuleInit {
     for (let i = 0; i < tokens.length; i += FCM_BATCH_SIZE) {
       const batch = tokens.slice(i, i + FCM_BATCH_SIZE);
       try {
-        const response = await admin.messaging().sendEachForMulticast({
+        const response = await getMessaging().sendEachForMulticast({
           tokens: batch,
           notification: { title, body },
           data,

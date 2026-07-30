@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
@@ -55,12 +55,20 @@ export class AuthService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // Dostopni žeton je kratkoživ; refresh žeton dolgoživ in podpisan z ločeno skrivnostjo.
-  private get accessExpires(): string {
-    return this.config.get<string>('JWT_ACCESS_EXPIRES', '1h');
+  // Dostopni žeton je kratkoživ; refresh žeton dolgoživ in podpisan z ločeno
+  // skrivnostjo. Env vrednosti so nizi oblike '1h'/'30d' — novi jsonwebtoken
+  // tipi zahtevajo ms.StringValue, zato ozka pretvorba tipa.
+  private get accessExpires(): JwtSignOptions['expiresIn'] {
+    return this.config.get<string>(
+      'JWT_ACCESS_EXPIRES',
+      '1h',
+    ) as JwtSignOptions['expiresIn'];
   }
-  private get refreshExpires(): string {
-    return this.config.get<string>('JWT_REFRESH_EXPIRES', '30d');
+  private get refreshExpires(): JwtSignOptions['expiresIn'] {
+    return this.config.get<string>(
+      'JWT_REFRESH_EXPIRES',
+      '30d',
+    ) as JwtSignOptions['expiresIn'];
   }
   private get refreshSecret(): string {
     return (
@@ -157,7 +165,7 @@ export class AuthService {
   /** Javni seznam društev — za izbiro ob prijavi (samo id in ime). */
   async publicOrganizations(): Promise<{ id: string; name: string }[]> {
     const orgs = await this.orgsRepo.find({
-      select: ['id', 'name'],
+      select: { id: true, name: true },
       order: { name: 'ASC' },
     });
     return orgs.map((o) => ({ id: o.id, name: o.name }));

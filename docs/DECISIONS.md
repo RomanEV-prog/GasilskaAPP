@@ -201,4 +201,6 @@ brez zunanje TOTP knjižnice. Prijava z vklopljeno 2FA vrne kratkoživ (5 min)
 - [ ] Google/Apple/Outlook kalendar sync
 - [ ] GZS API integracija (export poročil)
 - [ ] 2FA zaslon v mobilni aplikaciji (backend jo že podpira)
-- [ ] Nadgradnja NestJS 10 → 11 (npm audit: tranzitivne ranljivosti)
+- [x] Nadgradnja NestJS 10 → 11 + TypeORM 1.1 + firebase-admin 14 + node:22
+      (30. 7. 2026; preostale audit ranljivosti so tranzitivne v Google SDK /
+      swagger, DoS razreda, brez popravka navzgor)

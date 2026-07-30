@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from '../organizations/organization.entity';
@@ -26,7 +26,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         // žeton dobi 1h (JWT_ACCESS_EXPIRES), ne 7 dni. Dostopni in refresh
         // žeton v AuthService itak podata svoj expiresIn (1h oz. 30d).
         signOptions: {
-          expiresIn: config.get<string>('JWT_ACCESS_EXPIRES', '1h'),
+          // Vrednost je iz env vedno niz oblike '1h'/'30d'; novi jsonwebtoken
+          // tipi zahtevajo ms.StringValue, zato ozka pretvorba tipa.
+          expiresIn: config.get<string>(
+            'JWT_ACCESS_EXPIRES',
+            '1h',
+          ) as JwtSignOptions['expiresIn'],
         },
       }),
     }),
