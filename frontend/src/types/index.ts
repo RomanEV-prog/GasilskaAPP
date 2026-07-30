@@ -66,6 +66,26 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+/** Odgovor na prijavo, ko ima račun vklopljeno 2FA — sledi vnos TOTP kode. */
+export interface TwoFactorChallenge {
+  requires2fa: true;
+  pendingToken: string;
+}
+
+export type LoginResult = LoginResponse | TwoFactorChallenge;
+
+export function isTwoFactorChallenge(
+  res: LoginResult,
+): res is TwoFactorChallenge {
+  return 'requires2fa' in res && res.requires2fa === true;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  enabledAt: string | null;
+  backupCodesRemaining: number;
+}
+
 export interface User {
   id: string;
   organizationId: string;

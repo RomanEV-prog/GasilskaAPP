@@ -5,6 +5,7 @@ process.env.REGISTRATION_KEY = 'test-master-key';
 
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { createHmac } from 'crypto';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
@@ -188,6 +189,172 @@ describe('GasilApp E2E', () => {
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: 'ni.veljaven.zeton' })
         .expect(401);
+    });
+  });
+
+  describe('2FA (TOTP)', () => {
+    const email2fa = `dvofaktor@e2e-a-${stamp}.si`;
+    let token2fa = '';
+    let secret2fa = '';
+    let backupCodes: string[] = [];
+
+    // RFC 6238 TOTP (SHA-1, 6 mest, 30 s) — brez uvoza otplib, ker Jest
+    // njegovih ESM odvisnosti (@scure/base) ne zna transformirati.
+    const base32Decode = (input: string): Buffer => {
+      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+      let bits = 0;
+      let value = 0;
+      const out: number[] = [];
+      for (const ch of input.replace(/=+$/, '').toUpperCase()) {
+        value = (value << 5) | alphabet.indexOf(ch);
+        bits += 5;
+        if (bits >= 8) {
+          out.push((value >>> (bits - 8)) & 0xff);
+          bits -= 8;
+        }
+      }
+      return Buffer.from(out);
+    };
+    const freshCode = (): string => {
+      const counter = Math.floor(Date.now() / 30_000);
+      const msg = Buffer.alloc(8);
+      msg.writeBigUInt64BE(BigInt(counter));
+      const digest = createHmac('sha1', base32Decode(secret2fa))
+        .update(msg)
+        .digest();
+      const offset = digest[digest.length - 1] & 0xf;
+      const code = (digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+      return code.toString().padStart(6, '0');
+    };
+
+    beforeAll(async () => {
+      await request(http)
+        .post('/api/v1/users')
+        .set(auth(tokenA))
+        .send({
+          email: email2fa,
+          password: pass,
+          firstName: 'Dvo',
+          lastName: 'Faktor',
+          roles: ['member'],
+        })
+        .expect(201);
+      const res = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      token2fa = res.body.data.accessToken;
+    });
+
+    it('setup vrne skrivnost in QR kodo', async () => {
+      const res = await request(http)
+        .post('/api/v1/auth/2fa/setup')
+        .set(auth(token2fa))
+        .expect(200);
+      expect(res.body.data.secret).toBeDefined();
+      expect(res.body.data.qrDataUrl).toMatch(/^data:image\/png/);
+      secret2fa = res.body.data.secret;
+    });
+
+    it('enable z napačno kodo vrne 401', async () => {
+      await request(http)
+        .post('/api/v1/auth/2fa/enable')
+        .set(auth(token2fa))
+        .send({ code: '000000' })
+        .expect(401);
+    });
+
+    it('enable s pravilno kodo vklopi 2FA in vrne 8 rezervnih kod', async () => {
+      const res = await request(http)
+        .post('/api/v1/auth/2fa/enable')
+        .set(auth(token2fa))
+        .send({ code: await freshCode() })
+        .expect(200);
+      expect(res.body.data.backupCodes).toHaveLength(8);
+      backupCodes = res.body.data.backupCodes;
+    });
+
+    it('prijava z geslom zdaj vrne izziv brez žetonov', async () => {
+      const res = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      expect(res.body.data.requires2fa).toBe(true);
+      expect(res.body.data.pendingToken).toBeDefined();
+      expect(res.body.data.accessToken).toBeUndefined();
+    });
+
+    it('verify z napačno kodo vrne 401', async () => {
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      await request(http)
+        .post('/api/v1/auth/2fa/verify')
+        .send({ pendingToken: login.body.data.pendingToken, code: '000000' })
+        .expect(401);
+    });
+
+    it('verify s TOTP kodo vrne polni par žetonov', async () => {
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      const res = await request(http)
+        .post('/api/v1/auth/2fa/verify')
+        .send({
+          pendingToken: login.body.data.pendingToken,
+          code: await freshCode(),
+        })
+        .expect(200);
+      expect(res.body.data.accessToken).toBeDefined();
+      expect(res.body.data.refreshToken).toBeDefined();
+    });
+
+    it('rezervna koda deluje natanko enkrat', async () => {
+      const login1 = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      await request(http)
+        .post('/api/v1/auth/2fa/verify')
+        .send({ pendingToken: login1.body.data.pendingToken, code: backupCodes[0] })
+        .expect(200);
+
+      const login2 = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      await request(http)
+        .post('/api/v1/auth/2fa/verify')
+        .send({ pendingToken: login2.body.data.pendingToken, code: backupCodes[0] })
+        .expect(401);
+    });
+
+    it('pending žetona ni mogoče uporabiti kot dostopni žeton', async () => {
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      await request(http)
+        .get('/api/v1/users')
+        .set(auth(login.body.data.pendingToken))
+        .expect(401);
+    });
+
+    it('disable z geslom in kodo izklopi 2FA — prijava spet neposredna', async () => {
+      // Access žeton je iz časa pred vklopom, a je še veljaven (JWT).
+      await request(http)
+        .post('/api/v1/auth/2fa/disable')
+        .set(auth(token2fa))
+        .send({ password: pass, code: await freshCode() })
+        .expect(200);
+      const res = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: email2fa, password: pass })
+        .expect(200);
+      expect(res.body.data.accessToken).toBeDefined();
+      expect(res.body.data.requires2fa).toBeUndefined();
     });
   });
 

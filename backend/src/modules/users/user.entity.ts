@@ -117,6 +117,33 @@ export class User {
   @Column({ name: 'password_reset_expires', type: 'timestamptz', nullable: true, select: false })
   passwordResetExpires?: Date;
 
+  /** TOTP skrivnost (base32). Nikoli ne serializiraj v API odgovorih. */
+  @Column({
+    name: 'totp_secret',
+    type: 'varchar',
+    nullable: true,
+    length: 64,
+    select: false,
+  })
+  totpSecret?: string | null;
+
+  /** 2FA je vklopljena šele, ko uporabnik potrdi prvo kodo. */
+  @Column({ name: 'totp_enabled_at', type: 'timestamptz', nullable: true })
+  totpEnabledAt?: Date | null;
+
+  /** JSON seznam SHA-256 hashev enkratnih rezervnih kod. Ne serializiraj. */
+  @Column({
+    name: 'totp_backup_codes',
+    type: 'text',
+    nullable: true,
+    select: false,
+  })
+  totpBackupCodes?: string | null;
+
+  /** Razveljavitev refresh žetonov — sprememba gesla/2FA jo poveča. */
+  @Column({ name: 'token_version', type: 'int', default: 0 })
+  tokenVersion: number;
+
   @OneToMany(() => UserRole, (role) => role.user, { cascade: true })
   roles?: UserRole[];
 

@@ -65,6 +65,13 @@ CREATE TABLE users (
   email_verified_at     TIMESTAMPTZ,
   password_reset_token  VARCHAR(255),
   password_reset_expires TIMESTAMPTZ,
+  -- 2FA (TOTP): skrivnost je nastavljena ob setup, vklopljena šele ob potrditvi kode
+  totp_secret           VARCHAR(64),
+  totp_enabled_at       TIMESTAMPTZ,
+  -- JSON seznam SHA-256 hashev enkratnih rezervnih kod
+  totp_backup_codes     TEXT,
+  -- Razveljavitev refresh žetonov: sprememba gesla/2FA jo poveča
+  token_version         INTEGER NOT NULL DEFAULT 0,
   created_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_at            TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(organization_id, email),

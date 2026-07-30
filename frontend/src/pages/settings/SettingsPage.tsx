@@ -1,5 +1,6 @@
 import { Card } from '../../components/ui';
 import { ChangePasswordCard } from './ChangePasswordCard';
+import { TwoFactorCard } from './TwoFactorCard';
 import { useUi, type NavStyle } from '../../stores/ui.store';
 import { OrganizationSettings } from './OrganizationSettings';
 import { SpinNotificationsCard } from './SpinNotificationsCard';
@@ -96,6 +97,10 @@ export function SettingsPage() {
 
       <div className="mt-6">
         <ChangePasswordCard />
+      </div>
+
+      <div className="mt-6">
+        <TwoFactorCard />
       </div>
 
       <div className="mt-6">

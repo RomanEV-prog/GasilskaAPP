@@ -7,7 +7,13 @@ import {
   type ReactNode,
 } from 'react';
 import { authApi } from '../api/auth.api';
-import { LEADERSHIP_ROLES, type AuthUser, type LoginResponse } from '../types';
+import {
+  isTwoFactorChallenge,
+  LEADERSHIP_ROLES,
+  type AuthUser,
+  type LoginResponse,
+  type TwoFactorChallenge,
+} from '../types';
 
 interface RegisterData {
   activationCode: string;
@@ -24,11 +30,14 @@ interface AuthContextValue {
   isLeadership: boolean;
   /** Upravitelj platforme — vidi stran /platform (izdaja aktivacijskih kod). */
   isSuperAdmin: boolean;
+  /** Vrne izziv, če ima račun vklopljeno 2FA — takrat sledi verify2fa. */
   login: (
     username: string,
     password: string,
     organizationId?: string,
-  ) => Promise<void>;
+  ) => Promise<TwoFactorChallenge | undefined>;
+  /** Drugi korak prijave: TOTP ali rezervna koda. */
+  verify2fa: (pendingToken: string, code: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
 }
@@ -58,7 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (username: string, password: string, organizationId?: string) => {
-      persistSession(await authApi.login(username, password, organizationId));
+      const res = await authApi.login(username, password, organizationId);
+      if (isTwoFactorChallenge(res)) return res;
+      persistSession(res);
+      return undefined;
+    },
+    [persistSession],
+  );
+
+  const verify2fa = useCallback(
+    async (pendingToken: string, code: string) => {
+      persistSession(await authApi.verify2fa(pendingToken, code));
     },
     [persistSession],
   );
@@ -84,10 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user?.roles.some((r) => LEADERSHIP_ROLES.includes(r)) ?? false,
       isSuperAdmin: user?.roles.includes('super_admin') ?? false,
       login,
+      verify2fa,
       register,
       logout,
     }),
-    [user, login, register, logout],
+    [user, login, verify2fa, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

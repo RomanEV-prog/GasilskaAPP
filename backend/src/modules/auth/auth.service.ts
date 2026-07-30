@@ -8,6 +8,13 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
+import { createHash, randomBytes } from 'crypto';
+import { toDataURL } from 'qrcode';
+import {
+  buildOtpauthUri,
+  generateTotpSecret,
+  verifyTotpCode,
+} from './totp.util';
 import { DataSource, IsNull, Repository } from 'typeorm';
 import { SystemRole } from '../../common/enums/roles.enum';
 import { usernameBase } from '../../common/utils/username.util';
@@ -21,6 +28,17 @@ import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { addMonths } from '../../common/utils/subscription.util';
 
 const BCRYPT_ROUNDS = 12;
+
+const sha256 = (value: string): string =>
+  createHash('sha256').update(value).digest('hex');
+
+/** Rezervna koda oblike XXXX-XXXX (brez dvoumnih znakov). */
+function generateBackupCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(8);
+  const chars = Array.from(bytes, (b) => alphabet[b % alphabet.length]);
+  return `${chars.slice(0, 4).join('')}-${chars.slice(4).join('')}`;
+}
 
 @Injectable()
 export class AuthService {
@@ -64,8 +82,18 @@ export class AuthService {
 
   private signRefreshToken(user: User): string {
     return this.jwtService.sign(
-      { sub: user.id, type: 'refresh' },
+      // v = token_version: sprememba gesla/2FA razveljavi vse izdane refresh
+      // žetone naenkrat (odjava z vseh naprav).
+      { sub: user.id, type: 'refresh', v: user.tokenVersion ?? 0 },
       { secret: this.refreshSecret, expiresIn: this.refreshExpires },
+    );
+  }
+
+  /** Kratkoživ vmesni žeton med geslom in TOTP kodo (drugi korak prijave). */
+  private signPendingToken(user: User): string {
+    return this.jwtService.sign(
+      { sub: user.id, type: '2fa' },
+      { secret: this.refreshSecret, expiresIn: '5m' },
     );
   }
 
@@ -91,7 +119,7 @@ export class AuthService {
    * zato ga ni mogoče uporabiti kot dostopni žeton.
    */
   async refresh(refreshToken: string) {
-    let decoded: { sub?: string; type?: string };
+    let decoded: { sub?: string; type?: string; v?: number };
     try {
       decoded = this.jwtService.verify(refreshToken, {
         secret: this.refreshSecret,
@@ -113,6 +141,13 @@ export class AuthService {
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Uporabnik ni na voljo.');
+    }
+
+    // Starejši žetoni brez `v` se štejejo kot verzija 0 (izdani pred uvedbo).
+    if ((decoded.v ?? 0) !== (user.tokenVersion ?? 0)) {
+      throw new UnauthorizedException(
+        'Seja je bila preklicana. Prijavite se znova.',
+      );
     }
 
     const roles = (user.roles ?? []).map((r) => r.role);
@@ -138,6 +173,7 @@ export class AuthService {
     const qb = this.usersRepo
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
+      .addSelect('user.totpSecret')
       .leftJoinAndSelect('user.roles', 'role');
 
     if (identifier.includes('@')) {
@@ -165,11 +201,210 @@ export class AuthService {
       throw new UnauthorizedException('Napačno uporabniško ime ali geslo.');
     }
 
+    // 2FA: geslo je pravilno, a polni žetoni se izdajo šele po TOTP kodi.
+    if (user.totpEnabledAt && user.totpSecret) {
+      return {
+        requires2fa: true as const,
+        pendingToken: this.signPendingToken(user),
+      };
+    }
+
     user.lastLoginAt = new Date();
     await this.usersRepo.update(user.id, { lastLoginAt: user.lastLoginAt });
 
     const roles = (user.roles ?? []).map((r) => r.role);
     return this.buildAuthResponse(user, roles);
+  }
+
+  /**
+   * Drugi korak prijave: vmesni žeton + TOTP koda (ali rezervna koda)
+   * → polni par žetonov.
+   */
+  async verify2fa(pendingToken: string, code: string) {
+    let decoded: { sub?: string; type?: string };
+    try {
+      decoded = this.jwtService.verify(pendingToken, {
+        secret: this.refreshSecret,
+      });
+    } catch {
+      throw new UnauthorizedException(
+        'Prijava je potekla. Začnite znova z geslom.',
+      );
+    }
+    if (decoded.type !== '2fa' || !decoded.sub) {
+      throw new UnauthorizedException('Neveljaven žeton.');
+    }
+
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.totpSecret')
+      .addSelect('user.totpBackupCodes')
+      .leftJoinAndSelect('user.roles', 'role')
+      .where('user.id = :id', { id: decoded.sub })
+      .getOne();
+
+    if (!user || !user.isActive || !user.totpEnabledAt || !user.totpSecret) {
+      throw new UnauthorizedException('Uporabnik ni na voljo.');
+    }
+
+    const ok = await this.consumeSecondFactor(user, code);
+    if (!ok) {
+      throw new UnauthorizedException('Napačna koda. Poskusite znova.');
+    }
+
+    user.lastLoginAt = new Date();
+    await this.usersRepo.update(user.id, { lastLoginAt: user.lastLoginAt });
+
+    const roles = (user.roles ?? []).map((r) => r.role);
+    return this.buildAuthResponse(user, roles);
+  }
+
+  /**
+   * Preveri TOTP kodo; če ne ustreza, poskusi še enkratno rezervno kodo
+   * (porabljena se izbriše). Zahteva naloženi polji totpSecret/totpBackupCodes.
+   */
+  private async consumeSecondFactor(user: User, code: string): Promise<boolean> {
+    const normalized = code.replace(/\s/g, '').toUpperCase();
+
+    if (user.totpSecret && verifyTotpCode(user.totpSecret, normalized)) {
+      return true;
+    }
+
+    if (user.totpBackupCodes) {
+      let hashes: string[] = [];
+      try {
+        hashes = JSON.parse(user.totpBackupCodes) as string[];
+      } catch {
+        return false;
+      }
+      const hash = sha256(normalized);
+      if (hashes.includes(hash)) {
+        const remaining = hashes.filter((h) => h !== hash);
+        await this.usersRepo.update(user.id, {
+          totpBackupCodes: JSON.stringify(remaining),
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * 1. korak vklopa 2FA: ustvari skrivnost in vrne QR kodo.
+   * 2FA še NI vklopljena — vklopi jo šele potrjena koda (enable2fa).
+   */
+  async setup2fa(userId: string) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Uporabnik ni na voljo.');
+    }
+    if (user.totpEnabledAt) {
+      throw new BadRequestException(
+        'Dvojna avtentikacija je že vklopljena. Za novo skrivnost jo najprej izklopite.',
+      );
+    }
+
+    const secret = generateTotpSecret();
+    await this.usersRepo.update(userId, { totpSecret: secret });
+
+    const label = user.email || user.username;
+    const otpauthUrl = buildOtpauthUri('Plamen', label, secret);
+    const qrDataUrl = await toDataURL(otpauthUrl);
+    return { secret, otpauthUrl, qrDataUrl };
+  }
+
+  /**
+   * 2. korak vklopa 2FA: potrdi kodo iz aplikacije → vklop + rezervne kode.
+   * Rezervne kode se vrnejo SAMO tukaj (v bazi so le hashi).
+   */
+  async enable2fa(userId: string, code: string) {
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.totpSecret')
+      .where('user.id = :id', { id: userId })
+      .getOne();
+
+    if (!user || !user.totpSecret) {
+      throw new BadRequestException(
+        'Najprej ustvarite QR kodo (korak nastavitve).',
+      );
+    }
+    if (user.totpEnabledAt) {
+      throw new BadRequestException('Dvojna avtentikacija je že vklopljena.');
+    }
+    const valid = verifyTotpCode(user.totpSecret, code.replace(/\s/g, ''));
+    if (!valid) {
+      throw new UnauthorizedException('Napačna koda. Poskusite znova.');
+    }
+
+    const backupCodes = Array.from({ length: 8 }, generateBackupCode);
+    await this.usersRepo.update(userId, {
+      totpEnabledAt: new Date(),
+      totpBackupCodes: JSON.stringify(backupCodes.map(sha256)),
+      // Razveljavi obstoječe refresh žetone — stare seje morajo skozi 2FA.
+      tokenVersion: () => 'token_version + 1',
+    });
+    return {
+      message: 'Dvojna avtentikacija je vklopljena.',
+      backupCodes,
+    };
+  }
+
+  /** Izklop 2FA — zahteva geslo IN veljavno kodo (TOTP ali rezervno). */
+  async disable2fa(userId: string, password: string, code: string) {
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .addSelect('user.totpSecret')
+      .addSelect('user.totpBackupCodes')
+      .where('user.id = :id', { id: userId })
+      .getOne();
+
+    if (!user || !user.totpEnabledAt) {
+      throw new BadRequestException('Dvojna avtentikacija ni vklopljena.');
+    }
+    const passwordOk = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordOk) {
+      throw new UnauthorizedException('Napačno geslo.');
+    }
+    const codeOk = await this.consumeSecondFactor(user, code);
+    if (!codeOk) {
+      throw new UnauthorizedException('Napačna koda. Poskusite znova.');
+    }
+
+    await this.usersRepo.update(userId, {
+      totpSecret: null,
+      totpEnabledAt: null,
+      totpBackupCodes: null,
+      tokenVersion: () => 'token_version + 1',
+    });
+    return { message: 'Dvojna avtentikacija je izklopljena.' };
+  }
+
+  /** Stanje 2FA za prijavljenega uporabnika (za stran z nastavitvami). */
+  async get2faStatus(userId: string) {
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.totpBackupCodes')
+      .where('user.id = :id', { id: userId })
+      .getOne();
+    if (!user) {
+      throw new UnauthorizedException('Uporabnik ni na voljo.');
+    }
+    let backupCodesRemaining = 0;
+    if (user.totpBackupCodes) {
+      try {
+        backupCodesRemaining = (JSON.parse(user.totpBackupCodes) as string[])
+          .length;
+      } catch {
+        backupCodesRemaining = 0;
+      }
+    }
+    return {
+      enabled: !!user.totpEnabledAt,
+      enabledAt: user.totpEnabledAt ?? null,
+      backupCodesRemaining,
+    };
   }
 
   /**
@@ -274,10 +509,12 @@ export class AuthService {
       where: { email: email.toLowerCase() },
     });
     if (user) {
-      const token = await bcrypt.hash(`${user.id}:${Date.now()}`, 10);
+      // Kriptografsko naključen žeton; v bazi je le SHA-256 hash — kraja
+      // vsebine baze ne omogoči prevzema računov prek reset žetonov.
+      const token = randomBytes(32).toString('hex');
       const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
       await this.usersRepo.update(user.id, {
-        passwordResetToken: token,
+        passwordResetToken: sha256(token),
         passwordResetExpires: expires,
       });
       // TODO: pošlji e-pošto z reset povezavo (Notifications modul).
@@ -294,7 +531,7 @@ export class AuthService {
       .createQueryBuilder('user')
       .addSelect('user.passwordResetToken')
       .addSelect('user.passwordResetExpires')
-      .where('user.passwordResetToken = :token', { token })
+      .where('user.passwordResetToken = :token', { token: sha256(token) })
       .getOne();
 
     if (
@@ -310,6 +547,8 @@ export class AuthService {
       passwordHash,
       passwordResetToken: () => 'NULL',
       passwordResetExpires: () => 'NULL',
+      // Nova prijava povsod — ukradene seje po resetu gesla ne preživijo.
+      tokenVersion: () => 'token_version + 1',
     });
     return { message: 'Geslo je bilo uspešno posodobljeno.' };
   }

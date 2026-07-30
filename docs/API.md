@@ -24,6 +24,13 @@ pomočnik za zaščito dihal (oprema).
 | POST | `/auth/reset-password` | Nastavi novo geslo | ❌ |
 | POST | `/auth/registration-codes` | Izdaj aktivacijske kode (glava `x-master-key`) | 🔑 |
 | PATCH | `/auth/fcm-token` | Posodobi Firebase token | ✅ |
+| POST | `/auth/refresh` | Zamenjaj refresh žeton za nov par | ❌ |
+| POST | `/auth/change-password` | Sprememba gesla prijavljenega | ✅ |
+| POST | `/auth/2fa/verify` | 2. korak prijave: TOTP/rezervna koda | ❌ |
+| POST | `/auth/2fa/setup` | Ustvari 2FA skrivnost + QR | ✅ |
+| POST | `/auth/2fa/enable` | Vklopi 2FA (vrne 8 rezervnih kod) | ✅ |
+| POST | `/auth/2fa/disable` | Izklopi 2FA (geslo + koda) | ✅ |
+| GET | `/auth/2fa/status` | Stanje 2FA | ✅ |
 
 ### POST `/auth/login`
 ```json
@@ -54,6 +61,26 @@ pomočnik za zaščito dihal (oprema).
 Aktivacijska koda je obvezna. Njen `validMonths` določi trajanje naročnine
 novega društva (12 = letna, 2 = preizkus, brez vrednosti = neomejeno).
 Neveljavna, preklicana ali že porabljena koda → **401**.
+
+### Dvojna avtentikacija — 2FA (od 30. 7. 2026)
+
+TOTP po RFC 6238 (Google Authenticator, Aegis, 1Password ...). Vklop:
+`POST /auth/2fa/setup` (vrne `secret`, `otpauthUrl`, `qrDataUrl`) →
+`POST /auth/2fa/enable` s kodo iz aplikacije → odgovor vsebuje **8 enkratnih
+rezervnih kod** (prikažejo se SAMO takrat; v bazi so le SHA-256 hashi).
+
+**Prijava z vklopljeno 2FA:** `POST /auth/login` s pravilnim geslom NE vrne
+žetonov, ampak `{ "requires2fa": true, "pendingToken": "..." }` (5 min).
+Sledi `POST /auth/2fa/verify` s `pendingToken` + kodo (TOTP ali rezervna) →
+polni par žetonov. Pending žetona ni mogoče uporabiti kot dostopni žeton.
+
+**Preklic sej (`token_version`):** vklop/izklop 2FA, sprememba in reset gesla
+povečajo `users.token_version` — vsi izdani refresh žetoni s staro verzijo so
+razveljavljeni (401 na `/auth/refresh`), dostopni žetoni ugasnejo najpozneje
+po `JWT_ACCESS_EXPIRES` (1 h).
+
+⚠️ **Mobilna aplikacija 2FA prijave še ne podpira** — član z vklopljeno 2FA se
+v mobilno app ne more prijaviti, dokler ta ne dobi zaslona za vnos kode.
 
 ---
 

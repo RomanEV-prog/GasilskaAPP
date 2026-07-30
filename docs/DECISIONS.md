@@ -159,13 +159,46 @@ zamenjava ne zahteva sprememb kode.
 
 ---
 
+## ADR-011: 2FA (TOTP) z vmesnim žetonom in lastno RFC 6238 implementacijo
+
+**Datum:** 30. 7. 2026 · **Status:** sprejeto
+
+**Odločitev:** Dvojna avtentikacija je TOTP (RFC 6238, SHA-1/6 mest/30 s) z
+lastno implementacijo v `backend/src/modules/auth/totp.util.ts` (node `crypto`),
+brez zunanje TOTP knjižnice. Prijava z vklopljeno 2FA vrne kratkoživ (5 min)
+**pending žeton** namesto polnih žetonov; polni par izda šele `/auth/2fa/verify`.
+
+**Razlogi:**
+- `otplib` v13 in njegove odvisnosti (`@scure/base` v2) so **ESM-only** — lomijo
+  se v Jest (CJS transform) in so tvegane na prod `node:20` (`require(esm)`).
+  TOTP jedro je ~40 vrstic nad `createHmac`; e2e test ima **neodvisno**
+  implementacijo, ki jo navzkrižno preverja.
+- Pending žeton je podpisan z refresh skrivnostjo in tipom `2fa` — ni ga mogoče
+  uporabiti kot dostopni ali refresh žeton (preverjeno v e2e).
+- Rezervne kode (8, enkratne) so v bazi samo kot SHA-256 hashi; prikažejo se
+  enkrat ob vklopu.
+- `users.token_version` v refresh žetonu: sprememba gesla/2FA razveljavi vse
+  seje naenkrat, brez strežniške evidence žetonov (stateless ostane).
+
+**Kompromisi (zavestni):**
+- SHA-1 v TOTP je standard (Google Authenticator ne podpira drugega) in za
+  30-sekundne enkratne kode ni problematičen.
+- Brez strežniške evidence refresh žetonov ni odjave *ene same* naprave —
+  samo »odjavi povsod« (bump verzije). Za ta obseg dovolj.
+- Mobilna aplikacija zaslona za 2FA še nima — član z vklopljeno 2FA se vanjo
+  ne more prijaviti (backend vrne izziv, app pa ga ne zna prikazati).
+
+---
+
 ## TODO za V2
 
-- [ ] Refresh tokeni
+- [x] Refresh tokeni (rotacija + `token_version` preklic — 30. 7. 2026)
+- [x] Rate limiting (globalno 100/min, prijava 5/min)
 - [ ] Row Level Security na PostgreSQL
 - [ ] Bull Queue za email/push opomniki namesto cron
 - [ ] WebSocket za real-time razpoložljivost
 - [ ] S3 file storage
 - [ ] Google/Apple/Outlook kalendar sync
-- [ ] Rate limiting
 - [ ] GZS API integracija (export poročil)
+- [ ] 2FA zaslon v mobilni aplikaciji (backend jo že podpira)
+- [ ] Nadgradnja NestJS 10 → 11 (npm audit: tranzitivne ranljivosti)

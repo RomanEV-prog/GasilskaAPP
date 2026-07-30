@@ -3,6 +3,26 @@
 {$DOMAIN} {
 	encode gzip
 
+	# ── Varnostni headerji (za vse odgovore) ──────────────────────────────
+	header {
+		# HTTPS prisilno tudi za prihodnje obiske (1 leto, s poddomenami)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Brskalnik ne ugiba tipov datotek (MIME sniffing off)
+		X-Content-Type-Options "nosniff"
+		# Aplikacije ni dovoljeno vgraditi v tuj iframe (clickjacking)
+		X-Frame-Options "DENY"
+		# Referrer le znotraj iste domene
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Izklopi občutljive API-je brskalnika, ki jih app ne rabi
+		Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+		# CSP: skripte le lastne + gstatic (Firebase SW importScripts);
+		# connect vključuje Firebase Installations/FCM za web push.
+		# style 'unsafe-inline' rabijo React knjižnice z inline stili.
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://www.gstatic.com; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		# Odstrani izdajo strežnika
+		-Server
+	}
+
 	# API + Swagger → NestJS backend
 	handle /api/* {
 		reverse_proxy backend:4000

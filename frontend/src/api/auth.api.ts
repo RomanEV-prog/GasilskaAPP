@@ -1,4 +1,8 @@
-import type { LoginResponse } from '../types';
+import type {
+  LoginResponse,
+  LoginResult,
+  TwoFactorStatus,
+} from '../types';
 import api from './client';
 
 export const authApi = {
@@ -6,8 +10,27 @@ export const authApi = {
     username: string,
     password: string,
     organizationId?: string,
-  ): Promise<LoginResponse> =>
+  ): Promise<LoginResult> =>
     api.post('/auth/login', { username, password, organizationId }),
+
+  verify2fa: (pendingToken: string, code: string): Promise<LoginResponse> =>
+    api.post('/auth/2fa/verify', { pendingToken, code }),
+
+  get2faStatus: (): Promise<TwoFactorStatus> => api.get('/auth/2fa/status'),
+
+  setup2fa: (): Promise<{
+    secret: string;
+    otpauthUrl: string;
+    qrDataUrl: string;
+  }> => api.post('/auth/2fa/setup'),
+
+  enable2fa: (
+    code: string,
+  ): Promise<{ message: string; backupCodes: string[] }> =>
+    api.post('/auth/2fa/enable', { code }),
+
+  disable2fa: (password: string, code: string): Promise<{ message: string }> =>
+    api.post('/auth/2fa/disable', { password, code }),
 
   publicOrganizations: (): Promise<{ id: string; name: string }[]> =>
     api.get('/auth/organizations'),

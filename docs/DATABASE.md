@@ -96,8 +96,12 @@ CREATE TABLE users (
   fcm_token             VARCHAR(500),
   last_login_at         TIMESTAMPTZ,
   email_verified_at     TIMESTAMPTZ,
-  password_reset_token  VARCHAR(255),
+  password_reset_token  VARCHAR(255),   -- SHA-256 hash žetona (ne žeton sam)
   password_reset_expires TIMESTAMPTZ,
+  totp_secret           VARCHAR(64),    -- 2FA: base32 TOTP skrivnost
+  totp_enabled_at       TIMESTAMPTZ,    -- 2FA vklopljena šele ob potrjeni kodi
+  totp_backup_codes     TEXT,           -- JSON seznam SHA-256 hashev rezervnih kod
+  token_version         INTEGER NOT NULL DEFAULT 0, -- preklic refresh žetonov
   created_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_at            TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(organization_id, email)

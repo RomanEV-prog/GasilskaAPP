@@ -110,5 +110,36 @@ export class ResetPasswordDto {
   password: string;
 }
 
+export class Verify2faDto {
+  @ApiProperty({ description: 'Vmesni žeton iz odgovora na prijavo (requires2fa).' })
+  @IsString()
+  @MinLength(1, { message: 'Manjka vmesni žeton.' })
+  pendingToken: string;
+
+  @ApiProperty({ example: '123456', description: 'TOTP koda ali rezervna koda.' })
+  @IsString()
+  @MinLength(6, { message: 'Vnesite kodo iz aplikacije.' })
+  code: string;
+}
+
+export class Enable2faDto {
+  @ApiProperty({ example: '123456', description: 'Koda iz avtentikacijske aplikacije.' })
+  @IsString()
+  @MinLength(6, { message: 'Vnesite kodo iz aplikacije.' })
+  code: string;
+}
+
+export class Disable2faDto {
+  @ApiProperty({ description: 'Trenutno geslo.' })
+  @IsString()
+  @MinLength(1, { message: 'Vnesite geslo.' })
+  password: string;
+
+  @ApiProperty({ example: '123456', description: 'TOTP koda ali rezervna koda.' })
+  @IsString()
+  @MinLength(6, { message: 'Vnesite kodo iz aplikacije.' })
+  code: string;
+}
+
 // Izdaja kod je v PlatformModule (IssueCodesDto) — enak DTO uporabljata
 // endpoint z master ključem in stran za upravitelja platforme.

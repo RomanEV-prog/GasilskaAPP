@@ -24,9 +24,13 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, verify2fa } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
+  // 2FA drugi korak: po pravilnem geslu backend vrne vmesni žeton.
+  const [pendingToken, setPendingToken] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   // Javni seznam društev; zadnja izbira se zapomni za naslednjič.
   const { data: organizations } = useQuery({
@@ -48,7 +52,7 @@ export function LoginPage() {
   const onSubmit = async (data: FormData) => {
     setServerError('');
     try {
-      await login(
+      const challenge = await login(
         data.username,
         data.password,
         data.organizationId || undefined,
@@ -56,9 +60,27 @@ export function LoginPage() {
       if (data.organizationId) {
         localStorage.setItem('lastOrganizationId', data.organizationId);
       }
+      if (challenge) {
+        setPendingToken(challenge.pendingToken);
+        return;
+      }
       navigate('/');
     } catch (err) {
       setServerError(errorMessage(err));
+    }
+  };
+
+  const onVerify2fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setServerError('');
+    setVerifying(true);
+    try {
+      await verify2fa(pendingToken, totpCode);
+      navigate('/');
+    } catch (err) {
+      setServerError(errorMessage(err));
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -77,6 +99,46 @@ export function LoginPage() {
           </p>
         </div>
 
+        {pendingToken ? (
+          <form onSubmit={onVerify2fa} className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Vnesite 6-mestno kodo iz avtentikacijske aplikacije (ali rezervno
+              kodo).
+            </p>
+            <Input
+              label="Koda"
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              placeholder="123456"
+              autoFocus
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+            />
+            {serverError && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {serverError}
+              </p>
+            )}
+            <Button
+              type="submit"
+              disabled={verifying || totpCode.trim().length < 6}
+              className="w-full"
+            >
+              {verifying ? 'Preverjanje ...' : 'Potrdi'}
+            </Button>
+            <button
+              type="button"
+              className="w-full text-center text-sm text-gray-500 hover:underline"
+              onClick={() => {
+                setPendingToken('');
+                setTotpCode('');
+                setServerError('');
+              }}
+            >
+              Nazaj na prijavo
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Select
             label="Društvo"
@@ -115,6 +177,7 @@ export function LoginPage() {
             {isSubmitting ? 'Prijavljanje ...' : 'Prijava'}
           </Button>
         </form>
+        )}
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Nimate računa?{' '}

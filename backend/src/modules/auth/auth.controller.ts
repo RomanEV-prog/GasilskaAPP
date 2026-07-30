@@ -9,6 +9,7 @@ import {
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
+import { createHash, timingSafeEqual } from 'crypto';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -24,12 +25,15 @@ import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
+  Disable2faDto,
+  Enable2faDto,
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
   ResetPasswordDto,
   UpdateFcmTokenDto,
+  Verify2faDto,
 } from './dto/auth.dto';
 
 @ApiTags('auth')
@@ -56,6 +60,56 @@ export class AuthController {
   @ApiOperation({ summary: 'Prijava uporabnika' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  // Drugi korak prijave pri vklopljeni 2FA. Enaka stroga meja kot prijava.
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Potrdi TOTP kodo (drugi korak prijave)' })
+  verify2fa(@Body() dto: Verify2faDto) {
+    return this.authService.verify2fa(dto.pendingToken, dto.code);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('2fa/setup')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Ustvari 2FA skrivnost in QR kodo' })
+  setup2fa(@CurrentUser('userId') userId: string) {
+    return this.authService.setup2fa(userId);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('2fa/enable')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Vklopi 2FA (potrdi kodo, vrne rezervne kode)' })
+  enable2fa(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: Enable2faDto,
+  ) {
+    return this.authService.enable2fa(userId, dto.code);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('2fa/disable')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Izklopi 2FA (geslo + koda)' })
+  disable2fa(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: Disable2faDto,
+  ) {
+    return this.authService.disable2fa(userId, dto.password, dto.code);
+  }
+
+  @Get('2fa/status')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Stanje 2FA prijavljenega uporabnika' })
+  get2faStatus(@CurrentUser('userId') userId: string) {
+    return this.authService.get2faStatus(userId);
   }
 
   @Public()
@@ -93,7 +147,16 @@ export class AuthController {
     @Body() dto: IssueCodesDto,
   ) {
     const expected = process.env.REGISTRATION_KEY;
-    if (!expected || masterKey !== expected) {
+    // Primerjava prek hashev v konstantnem času — preprečuje timing napad,
+    // hkrati reši različni dolžini vhodov (timingSafeEqual zahteva enaki).
+    const provided = masterKey ?? '';
+    const match =
+      !!expected &&
+      timingSafeEqual(
+        createHash('sha256').update(provided).digest(),
+        createHash('sha256').update(expected).digest(),
+      );
+    if (!match) {
       throw new UnauthorizedException('Neveljaven master ključ.');
     }
     const issued = await this.platformService.issueCodes(dto, null);

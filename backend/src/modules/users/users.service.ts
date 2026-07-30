@@ -28,7 +28,12 @@ const BCRYPT_ROUNDS = 12;
 /** User brez občutljivih polj — varno za API odgovore. */
 export type SafeUser = Omit<
   User,
-  'passwordHash' | 'fcmToken' | 'passwordResetToken' | 'passwordResetExpires'
+  | 'passwordHash'
+  | 'fcmToken'
+  | 'passwordResetToken'
+  | 'passwordResetExpires'
+  | 'totpSecret'
+  | 'totpBackupCodes'
 > & { roles?: SystemRole[] | UserRole[] };
 
 /**
@@ -60,6 +65,8 @@ export class UsersService {
       fcmToken,
       passwordResetToken,
       passwordResetExpires,
+      totpSecret,
+      totpBackupCodes,
       roles,
       ...rest
     } = user;
@@ -372,8 +379,12 @@ export class UsersService {
     if (!valid) {
       throw new UnauthorizedException('Trenutno geslo ni pravilno.');
     }
-    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-    await this.usersRepo.save(user);
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.usersRepo.update(user.id, {
+      passwordHash,
+      // Razveljavi refresh žetone na vseh napravah — nova prijava povsod.
+      tokenVersion: () => 'token_version + 1',
+    });
     return { message: 'Geslo je bilo uspešno spremenjeno.' };
   }
 
