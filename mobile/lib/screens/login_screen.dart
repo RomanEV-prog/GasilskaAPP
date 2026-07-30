@@ -21,11 +21,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _storage = const FlutterSecureStorage();
   final _authApi = AuthApi();
 
+  final _codeCtrl = TextEditingController();
+
   List<PublicOrganization> _organizations = [];
   String? _organizationId;
   bool _loadingOrgs = true;
   bool _submitting = false;
   String? _error;
+  // 2FA drugi korak: po pravilnem geslu backend vrne vmesni žeton (5 min).
+  String? _pendingToken;
 
   @override
   void initState() {
@@ -58,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _codeCtrl.dispose();
     super.dispose();
   }
 
@@ -73,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
-      await context.read<AuthProvider>().login(
+      final pendingToken = await context.read<AuthProvider>().login(
             username,
             _passwordCtrl.text,
             organizationId: _organizationId,
@@ -82,7 +87,11 @@ class _LoginScreenState extends State<LoginScreen> {
         await _storage.write(
             key: 'lastOrganizationId', value: _organizationId);
       }
-      // Navigacija se sproži prek GoRouter redirect (auth state).
+      if (pendingToken != null && mounted) {
+        // Račun ima 2FA — pokaži vnos kode.
+        setState(() => _pendingToken = pendingToken);
+      }
+      // Sicer se navigacija sproži prek GoRouter redirect (auth state).
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
@@ -90,6 +99,36 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Future<void> _submitCode() async {
+    final code = _codeCtrl.text.trim();
+    if (code.length < 6) {
+      setState(() => _error = 'Vnesite kodo iz aplikacije.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await context.read<AuthProvider>().verify2fa(_pendingToken!, code);
+      // Navigacija prek GoRouter redirect (auth state).
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Prišlo je do napake.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  void _backToLogin() {
+    setState(() {
+      _pendingToken = null;
+      _codeCtrl.clear();
+      _error = null;
+    });
   }
 
   @override
@@ -130,6 +169,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(color: GasilColors.textMuted),
                       ),
                       const SizedBox(height: 24),
+                      if (_pendingToken != null) ...[
+                        const Text(
+                          'Vnesite 6-mestno kodo iz avtentikacijske '
+                          'aplikacije (ali rezervno kodo).',
+                          style: TextStyle(color: GasilColors.textMuted),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _codeCtrl,
+                          autofocus: true,
+                          autocorrect: false,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Koda',
+                            hintText: '123456',
+                            border: OutlineInputBorder(),
+                          ),
+                          onFieldSubmitted: (_) => _submitCode(),
+                        ),
+                      ] else ...[
                       DropdownButtonFormField<String>(
                         // ignore: deprecated_member_use
                         value: _organizationId,
@@ -186,6 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             : null,
                         onFieldSubmitted: (_) => _submit(),
                       ),
+                      ],
                       if (_error != null) ...[
                         const SizedBox(height: 16),
                         Container(
@@ -208,15 +268,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
-                          onPressed: _submitting ? null : _submit,
+                          onPressed: _submitting
+                              ? null
+                              : (_pendingToken != null
+                                  ? _submitCode
+                                  : _submit),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             child: Text(
-                              _submitting ? 'Prijavljanje ...' : 'Prijava',
+                              _submitting
+                                  ? (_pendingToken != null
+                                      ? 'Preverjanje ...'
+                                      : 'Prijavljanje ...')
+                                  : (_pendingToken != null
+                                      ? 'Potrdi'
+                                      : 'Prijava'),
                             ),
                           ),
                         ),
                       ),
+                      if (_pendingToken != null)
+                        TextButton(
+                          onPressed: _submitting ? null : _backToLogin,
+                          child: const Text('Nazaj na prijavo'),
+                        ),
                     ],
                   ),
                 ),

@@ -45,16 +45,40 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(
+  /// Vrne `null` ob uspešni prijavi ali `pendingToken`, kadar ima račun
+  /// vklopljeno 2FA — takrat sledi [verify2fa] s kodo iz aplikacije.
+  Future<String?> login(
     String username,
     String password, {
     String? organizationId,
   }) async {
-    final (accessToken, refreshToken, user) =
+    final result =
         await _authApi.login(username, password, organizationId: organizationId);
-    await ApiClient.instance.saveTokens(accessToken, refreshToken);
-    await _storage.write(key: 'user', value: jsonEncode(user.toJson()));
-    _user = user;
+    switch (result) {
+      case LoginTwoFactorChallenge(:final pendingToken):
+        return pendingToken;
+      case LoginSuccess():
+        await _persistSession(result);
+        return null;
+    }
+  }
+
+  /// Drugi korak prijave: TOTP ali rezervna koda.
+  Future<void> verify2fa(String pendingToken, String code) async {
+    final result = await _authApi.verify2fa(pendingToken, code);
+    await _persistSession(result);
+  }
+
+  Future<void> _persistSession(LoginSuccess result) async {
+    await ApiClient.instance.saveTokens(
+      result.accessToken,
+      result.refreshToken,
+    );
+    await _storage.write(
+      key: 'user',
+      value: jsonEncode(result.user.toJson()),
+    );
+    _user = result.user;
     notifyListeners();
   }
 
