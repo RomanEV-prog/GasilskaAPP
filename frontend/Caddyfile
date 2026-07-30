@@ -1,5 +1,16 @@
 # Caddy streže web portal in preusmerja /api na backend.
 # DOMAIN pride iz okolja (docker-compose). HTTPS certifikat je samodejen (Let's Encrypt).
+
+# Na produkciji ta Caddy teče ZA eversum-caddy (docker omrežje). Brez
+# trusted_proxies Caddy prejeti X-Forwarded-For ZAVRŽE in backend vidi za vse
+# uporabnike isti IP (eversumov) — rate-limit prijave bi bil spet globalen.
+# private_ranges = zaupaj samo peerom iz zasebnih omrežij (docker), javnim ne.
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 {$DOMAIN} {
 	encode gzip
 
