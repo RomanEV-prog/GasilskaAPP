@@ -61,6 +61,11 @@ REGISTRATION_KEY=<master ključ za izdajo aktivacijskih kod>   # DEPLOY.md §9
 # po klientovem IP; brez tega je limit prijave globalen za vse uporabnike.
 TRUST_PROXY_HOPS=0
 
+# ─── SENTRY (poročanje napak) ─────────────
+SENTRY_DSN=            # backend; prazno = izklopljeno
+# frontend: VITE_SENTRY_DSN v .env.prod (build arg v docker-compose.prod.yml);
+# CSP v frontend/Caddyfile dovoli https://*.ingest.de.sentry.io (EU regija!)
+
 # ─── SMTP (Brevo) — reset gesla ───────────
 MAIL_HOST=smtp-relay.brevo.com   # brez MAIL_* je pošiljanje no-op
 MAIL_PORT=587                    # 587 STARTTLS (465 = implicitni TLS)

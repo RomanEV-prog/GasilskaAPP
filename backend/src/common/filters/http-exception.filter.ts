@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { Request, Response } from 'express';
 
 /** `PAYMENT_REQUIRED` → `Payment Required` (oznaka napake iz HTTP statusa). */
@@ -53,6 +54,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);
+    }
+
+    // V Sentry samo prave napake (5xx / ne-HTTP izjeme) — 401/404/429 so
+    // pričakovan promet in bi le polnili kvoto. Brez DSN je captureException no-op.
+    if (status >= 500) {
+      Sentry.captureException(exception);
     }
 
     response.status(status).json({

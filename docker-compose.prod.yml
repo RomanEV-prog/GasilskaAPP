@@ -44,6 +44,8 @@ services:
       FRONTEND_URL: https://${DOMAIN}
       UPLOADS_DIR: /app/uploads
       REGISTRATION_KEY: ${REGISTRATION_KEY}
+      # Sentry za backend; prazno = poročanje izklopljeno.
+      SENTRY_DSN: ${SENTRY_DSN:-}
       # SPIN je geo-omejen na SI IP; na tujem strežniku nastavi na SI relay.
       SPIN_BASE_URL: ${SPIN_BASE_URL:-https://spin3.sos112.si}
       # SMTP (Brevo) — reset gesla; prazno = pošiljanje izklopljeno.
@@ -78,7 +80,11 @@ services:
       - uploads:/app/uploads
 
   web:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Sentry za frontend (build-time); prazno = poročanje izklopljeno.
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     restart: unless-stopped
     depends_on:
       - backend

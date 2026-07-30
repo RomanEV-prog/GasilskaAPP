@@ -42,7 +42,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -81,6 +81,74 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+  frontend-e2e:
+    name: Frontend (Playwright dimni test)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gasilapp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: gasilapp
+      DB_SYNCHRONIZE: 'false'
+      JWT_SECRET: ci-test-secret-not-for-production
+      PORT: 4000
+      FRONTEND_URL: http://localhost:4173
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Naloži shemo baze
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -d gasilapp -f docs/schema.sql
+
+      - name: Backend — build + seed + zagon
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+          npm run seed
+          node dist/main.js &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:4000/api/v1/auth/organizations && break
+            sleep 1
+          done
+
+      - name: Frontend — build (API na localhost)
+        working-directory: frontend
+        env:
+          VITE_API_URL: http://localhost:4000/api/v1
+        run: |
+          npm ci
+          npm run build
+
+      - name: Playwright
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
 
   mobile:
     name: Mobile (flutter analyze)
