@@ -1,32 +1,80 @@
 import { useQuery } from '@tanstack/react-query';
+import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { organizationsApi } from './api/organizations.api';
 import { AppLayout } from './components/layout/AppLayout';
 import { Spinner } from './components/ui';
 import { PLATFORM_ORG_SLUG } from './types';
+// Prijavna stran ostane v glavnem paketu — je prvi zaslon vsakega obiska.
 import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-import { DashboardPage } from './pages/dashboard/DashboardPage';
-import { EventDetailPage } from './pages/events/EventDetailPage';
-import { CalendarPage } from './pages/calendar/CalendarPage';
-import { EventFormPage } from './pages/events/EventFormPage';
-import { EquipmentDetailPage } from './pages/equipment/EquipmentDetailPage';
-import { EquipmentFormPage } from './pages/equipment/EquipmentFormPage';
-import { EquipmentPage } from './pages/equipment/EquipmentPage';
-import { MyEquipmentPage } from './pages/equipment/MyEquipmentPage';
-import { EventsPage } from './pages/events/EventsPage';
-import { MemberDetailPage } from './pages/members/MemberDetailPage';
-import { MemberFormPage } from './pages/members/MemberFormPage';
-import { MembersPage } from './pages/members/MembersPage';
-import { NotificationsPage } from './pages/notifications/NotificationsPage';
-import { InvoicePage } from './pages/platform/InvoicePage';
-import { PlatformPage } from './pages/platform/PlatformPage';
-import { SettingsPage } from './pages/settings/SettingsPage';
-import { TrainingsPage } from './pages/trainings/TrainingsPage';
-import { VehicleFormPage } from './pages/vehicles/VehicleFormPage';
-import { SpinPage } from './pages/spin/SpinPage';
-import { VehiclesPage } from './pages/vehicles/VehiclesPage';
 import { useAuth } from './stores/auth.store';
+
+// Vse ostale strani se naložijo šele ob prvem obisku (code-splitting) —
+// glavni paket je bil 614 kB, kar je na počasnem omrežju predolg prvi zagon.
+// Strani so named exporti, zato .then(m => ({ default: m.X })).
+const RegisterPage = lazy(() =>
+  import('./pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })),
+);
+const DashboardPage = lazy(() =>
+  import('./pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+);
+const EventDetailPage = lazy(() =>
+  import('./pages/events/EventDetailPage').then((m) => ({ default: m.EventDetailPage })),
+);
+const CalendarPage = lazy(() =>
+  import('./pages/calendar/CalendarPage').then((m) => ({ default: m.CalendarPage })),
+);
+const EventFormPage = lazy(() =>
+  import('./pages/events/EventFormPage').then((m) => ({ default: m.EventFormPage })),
+);
+const EquipmentDetailPage = lazy(() =>
+  import('./pages/equipment/EquipmentDetailPage').then((m) => ({ default: m.EquipmentDetailPage })),
+);
+const EquipmentFormPage = lazy(() =>
+  import('./pages/equipment/EquipmentFormPage').then((m) => ({ default: m.EquipmentFormPage })),
+);
+const EquipmentPage = lazy(() =>
+  import('./pages/equipment/EquipmentPage').then((m) => ({ default: m.EquipmentPage })),
+);
+const MyEquipmentPage = lazy(() =>
+  import('./pages/equipment/MyEquipmentPage').then((m) => ({ default: m.MyEquipmentPage })),
+);
+const EventsPage = lazy(() =>
+  import('./pages/events/EventsPage').then((m) => ({ default: m.EventsPage })),
+);
+const MemberDetailPage = lazy(() =>
+  import('./pages/members/MemberDetailPage').then((m) => ({ default: m.MemberDetailPage })),
+);
+const MemberFormPage = lazy(() =>
+  import('./pages/members/MemberFormPage').then((m) => ({ default: m.MemberFormPage })),
+);
+const MembersPage = lazy(() =>
+  import('./pages/members/MembersPage').then((m) => ({ default: m.MembersPage })),
+);
+const NotificationsPage = lazy(() =>
+  import('./pages/notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
+);
+const InvoicePage = lazy(() =>
+  import('./pages/platform/InvoicePage').then((m) => ({ default: m.InvoicePage })),
+);
+const PlatformPage = lazy(() =>
+  import('./pages/platform/PlatformPage').then((m) => ({ default: m.PlatformPage })),
+);
+const SettingsPage = lazy(() =>
+  import('./pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const TrainingsPage = lazy(() =>
+  import('./pages/trainings/TrainingsPage').then((m) => ({ default: m.TrainingsPage })),
+);
+const VehicleFormPage = lazy(() =>
+  import('./pages/vehicles/VehicleFormPage').then((m) => ({ default: m.VehicleFormPage })),
+);
+const SpinPage = lazy(() =>
+  import('./pages/spin/SpinPage').then((m) => ({ default: m.SpinPage })),
+);
+const VehiclesPage = lazy(() =>
+  import('./pages/vehicles/VehiclesPage').then((m) => ({ default: m.VehiclesPage })),
+);
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -68,6 +116,7 @@ function HomeRoute() {
 
 export default function App() {
   return (
+    <Suspense fallback={<Spinner />}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -122,5 +171,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }

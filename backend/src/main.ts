@@ -1,13 +1,24 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+
+  // Za koliko proxyji teče backend (prod: eversum-caddy → gasilapp-web = 2).
+  // Brez tega je req.ip IP zadnjega proxyja in rate-limit prijave deluje
+  // GLOBALNO za vse uporabnike skupaj, namesto po dejanskem klientu.
+  // Fiksno število hopov (ne `true`) — sicer klient s poljubnim
+  // X-Forwarded-For ponaredi svoj IP in se limitu izogne.
+  const trustProxyHops = Number(config.get<string>('TRUST_PROXY_HOPS', '0'));
+  if (trustProxyHops > 0) {
+    app.set('trust proxy', trustProxyHops);
+  }
 
   // Varnostni headerji za API odgovore. CSP je izklopljen — velja za HTML,
   // ki ga streže Caddy (frontend/Caddyfile), tu bi le zlomil Swagger UI v dev.

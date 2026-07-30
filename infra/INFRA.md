@@ -56,6 +56,10 @@ PORT=4000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
 REGISTRATION_KEY=<master ključ za izdajo aktivacijskih kod>   # DEPLOY.md §9
+# Za koliko reverse-proxyji teče backend: razvoj 0, PRODUKCIJA 2
+# (eversum-caddy → gasilapp-web → backend). Nujno za pravilen rate-limit
+# po klientovem IP; brez tega je limit prijave globalen za vse uporabnike.
+TRUST_PROXY_HOPS=0
 
 # ─── FIREBASE (push obvestila) ────────────
 FIREBASE_PROJECT_ID=gasilapp

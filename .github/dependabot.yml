@@ -1,0 +1,31 @@
+# Samodejni tedenski PR-ji za varnostne in verzijske posodobitve odvisnosti.
+# CI (backend E2E + frontend build + flutter analyze) vsak PR preveri sam.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: master
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: master
+
+  - package-ecosystem: pub
+    directory: /mobile
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: master
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    target-branch: master

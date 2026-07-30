@@ -27,6 +27,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
+      # 2 proxyja pred backendom: eversum-caddy -> gasilapp-web -> backend.
+      # Brez tega rate-limit prijave deluje na IP proxyja (globalno za vse).
+      TRUST_PROXY_HOPS: "2"
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: postgres

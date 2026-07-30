@@ -190,6 +190,27 @@ brez zunanje TOTP knjižnice. Prijava z vklopljeno 2FA vrne kratkoživ (5 min)
 
 ---
 
+## ADR-012: Row Level Security in httpOnly refresh piškotek — zavestno preložena
+
+**Datum:** 30. 7. 2026 · **Status:** preloženo
+
+**RLS na PostgreSQL: preložen.** Aplikacija se na bazo povezuje kot `postgres`
+(superuser) — RLS za superuserja sploh ne velja. Prava izvedba zahteva:
+ločenega `app_user` brez BYPASSRLS, ovitje vsakega zahtevka v transakcijo s
+`SET LOCAL app.tenant_id` (interceptor + AsyncLocalStorage), politike za ~20
+tabel prek ročnih migracij in regresijski pregled 101 e2e testov — ocena ~1
+teden. Obstoječa obramba (tenant filter v vsakem servisu + e2e test izolacije
+v vsakem modulu) vrzel pokriva. Ponovno oceni, ko/če pride SQL dostop do baze
+še od kod drugod kot iz aplikacije.
+
+**Refresh žeton v httpOnly piškotku: preložen.** Mobilna aplikacija pošilja
+refresh žeton v telesu — piškotek bi zahteval dvojno pot (cookie za web, body
+za mobile), CORS `credentials` in CSRF zaščito (double-submit). Trenutna
+mitigacija: `token_version` ob spremembi gesla/2FA razveljavi vse seje, XSS
+površino pa krči CSP. Ponovno oceni ob naslednji večji predelavi avtentikacije.
+
+---
+
 ## TODO za V2
 
 - [x] Refresh tokeni (rotacija + `token_version` preklic — 30. 7. 2026)
