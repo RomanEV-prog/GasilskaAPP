@@ -1,0 +1,22 @@
+{
+  "projectId": "554e8bfa-9680-47c6-b1cb-fb59f431d186",
+  "shape": "package",
+  "entry": "frontend/src/components/ui/index.tsx",
+  "readmeHeader": ".design-sync/conventions.md",
+  "pkg": "gasilapp-frontend",
+  "globalName": "PlamenUI",
+  "srcDir": "src",
+  "tsconfig": "tsconfig.app.json",
+  "buildCmd": "npx tailwindcss -i src/index.css -o dist/ds-tailwind.css --content \"./src/**/*.{ts,tsx},./index.html,../.design-sync/previews/*.tsx,../.design-sync/tailwind-safelist.txt\"",
+  "cssEntry": "dist/ds-tailwind.css",
+  "componentSrcMap": {
+    "Button": "src/components/ui/index.tsx",
+    "Input": "src/components/ui/index.tsx",
+    "Select": "src/components/ui/index.tsx",
+    "Card": "src/components/ui/index.tsx",
+    "Badge": "src/components/ui/index.tsx",
+    "Spinner": "src/components/ui/index.tsx",
+    "EmptyState": "src/components/ui/index.tsx",
+    "ErrorState": "src/components/ui/index.tsx"
+  }
+}
