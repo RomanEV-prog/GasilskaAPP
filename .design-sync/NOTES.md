@@ -21,6 +21,11 @@
 - Validate izpiše »typescript not in node_modules« (preskok .d.ts parse
   preverbe) — nekritično; typescript je sicer v `frontend/node_modules`.
 - Znana render opozorila: (trenutno nobenih — 8/8 čisto).
+- **TODO ob naslednjem re-sync:** oblikovni agent v Claude Design javlja, da so
+  med žetoni v `_ds_bundle.css` pristale interne Tailwindove spremenljivke
+  (`--tw-translate-x`, `--tw-ring-*`, `--tw-shadow` … iz utility razredov) —
+  to niso tematski žetoni. Ob sinhronizaciji jih izloči (ali označi
+  `/* @kind other */`), da ne šumijo v tokens/ pogledu.
 
 ## Re-sync tveganja
 
