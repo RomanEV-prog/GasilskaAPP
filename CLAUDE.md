@@ -166,6 +166,9 @@ obstoječi modul kot vzorec, preden pišeš nov (users je najboljši primer).
 | `/ikona-aplikacije` | zamenjava ikone — izrez motiva, adaptive icon, preverba v APK |
 | `/preimenovanje-znamke` | sprememba imena — kaj zamenjati in kaj bi zlomilo sistem |
 | `/mobilna-ziva-preverba` | preverba mobilne spremembe na emulatorju — adb posnetki/tapi, testni FCM push, pasti |
+| `/nfc-oprema-pisanje` | NDEF pisanje na oznake (nfc_manager v4), NFC tokovi opreme, pasti sideloada |
+| `/mobilna-diagnostika-na-daljavo` | diagnoza »ne dela« na pravem telefonu po plasteh (USB + tcpdump); backup/Keystore past |
+| `/play-posnetki-emulator` | lepi polni posnetki za Play/marketing — demo najemnik, demo status bar, tablice prek wm size |
 
 Kaj sodi kam: **skill** = ponovljiv postopek s pastmi · **CLAUDE.md** = kar mora
 vedeti vsaka seja že ob zagonu · **`docs/DECISIONS.md`** = arhitekturne odločitve
@@ -177,7 +180,7 @@ z razlogi (ADR) · **komentar v kodi** = kar velja le za tisto vrstico.
 
 - **Baza:** `docker compose up -d db` (Postgres 15). Shema se ustvari iz `docs/schema.sql` prek initdb.
 - **Seed:** `cd backend && npm run seed` → ustvari test društvo + **samo admina**.
-- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (`admin.pekre`, org_admin). **Člana seed NE ustvari** — dodaj ga prek portala. V trenutni dev bazi sta `janez.novak` in `miha.kranjc`, a ju svež seed ne obnovi. POZOR: dev admin ima lahko vklopljeno 2FA (Romanov telefon) — za skriptirane teste uporabi račun brez 2FA.
+- **Test računi:** `admin@pgd-pekre.si` / `GasilApp123!` (`admin.pekre`, org_admin). Za posnetke/predstavitve: **demo najemnik »PGD Sončni Vrh«** (`docs/demo-seed.sql`; prijava `demo@plamen.si` / `GasilApp123!`, 20 članov, polni podatki) — samo v dev bazi, glej `/play-posnetki-emulator`. **Člana seed NE ustvari** — dodaj ga prek portala. V trenutni dev bazi sta `janez.novak` in `miha.kranjc`, a ju svež seed ne obnovi. POZOR: dev admin ima lahko vklopljeno 2FA (Romanov telefon) — za skriptirane teste uporabi račun brez 2FA.
 - **Prijava (API):** polje je vedno `username` — vanj gre uporabniško ime (takrat obvezen `organizationId`) **ali e-pošta** (brez `organizationId`). Telesa s poljem `email` backend zavrne. Odgovori so oviti v `data` (`data.accessToken`); javni seznam društev: `GET /auth/organizations` → `data`.
 - **Zagon:** backend `npm run start:dev` (port 4000), frontend `npm run dev` (port 3000 — če je zaseden, Vite vzame 3001!).
 - **Pred commitom:** backend `npx tsc --noEmit -p tsconfig.json` (lint skripte ni več); frontend `npx tsc --noEmit` + `npm run build`; mobile `flutter analyze` **iz `C:\gasilapp_mobile`** (glej Mobilna spodaj).
@@ -204,7 +207,8 @@ z razlogi (ADR) · **komentar v kodi** = kar velja le za tisto vrstico.
 - **`minSdk` je `maxOf(flutter.minSdkVersion, 23)`, NE gol `23`** — Flutter migrator gol literal ob vsakem buildu prepiše nazaj na 21; `maxOf(...)` izraza ne dira (25. 7. 2026). `mobile_scanner` v7 rabi `minSdk 23`+`compileSdk 36`.
 - **Dart-define je `API_URL` (NE `API_BASE_URL`!)**. Release: `flutter build appbundle --release --dart-define=API_URL=https://plamenapp.si/api/v1`. Emulator: `http://10.0.2.2:4000/api/v1`. Glej `mobile/MOBILE.md`.
 - **Beta razdeljevanje:** podpisan APK na `plamenapp.si/beta` (Caddy `handle_path /beta` iz `/opt/gasilapp/downloads/`; stran `infra/beta/index.html`). Build iz `C:\gasilapp_mobile`, nato `scp .../app-release.apk root@178.104.67.229:/opt/gasilapp/downloads/gasilapp.apk`. Postopek: `/gasilapp-play-izdaja`.
-- **NFC (oprema):** `nfc_manager` v4 (API prelomno drugačen od v3 — beri README nameščene verzije). UID: `NfcTagAndroid.from(tag)?.id` / `MiFareIos.from(tag)?.identifier`; ovito v `mobile/lib/services/nfc_service.dart`. Android: NFC ob kameri; iOS: sistemsko okno → ročni gumb. `equipment.nfc_uid` je **globalno** unikaten — testi ne smejo uporabljati fiksnih UID-jev.
+- **NFC (oprema):** `nfc_manager` v4 (API prelomno drugačen od v3 — beri README nameščene verzije). UID: `NfcTagAndroid.from(tag)?.id` / `MiFareIos.from(tag)?.identifier`; od 1.0.17 tudi **pisanje NDEF** (`NfcService.startWrite`; vir resnice ostaja UID→baza, besedilo je posnetek — glej `/nfc-oprema-pisanje` in ADR-010). `equipment.nfc_uid` je **globalno** unikaten — testi ne smejo uporabljati fiksnih UID-jev.
+- **Auto Backup je IZKLOPLJEN** (`allowBackup=false` + `data_extraction_rules`, od 1.0.18) — obnovljena šifrirana shramba brez ključa v Keystore je metala izjeme ob vsakem branju. NE vklapljaj nazaj; diagnostika tovrstnih napak: `/mobilna-diagnostika-na-daljavo`.
 
 ## Integracije
 

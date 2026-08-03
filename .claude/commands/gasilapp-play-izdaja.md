@@ -110,7 +110,20 @@ Tehnika klikanja je v `/play-release-internal`. Vrstni red za Plamen:
 - Play: track »Aktivno · Najnovejša izdaja: N«, testerji dobijo prek opt-in
   povezave (auto-update).
 
-## Gotchas (vse so ugriznile 26. 7. 2026)
+## Gotchas (26. 7. in 3. 8. 2026)
+
+- **Toast »Prišlo je do nepričakovane napake (66E6E334)« po »Shrani in
+  objavi« je kozmetika** — merodajno je stanje tracka (»Aktivno · Najnovejša
+  izdaja: N (X.Y.Z)«). Ne ponavljaj objave.
+- **Opombe ob izdaji ne urejaj s triple-click** (poje newline in `</sl>`
+  pristane v isti vrstici → rdeče polje). Klik v polje → Ctrl+A → vtipkaj
+  vse tri vrstice na novo. Uspeh = »Opombe ob izdaji za 1 jezik«.
+- **Trgovinska stran (Main store listing)**: besedilna polja se dajo
+  urejati prek JS (native setter + `dispatchEvent(new Event('input',
+  {bubbles:true}))`), `input[type=file]` pa NE obstajajo, dokler ne klikneš
+  »Dodajanje elementov« (odpre sistemski dialog) — slike zato povleče
+  uporabnik. Po »Shrani« ponudi »Odpiranje pregleda«; klikni »Ne zdaj«,
+  če boš dodal še kaj, in vse pošlji v Googlov pregled naenkrat.
 
 - **Po povleku AAB renderer zamrzne** (screenshot timeout »renderer frozen«) —
   NE ponavljaj; nov tab / navigate na isti `.../prepare` URL. **Upload se ob
