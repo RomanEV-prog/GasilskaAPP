@@ -203,18 +203,26 @@ equipment/
 - `next_inspection` — datum naslednjega periodičnega pregleda (IDA, vrvna tehnika ...)
 - `expiry_date` — rok veljave/trajanja (zaščitna oprema ima rok uporabe; feedback testerjev)
 - Oba roka pokrivajo opomniki 7/3 dni v `scheduler/reminders.service.ts`
-  (prejemniki: admin, glavni strojnik, orodjar, pomočnik za zaščito dihal)
+  (prejemniki: admin, glavni strojnik, orodjar, pomočnik za zaščito dihal);
+  od 3. 8. 2026 dobi **zadolženi član** še osebni opomnik samo za svoje kose
 
 ### NFC oznake (predlog Darjan, 20. 7. 2026)
 Ker se na etikete oblek in rokavic po pravilih ne sme pisati imen, se oprema
 meša in izgublja. Rešitev: NFC nalepka (NTAG213, 13,56 MHz) na kosu opreme.
 
-- `equipment.nfc_uid` hrani **strojni UID nalepke**; na oznako ne pišemo ničesar
-  (glej ADR-010 za razloge in kompromise)
+- `equipment.nfc_uid` hrani **strojni UID nalepke** — vir resnice je preslikava
+  UID → oprema v bazi (glej ADR-010 + dopolnilo 3. 8. 2026)
+- Od 1.0.17 mobilna na oznako **piše tudi NDEF besedilo** (naziv, vrsta,
+  inv. št., zadolžitev, roki) — berljivo s katerimkoli NFC bralnikom; posnetek
+  stanja ob zapisu, ob spremembi ga upravljavec zapiše znova (app opomni)
 - `GET /equipment/nfc/:uid` zrcali QR pot — ista reducirana projekcija
   (`toScanProjection`), obogatena z imetnikom, datumom zadolžitve in nabave
-- Mobilna: `services/nfc_service.dart` (paket `nfc_manager` v4), zaslon za
-  skeniranje bere QR in NFC hkrati; povezovanje oznake na zaslonu podrobnosti
+- Mobilna: `services/nfc_service.dart` (paket `nfc_manager` v4). Skeniranje je
+  ločeno: NFC prislon (brez kamere) ali QR (kamera). Upravljavci opreme na
+  telefonu tudi: urejajo podatke, zadolžijo (izbirnik z iskalnikom) / vrnejo,
+  vidijo zgodovino zadolžitev, seznam opreme z iskalnikom (profil → Oprema)
+  ter **vnesejo nov kos prek neznane nalepke** (skener ob 404 ponudi
+  »Dodaj novo opremo« z ujetim UID)
 - Naprave brez NFC tiho degradirajo na QR
 
 ### Zadolžitve opreme

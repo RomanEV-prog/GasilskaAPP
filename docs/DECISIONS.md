@@ -137,6 +137,14 @@ vsili delni unikatni indeks `idx_eq_assign_open`.
 
 ## ADR-010: NFC oznake — hranimo UID, ne pišemo NDEF
 
+> **Dopolnjeno 3. 8. 2026 (izdaja 1.0.17):** mobilna aplikacija zdaj NDEF
+> vsebino tudi **piše** (naziv, vrsta, inv. št., zadolžitev, roki) — zahteva
+> uporabnika, da zunanja aplikacija za pisanje ni potrebna in da oznako
+> prebere katerikoli NFC bralnik. Jedro odločitve OSTAJA: vir resnice je
+> preslikava UID → oprema v bazi; NDEF besedilo je le berljiv posnetek stanja
+> ob zapisu in se ob spremembi zapiše znova (aplikacija na to opomni).
+> Oznake ne zaklepamo (`makeReadOnly` namerno ni v uporabi — nepovratno).
+
 **Odločitev:** Na opremo shranimo tovarniški UID nalepke (`equipment.nfc_uid`),
 na oznako ne pišemo ničesar. Preslikava UID → oprema živi v bazi.
 

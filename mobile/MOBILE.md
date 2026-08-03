@@ -88,7 +88,13 @@ flutter run              # na priklopljeni napravi/emulatorju
 - ✅ Koledar (`table_calendar`) + povzetek »Danes« in »Naslednji dogodek«
 - ✅ SPIN (zavihek »Intervencije«, bere lasten feed; NE meša z obvestili)
 - ✅ Obvestila (naslov+datum, besedilo razpre ob tapu, tap = označi prebrano)
-- ✅ Skeniranje opreme (QR + NFC), »Moja oprema«
+- ✅ Skeniranje opreme — ločena zaslona: NFC prislon (brez kamere) in QR
+  (kamera); izbira ob tapu na ikono. »Moja oprema« za vse člane.
+- ✅ Oprema za upravljavce (org_admin + strojniške vloge, od 1.0.17): seznam z
+  iskalnikom (profil → Oprema), urejanje podatkov, zadolži (iskalnik članov) /
+  vrni, zgodovina zadolžitev, **zapis NDEF na NFC oznako** (vrsta, zadolžitev,
+  roki — `NfcService.startWrite`) in vnos nove opreme prek neznane nalepke
+  (skener ob 404 ponudi »Dodaj novo opremo« z ujetim UID)
 - ✅ Vozila — **samo pregled**, za odgovorne (`chief_machinist`/`org_admin`);
   vnos v meniju računa (glej vzorec spodaj)
 - ✅ Fotografije — vnos v meniju odpre album društva (`photoUploadLink`) prek
