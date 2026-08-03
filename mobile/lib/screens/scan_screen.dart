@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/equipment_api.dart';
 import '../models/equipment.dart';
+import '../providers/auth_provider.dart';
 import '../services/nfc_service.dart';
 
 /// Skeniranje opreme — QR koda ali NFC oznaka, oboje na istem zaslonu.
@@ -48,6 +50,7 @@ class _ScanScreenState extends State<ScanScreen> {
       await _handleResult(
         () => _api.getByNfc(uid),
         'Oprema s to NFC oznako ni najdena.',
+        nfcUid: uid,
       );
     });
   }
@@ -64,10 +67,14 @@ class _ScanScreenState extends State<ScanScreen> {
 
   /// Skupna obravnava za QR in NFC: ustavi branje, poišče opremo, ob napaki
   /// ponudi ponovni poskus (in takrat znova zažene oba načina).
+  ///
+  /// Ob neznani NFC oznaki upravljavcem opreme ponudi tok »najprej nalepka,
+  /// potem podatki«: vnos nove opreme z že ujetim UID.
   Future<void> _handleResult(
     Future<Equipment> Function() fetch,
-    String notFoundMsg,
-  ) async {
+    String notFoundMsg, {
+    String? nfcUid,
+  }) async {
     if (_handling) return;
     setState(() => _handling = true);
     await _controller.stop();
@@ -79,31 +86,47 @@ class _ScanScreenState extends State<ScanScreen> {
       context.pushReplacement('/equipment/${eq.id}', extra: eq);
     } on ApiException catch (err) {
       if (!mounted) return;
-      final msg = err.statusCode == 404 ? notFoundMsg : err.message;
-      final retry = await showDialog<bool>(
+      final notFound = err.statusCode == 404;
+      final msg = notFound ? notFoundMsg : err.message;
+      final canCreate = notFound &&
+          nfcUid != null &&
+          (context.read<AuthProvider>().user?.canManageEquipment ?? false);
+      // 'create' | 'retry' | null (zapri)
+      final choice = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Skeniranje'),
-          content: Text(msg),
+          content: Text(canCreate
+              ? '$msg\n\nOznaka je prosta — jo nalepiš na nov kos opreme?'
+              : msg),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('Zapri'),
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Poskusi znova'),
-            ),
+            if (canCreate)
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, 'create'),
+                child: const Text('Dodaj novo opremo'),
+              )
+            else
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, 'retry'),
+                child: const Text('Poskusi znova'),
+              ),
           ],
         ),
       );
       if (!mounted) return;
-      if (retry == true) {
-        setState(() => _handling = false);
-        await _controller.start();
-        if (_nfcAvailable && Platform.isAndroid) await _startNfc();
-      } else {
-        if (mounted) context.pop();
+      switch (choice) {
+        case 'create':
+          context.pushReplacement('/equipment-new', extra: nfcUid);
+        case 'retry':
+          setState(() => _handling = false);
+          await _controller.start();
+          if (_nfcAvailable && Platform.isAndroid) await _startNfc();
+        default:
+          if (mounted) context.pop();
       }
     }
   }

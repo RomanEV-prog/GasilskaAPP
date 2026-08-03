@@ -8,6 +8,7 @@ import 'models/equipment.dart';
 import 'models/event.dart';
 import 'models/vehicle.dart';
 import 'providers/auth_provider.dart';
+import 'screens/equipment_create_screen.dart';
 import 'screens/equipment_detail_screen.dart';
 import 'screens/event_detail_screen.dart';
 import 'screens/home_shell.dart';
@@ -113,6 +114,11 @@ class _PlamenAppState extends State<PlamenApp> {
             final equipment = state.extra as Equipment;
             return EquipmentDetailScreen(equipment: equipment);
           },
+        ),
+        GoRoute(
+          path: '/equipment-new',
+          builder: (context, state) =>
+              EquipmentCreateScreen(nfcUid: state.extra as String?),
         ),
         GoRoute(
           path: '/moja-oprema',

@@ -24,6 +24,12 @@ class EquipmentApi {
     return Equipment.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Ustvari nov kos opreme (samo upravljavci opreme); lahko že z `nfcUid`.
+  Future<Equipment> create(Map<String, dynamic> fields) async {
+    final data = await _client.post('/equipment', data: fields);
+    return Equipment.fromJson(data as Map<String, dynamic>);
+  }
+
   /// En kos opreme — za osvežitev po urejanju/zadolžitvi.
   Future<Equipment> getById(String id) async {
     final data = await _client.get('/equipment/$id');
