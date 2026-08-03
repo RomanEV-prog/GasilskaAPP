@@ -216,6 +216,8 @@ class _HomeShellState extends State<HomeShell> {
                 context.push('/moja-oprema');
               } else if (value == 'vozila') {
                 context.push('/vozila');
+              } else if (value == 'oprema') {
+                context.push('/oprema');
               } else if (value == 'photos') {
                 _openPhotos(context);
               } else if (value == 'password') {
@@ -227,8 +229,9 @@ class _HomeShellState extends State<HomeShell> {
               }
             },
             itemBuilder: (_) {
-              final canManageVehicles =
-                  context.read<AuthProvider>().user?.canManageVehicles ?? false;
+              final user = context.read<AuthProvider>().user;
+              final canManageVehicles = user?.canManageVehicles ?? false;
+              final canManageEquipment = user?.canManageEquipment ?? false;
               return [
                 const PopupMenuItem(
                   value: 'my-equipment',
@@ -238,6 +241,15 @@ class _HomeShellState extends State<HomeShell> {
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
+                if (canManageEquipment)
+                  const PopupMenuItem(
+                    value: 'oprema',
+                    child: ListTile(
+                      leading: Icon(Icons.handyman_outlined),
+                      title: Text('Oprema'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                 if (canManageVehicles)
                   const PopupMenuItem(
                     value: 'vozila',

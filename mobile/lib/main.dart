@@ -10,6 +10,7 @@ import 'models/vehicle.dart';
 import 'providers/auth_provider.dart';
 import 'screens/equipment_create_screen.dart';
 import 'screens/equipment_detail_screen.dart';
+import 'screens/equipment_list_screen.dart';
 import 'screens/event_detail_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
@@ -124,6 +125,10 @@ class _PlamenAppState extends State<PlamenApp> {
         GoRoute(
           path: '/moja-oprema',
           builder: (_, __) => const MyEquipmentScreen(),
+        ),
+        GoRoute(
+          path: '/oprema',
+          builder: (_, __) => const EquipmentListScreen(),
         ),
         GoRoute(
           path: '/vozila',
