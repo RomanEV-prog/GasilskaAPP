@@ -5,13 +5,26 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { SystemRole } from '../../common/enums/roles.enum';
+import { Equipment } from '../equipment/equipment.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { VehicleDriver } from './vehicle-driver.entity';
+import { VehicleEquipmentCheck } from './vehicle-equipment-check.entity';
 import { Vehicle } from './vehicle.entity';
 import {
   AddDriverDto,
+  CreateEquipmentCheckDto,
   CreateVehicleDto,
   UpdateVehicleDto,
 } from './dto/vehicle.dto';
+
+/** Prejemniki obvestila o manjkajoči opremi — isti kot opomniki za opremo. */
+const EQUIPMENT_MANAGE_ROLES: SystemRole[] = [
+  SystemRole.ORG_ADMIN,
+  SystemRole.CHIEF_MACHINIST,
+  SystemRole.TOOLKEEPER,
+  SystemRole.ASSISTANT_BREATHING_APPARATUS,
+];
 
 @Injectable()
 export class VehiclesService {
@@ -20,6 +33,11 @@ export class VehiclesService {
     private readonly vehiclesRepo: Repository<Vehicle>,
     @InjectRepository(VehicleDriver)
     private readonly driversRepo: Repository<VehicleDriver>,
+    @InjectRepository(VehicleEquipmentCheck)
+    private readonly checksRepo: Repository<VehicleEquipmentCheck>,
+    @InjectRepository(Equipment)
+    private readonly equipmentRepo: Repository<Equipment>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /** Vozniki brez občutljivih polj uporabnika. */
@@ -139,5 +157,98 @@ export class VehiclesService {
       throw new NotFoundException('Voznik ni bil najden.');
     }
     await this.driversRepo.remove(driver);
+  }
+
+  /**
+   * Zabeleži inventuro opreme vozila. Upošteva samo kose, ki v resnici
+   * pripadajo temu vozilu in društvu — tuji ID-ji se tiho izpustijo, da
+   * podtaknjeni zahtevek ne more beležiti tuje opreme. Ob manjkih obvesti
+   * upravljavce opreme.
+   */
+  async createEquipmentCheck(
+    organizationId: string,
+    vehicleId: string,
+    actorId: string,
+    dto: CreateEquipmentCheckDto,
+  ): Promise<VehicleEquipmentCheck> {
+    const vehicle = await this.findOne(organizationId, vehicleId);
+
+    const valid = await this.equipmentRepo.find({
+      where: { organizationId, vehicleId, isActive: true },
+      select: { id: true, name: true },
+    });
+    const nameById = new Map(valid.map((e) => [e.id, e.name]));
+    const presentIds = dto.presentIds.filter((id) => nameById.has(id));
+    const missingIds = dto.missingIds.filter(
+      (id) => nameById.has(id) && !presentIds.includes(id),
+    );
+
+    const check = this.checksRepo.create({
+      vehicleId,
+      performedBy: actorId,
+      performedAt: new Date(),
+      total: presentIds.length + missingIds.length,
+      presentIds,
+      missingIds,
+      notes: dto.notes ?? null,
+    });
+    const saved = await this.checksRepo.save(check);
+
+    if (missingIds.length > 0) {
+      const lines = missingIds.map((id) => nameById.get(id)).filter(Boolean);
+      await this.notificationsService.createForRoles(
+        organizationId,
+        EQUIPMENT_MANAGE_ROLES,
+        {
+          title: `🚒 Pregled opreme ${vehicle.name}: manjka ${missingIds.length} kos(ov)`,
+          body: lines.join('\n'),
+          type: 'equipment_reminder',
+        },
+      );
+    }
+    return saved;
+  }
+
+  /** Zgodovina inventur vozila, najnovejša prva (izvajalec v ozki projekciji). */
+  async equipmentChecks(organizationId: string, vehicleId: string) {
+    await this.findOne(organizationId, vehicleId); // preveri tenant + obstoj
+    const rows = await this.checksRepo.find({
+      where: { vehicleId },
+      relations: { performer: true },
+      order: { performedAt: 'DESC' },
+      take: 20,
+    });
+    return rows.map((c) => ({
+      id: c.id,
+      performedAt: c.performedAt,
+      total: c.total,
+      presentCount: c.presentIds.length,
+      missingIds: c.missingIds,
+      notes: c.notes,
+      performer: c.performer
+        ? {
+            id: c.performer.id,
+            firstName: c.performer.firstName,
+            lastName: c.performer.lastName,
+          }
+        : null,
+    }));
+  }
+
+  /** Oprema, ki domuje na vozilu — za inventuro in prikaz na vozilu. */
+  async equipmentOnVehicle(organizationId: string, vehicleId: string) {
+    await this.findOne(organizationId, vehicleId);
+    return this.equipmentRepo.find({
+      where: { organizationId, vehicleId, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        inventoryNumber: true,
+        nfcUid: true,
+        qrCode: true,
+      },
+      order: { name: 'ASC' },
+    });
   }
 }

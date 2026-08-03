@@ -17,6 +17,7 @@ import 'screens/login_screen.dart';
 import 'screens/my_equipment_screen.dart';
 import 'screens/scan_screen.dart';
 import 'screens/vehicle_detail_screen.dart';
+import 'screens/vehicle_inventory_screen.dart';
 import 'screens/vehicles_screen.dart';
 import 'services/fcm_service.dart';
 import 'theme.dart';
@@ -139,6 +140,13 @@ class _PlamenAppState extends State<PlamenApp> {
           builder: (context, state) {
             final vehicle = state.extra as Vehicle;
             return VehicleDetailScreen(vehicle: vehicle);
+          },
+        ),
+        GoRoute(
+          path: '/vozila/:id/pregled-opreme',
+          builder: (context, state) {
+            final vehicle = state.extra as Vehicle;
+            return VehicleInventoryScreen(vehicle: vehicle);
           },
         ),
       ],

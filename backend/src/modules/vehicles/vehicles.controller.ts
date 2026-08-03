@@ -15,6 +15,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../../common/enums/roles.enum';
 import {
   AddDriverDto,
+  CreateEquipmentCheckDto,
   CreateVehicleDto,
   ExpiringQueryDto,
   UpdateVehicleDto,
@@ -103,5 +104,46 @@ export class VehiclesController {
     @Param('userId', ParseUUIDPipe) userId: string,
   ) {
     return this.vehiclesService.removeDriver(orgId, id, userId);
+  }
+
+  @Get(':id/equipment')
+  @ApiOperation({ summary: 'Oprema, ki domuje na vozilu' })
+  equipmentOnVehicle(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.vehiclesService.equipmentOnVehicle(orgId, id);
+  }
+
+  @Post(':id/equipment-check')
+  @Roles(
+    SystemRole.ORG_ADMIN,
+    SystemRole.CHIEF_MACHINIST,
+    SystemRole.TOOLKEEPER,
+    SystemRole.ASSISTANT_BREATHING_APPARATUS,
+  )
+  @ApiOperation({ summary: 'Zabeleži inventuro opreme vozila' })
+  createEquipmentCheck(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('userId') actorId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateEquipmentCheckDto,
+  ) {
+    return this.vehiclesService.createEquipmentCheck(orgId, id, actorId, dto);
+  }
+
+  @Get(':id/equipment-checks')
+  @Roles(
+    SystemRole.ORG_ADMIN,
+    SystemRole.CHIEF_MACHINIST,
+    SystemRole.TOOLKEEPER,
+    SystemRole.ASSISTANT_BREATHING_APPARATUS,
+  )
+  @ApiOperation({ summary: 'Zgodovina inventur opreme vozila' })
+  equipmentChecks(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.vehiclesService.equipmentChecks(orgId, id);
   }
 }

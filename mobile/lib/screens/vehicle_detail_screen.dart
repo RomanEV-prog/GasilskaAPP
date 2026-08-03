@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../api/vehicles_api.dart';
+import '../models/equipment.dart';
 import '../models/vehicle.dart';
+import '../providers/auth_provider.dart';
 import '../theme.dart';
 import 'vehicles_screen.dart' show deadlineChip;
 
@@ -18,6 +23,8 @@ class VehicleDetailScreen extends StatefulWidget {
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   final _api = VehiclesApi();
   late Vehicle _v = widget.vehicle;
+  List<Equipment>? _equipment;
+  VehicleEquipmentCheck? _lastCheck;
 
   @override
   void initState() {
@@ -27,6 +34,25 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     }).catchError((_) {
       // Ob napaki ostane prikaz iz seznama (extra).
     });
+    _loadEquipment();
+  }
+
+  void _loadEquipment() {
+    _api.equipment(widget.vehicle.id).then((items) {
+      if (mounted) setState(() => _equipment = items);
+    }).catchError((_) {
+      if (mounted) setState(() => _equipment = []);
+    });
+    // Zadnji pregled vidijo samo upravljavci opreme (endpoint 403 za člane).
+    final canManage =
+        context.read<AuthProvider>().user?.canManageEquipment ?? false;
+    if (canManage) {
+      _api.equipmentChecks(widget.vehicle.id).then((checks) {
+        if (mounted && checks.isNotEmpty) {
+          setState(() => _lastCheck = checks.first);
+        }
+      }).catchError((_) {});
+    }
   }
 
   @override
@@ -84,6 +110,73 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             const SizedBox(height: 16),
             const _SectionTitle('Opombe'),
             Text(v.notes!),
+          ],
+
+          const SizedBox(height: 16),
+          _SectionTitle(
+            'Oprema na vozilu'
+            '${_equipment != null ? ' (${_equipment!.length})' : ''}',
+          ),
+          if (_equipment == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_equipment!.isEmpty)
+            const Text(
+              'Na tem vozilu ni evidentirane opreme.',
+              style: TextStyle(color: GasilColors.textMuted),
+            )
+          else
+            ..._equipment!.map(
+              (e) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  e.nfcUid != null ? Icons.nfc : Icons.handyman_outlined,
+                  size: 20,
+                ),
+                title: Text(e.name),
+                subtitle: e.inventoryNumber?.isNotEmpty == true
+                    ? Text(e.inventoryNumber!)
+                    : null,
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/equipment/${e.id}', extra: e),
+              ),
+            ),
+
+          if (context.watch<AuthProvider>().user?.canManageEquipment ??
+              false) ...[
+            if (_lastCheck != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Zadnji pregled: '
+                '${_lastCheck!.performedAt != null ? DateFormat('d. M. yyyy HH:mm', 'sl').format(_lastCheck!.performedAt!) : '—'}'
+                ' · ${_lastCheck!.presentCount}/${_lastCheck!.total}'
+                '${_lastCheck!.missingIds.isEmpty ? ' ✅' : ' — manjka ${_lastCheck!.missingIds.length}'}'
+                '${_lastCheck!.performerName?.isNotEmpty == true ? ' (${_lastCheck!.performerName})' : ''}',
+                style: const TextStyle(
+                  color: GasilColors.textMuted,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+            if (_equipment?.isNotEmpty == true) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.checklist),
+                label: const Text('Preveri opremo vozila'),
+                onPressed: () async {
+                  final done = await context.push<bool>(
+                    '/vozila/${v.id}/pregled-opreme',
+                    extra: v,
+                  );
+                  if (done == true) _loadEquipment();
+                },
+              ),
+            ],
           ],
         ],
       ),

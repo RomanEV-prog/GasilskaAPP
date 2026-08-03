@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import '../api/api_client.dart';
 import '../api/equipment_api.dart';
 import '../api/users_api.dart';
+import '../api/vehicles_api.dart';
 import '../models/equipment.dart';
+import '../models/vehicle.dart';
 import '../models/equipment_assignment.dart';
 import '../providers/auth_provider.dart';
 import '../services/nfc_service.dart';
@@ -95,6 +97,15 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
     var condition = e.condition;
     DateTime? nextInspection = e.nextInspection;
     DateTime? expiryDate = e.expiryDate;
+    String? vehicleId = e.vehicleId;
+
+    // Seznam vozil za izbirnik »Na vozilu« — ob napaki izbirnik skrijemo,
+    // ostalo urejanje pa mora delovati naprej.
+    List<Vehicle> vehicles = const [];
+    try {
+      vehicles = await VehiclesApi().list();
+    } catch (_) {}
+    if (!mounted) return;
 
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -178,6 +189,27 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
                         .toList(),
                     onChanged: (v) => condition = v ?? condition,
                   ),
+                  if (vehicles.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String?>(
+                      initialValue: vehicleId,
+                      isExpanded: true,
+                      decoration:
+                          const InputDecoration(labelText: 'Na vozilu'),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('— ni na vozilu —'),
+                        ),
+                        ...vehicles.map((v) => DropdownMenuItem<String?>(
+                              value: v.id,
+                              child: Text(v.name,
+                                  overflow: TextOverflow.ellipsis),
+                            )),
+                      ],
+                      onChanged: (v) => vehicleId = v,
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   dateRow('Naslednji pregled', nextInspection,
                       (v) => nextInspection = v),
@@ -208,6 +240,7 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
         'inventoryNumber': blankToNull(invNo.text),
         'location': blankToNull(location.text),
         'condition': condition,
+        'vehicleId': vehicleId,
         'nextInspection': iso(nextInspection),
         'expiryDate': iso(expiryDate),
       });
@@ -340,6 +373,7 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
       if (e.inventoryNumber?.isNotEmpty == true)
         'Inv. št.: ${e.inventoryNumber}',
       'Zadolženo: ${e.currentHolderName ?? 'Prosto'}',
+      if (e.vehicleName?.isNotEmpty == true) 'Na vozilu: ${e.vehicleName}',
       if (e.nextInspection != null)
         'Pregled do: ${df.format(e.nextInspection!)}',
       if (e.expiryDate != null) 'Velja do: ${df.format(e.expiryDate!)}',

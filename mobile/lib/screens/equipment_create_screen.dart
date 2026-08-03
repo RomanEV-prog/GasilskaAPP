@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../api/api_client.dart';
 import '../api/equipment_api.dart';
+import '../api/vehicles_api.dart';
 import '../models/equipment.dart';
+import '../models/vehicle.dart';
 
 /// Vnos nove opreme — tok »najprej nalepka, potem podatki«.
 ///
@@ -30,9 +32,20 @@ class _EquipmentCreateScreenState extends State<EquipmentCreateScreen> {
   final _invNo = TextEditingController();
   final _location = TextEditingController();
   String _condition = 'good';
+  String? _vehicleId;
+  List<Vehicle> _vehicles = const [];
   DateTime? _nextInspection;
   DateTime? _expiryDate;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ob napaki izbirnik vozila preprosto ostane skrit — vnos mora delovati.
+    VehiclesApi().list().then((v) {
+      if (mounted) setState(() => _vehicles = v);
+    }).catchError((_) {});
+  }
 
   @override
   void dispose() {
@@ -62,6 +75,7 @@ class _EquipmentCreateScreenState extends State<EquipmentCreateScreen> {
         if (blankToNull(_location.text) != null)
           'location': _location.text.trim(),
         'condition': _condition,
+        if (_vehicleId != null) 'vehicleId': _vehicleId,
         if (_nextInspection != null) 'nextInspection': iso(_nextInspection),
         if (_expiryDate != null) 'expiryDate': iso(_expiryDate),
         if (widget.nfcUid != null) 'nfcUid': widget.nfcUid,
@@ -158,6 +172,25 @@ class _EquipmentCreateScreenState extends State<EquipmentCreateScreen> {
                   .toList(),
               onChanged: (v) => setState(() => _condition = v ?? _condition),
             ),
+            if (_vehicles.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _vehicleId,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Na vozilu'),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('— ni na vozilu —'),
+                  ),
+                  ..._vehicles.map((v) => DropdownMenuItem<String?>(
+                        value: v.id,
+                        child: Text(v.name, overflow: TextOverflow.ellipsis),
+                      )),
+                ],
+                onChanged: (v) => setState(() => _vehicleId = v),
+              ),
+            ],
             const SizedBox(height: 12),
             _dateRow('Naslednji pregled', _nextInspection,
                 (v) => _nextInspection = v),

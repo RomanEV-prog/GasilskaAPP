@@ -21,6 +21,7 @@ class Equipment {
   final String? nfcUid;
   final DateTime? purchaseDate;
   final bool isActive;
+  final String? vehicleId;
   final String? vehicleName;
 
   /// Trenutni imetnik, npr. "Novak Janez"; `null`, če je oprema prosta.
@@ -42,6 +43,7 @@ class Equipment {
     this.nfcUid,
     this.purchaseDate,
     required this.isActive,
+    this.vehicleId,
     this.vehicleName,
     this.currentHolderName,
     this.issuedAt,
@@ -68,6 +70,10 @@ class Equipment {
         nfcUid: json['nfcUid'] as String?,
         purchaseDate: _date(json['purchaseDate']),
         isActive: json['isActive'] as bool? ?? true,
+        vehicleId: json['vehicleId'] as String? ??
+            (json['vehicle'] is Map<String, dynamic>
+                ? (json['vehicle']['id'] as String?)
+                : null),
         vehicleName: json['vehicle'] is Map<String, dynamic>
             ? (json['vehicle']['name'] as String?)
             : null,

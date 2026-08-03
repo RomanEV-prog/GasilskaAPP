@@ -201,6 +201,23 @@ CREATE TABLE vehicle_drivers (
   UNIQUE(vehicle_id, user_id)
 );
 
+-- Inventura opreme vozila: strojnik s prislanjanjem NFC oznak (ali ročno)
+-- preveri, ali je vsa pričakovana oprema na vozilu. Najemništvo podeduje
+-- prek vozila (vzorec event_attendance) — brez lastnega organization_id.
+CREATE TABLE vehicle_equipment_checks (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  vehicle_id    UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  -- Kdo je zapis ustvaril → SET NULL (glej /gasilapp-shema: pravila FK na users).
+  performed_by  UUID REFERENCES users(id) ON DELETE SET NULL,
+  performed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  total         INTEGER NOT NULL,
+  present_ids   JSONB NOT NULL DEFAULT '[]',
+  missing_ids   JSONB NOT NULL DEFAULT '[]',
+  notes         TEXT,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE equipment (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -330,6 +347,7 @@ CREATE INDEX idx_events_org ON events(organization_id, starts_at);
 CREATE INDEX idx_rsvps_event ON event_rsvps(event_id);
 CREATE INDEX idx_attendance_event ON event_attendance(event_id);
 CREATE INDEX idx_vehicles_org ON vehicles(organization_id);
+CREATE INDEX idx_vec_vehicle ON vehicle_equipment_checks(vehicle_id);
 CREATE INDEX idx_vehicles_exp ON vehicles(registration_expires, insurance_expires, service_due);
 CREATE INDEX idx_trainings_user ON trainings(user_id, expires_at);
 CREATE INDEX idx_trainings_org ON trainings(organization_id, expires_at);
@@ -348,6 +366,7 @@ CREATE TRIGGER t_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION upda
 CREATE TRIGGER t_events BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_vehicles BEFORE UPDATE ON vehicles FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_equipment BEFORE UPDATE ON equipment FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER t_vehicle_equipment_checks BEFORE UPDATE ON vehicle_equipment_checks FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_equipment_assignments BEFORE UPDATE ON equipment_assignments FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_trainings BEFORE UPDATE ON trainings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER t_docs BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION update_updated_at();

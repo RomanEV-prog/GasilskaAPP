@@ -586,6 +586,79 @@ describe('GasilApp E2E', () => {
         .expect(400);
     });
 
+    it('inventura opreme vozila: zapis, izolacija, pravice, projekcija', async () => {
+      // Vozilo + dva kosa na njem (en bo "manjkal").
+      const veh = await request(http)
+        .post('/api/v1/vehicles')
+        .set(auth(tokenA))
+        .send({ name: `Inventura ${stamp}`, vehicleType: 'GVC-1' })
+        .expect(201);
+      const vehicleId = veh.body.data.id as string;
+
+      const eq = async (name: string) =>
+        (
+          await request(http)
+            .post('/api/v1/equipment')
+            .set(auth(tokenA))
+            .send({ name, vehicleId })
+            .expect(201)
+        ).body.data.id as string;
+      const idPrisoten = await eq(`IDA ${stamp}`);
+      const idManjka = await eq(`Cev ${stamp}`);
+
+      // Seznam opreme vozila vidi tudi navaden član (ozka projekcija).
+      const list = await request(http)
+        .get(`/api/v1/vehicles/${vehicleId}/equipment`)
+        .set(auth(memberToken))
+        .expect(200);
+      expect(list.body.data).toHaveLength(2);
+      expect(list.body.data[0].condition).toBeUndefined();
+
+      // Navaden član inventure NE sme zabeležiti.
+      await request(http)
+        .post(`/api/v1/vehicles/${vehicleId}/equipment-check`)
+        .set(auth(memberToken))
+        .send({ presentIds: [idPrisoten], missingIds: [idManjka] })
+        .expect(403);
+
+      // Tuj tenant vozila ne vidi (404).
+      await request(http)
+        .post(`/api/v1/vehicles/${vehicleId}/equipment-check`)
+        .set(auth(tokenB))
+        .send({ presentIds: [], missingIds: [] })
+        .expect(404);
+
+      // Admin zabeleži; podtaknjen tuj ID se tiho izpusti.
+      const created = await request(http)
+        .post(`/api/v1/vehicles/${vehicleId}/equipment-check`)
+        .set(auth(tokenA))
+        .send({
+          presentIds: [idPrisoten, '00000000-0000-4000-8000-000000000000'],
+          missingIds: [idManjka],
+        })
+        .expect(201);
+      expect(created.body.data.total).toBe(2);
+      expect(created.body.data.presentIds).toEqual([idPrisoten]);
+      expect(created.body.data.missingIds).toEqual([idManjka]);
+
+      // Zgodovina: zapis prisoten, izvajalec v ozki projekciji.
+      const checks = await request(http)
+        .get(`/api/v1/vehicles/${vehicleId}/equipment-checks`)
+        .set(auth(tokenA))
+        .expect(200);
+      expect(checks.body.data).toHaveLength(1);
+      expect(checks.body.data[0].presentCount).toBe(1);
+      expect(checks.body.data[0].missingIds).toEqual([idManjka]);
+      expect(checks.body.data[0].performer.firstName).toBeDefined();
+      expect(checks.body.data[0].performer.passwordHash).toBeUndefined();
+
+      // Tuj tenant zgodovine ne vidi.
+      await request(http)
+        .get(`/api/v1/vehicles/${vehicleId}/equipment-checks`)
+        .set(auth(tokenB))
+        .expect(404);
+    });
+
     it('GET /users/me vrne moj profil s spinNotifications=true', async () => {
       const res = await request(http)
         .get('/api/v1/users/me')

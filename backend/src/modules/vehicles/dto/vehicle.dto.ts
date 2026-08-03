@@ -93,3 +93,19 @@ export class ExpiringQueryDto {
   @Min(1)
   days?: number;
 }
+
+/** Rezultat inventure opreme vozila (mobilna: NFC prislanjanje / ročno). */
+export class CreateEquipmentCheckDto {
+  @ApiProperty({ type: [String], description: 'ID-ji najdenih kosov' })
+  @IsUUID('4', { each: true, message: 'Neveljaven ID opreme.' })
+  presentIds: string[];
+
+  @ApiProperty({ type: [String], description: 'ID-ji manjkajočih kosov' })
+  @IsUUID('4', { each: true, message: 'Neveljaven ID opreme.' })
+  missingIds: string[];
+
+  @ApiPropertyOptional({ example: 'Manjka B-cev — na servisu.' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
