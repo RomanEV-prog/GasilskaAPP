@@ -194,6 +194,15 @@ private_ranges }`. Sprememba Caddyfile = rebuild `web` vsebnika.
 - **SPIN geo-omejitev:** prod (Hetzner DE) ne doseže spin3.sos112.si; teče prek
   SI relay `152.89.232.161` (env `SPIN_BASE_URL`). Če SPIN po objavi ne dela,
   preveri relay, ne backend.
+- **Relay nginx po ponovnem zagonu strežnika lahko obleži** — `nginx -t` ob
+  zagonu pade z `host not found in upstream "spin3.sos112.si"`, če DNS še ne
+  dela, in nginx OSTANE dol (udarilo 28. 7.–3. 8. 2026: 6 dni brez novih
+  intervencij, tiho). Od 3. 8. je na relayu systemd drop-in
+  (`/etc/systemd/system/nginx.service.d/override.conf`: `Restart=on-failure`
+  + `After/Wants=network-online.target`). Zdravje preveri s podatki:
+  `max(created_at)` v `spin_interventions` mora biti svež; feed test s prod:
+  `curl http://152.89.232.161/Javno/ODApi/True` → 200 (drugod 403 — allowlist
+  dovoli samo prod IP, zato test z lokalnega stroja LAŽE).
 - **Tišina SPIN-a v dnevniku po objavi je NORMALNA — ne lovi je.** Sporočilo
   `SPIN inicializacija: shranjenih N …` se izpiše **samo ob prazni tabeli**:
   `onModuleInit` ob `count() > 0` nastavi `primed=true` in se vrne brez zapisa
