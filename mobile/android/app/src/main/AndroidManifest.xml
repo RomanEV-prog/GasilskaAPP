@@ -5,10 +5,18 @@
     <uses-permission android:name="android.permission.NFC"/>
     <!-- required="false": sicer bi Play skril aplikacijo napravam brez NFC. -->
     <uses-feature android:name="android.hardware.nfc" android:required="false"/>
+    <!-- allowBackup=false: Googlov Auto Backup ob ponovni namestitvi obnovi
+         šifrirano shrambo (flutter_secure_storage), ključ v Keystore pa je z
+         odstranitvijo izbrisan — vsa branja nato mečejo izjeme. Žetonov in
+         nastavitev je malo in se ob prijavi obnovijo; backup ni vreden tega
+         tveganja. Udarilo 3. 8. 2026 (seznam društev »omrežna napaka«). -->
     <application
         android:label="Plamen"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"

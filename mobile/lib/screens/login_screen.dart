@@ -26,6 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
   List<PublicOrganization> _organizations = [];
   String? _organizationId;
   bool _loadingOrgs = true;
+  bool _orgsFailed = false;
+  bool _showPassword = false;
   bool _submitting = false;
   String? _error;
   // 2FA drugi korak: po pravilnem geslu backend vrne vmesni žeton (5 min).
@@ -38,24 +40,47 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// Naloži javni seznam društev; zadnja izbira se zapomni.
+  ///
+  /// Branje shrambe je LOČENO od omrežnega klica: pokvarjena šifrirana
+  /// shramba (npr. obnovljena iz backupa brez ključa v Keystore) ne sme
+  /// podreti seznama — udarilo 3. 8. 2026 in izgledalo kot omrežna napaka.
   Future<void> _loadOrganizations() async {
+    String? last;
+    try {
+      last = await _storage.read(key: 'lastOrganizationId');
+    } catch (_) {
+      // Neberljivo shrambo počistimo, da ne moti niti prihodnjih zagonov.
+      try {
+        await _storage.deleteAll();
+      } catch (_) {}
+    }
     try {
       final orgs = await _authApi.publicOrganizations();
-      final last = await _storage.read(key: 'lastOrganizationId');
       if (!mounted) return;
       setState(() {
         _organizations = orgs;
         _organizationId =
             orgs.any((o) => o.id == last) ? last : null;
         _loadingOrgs = false;
+        _orgsFailed = false;
+        _error = null;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loadingOrgs = false;
+        _orgsFailed = true;
         _error = 'Seznama društev ni bilo mogoče naložiti. Preverite povezavo.';
       });
     }
+  }
+
+  Future<void> _retryOrganizations() async {
+    setState(() {
+      _loadingOrgs = true;
+      _error = null;
+    });
+    await _loadOrganizations();
   }
 
   @override
@@ -295,10 +320,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _passwordCtrl,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: !_showPassword,
+                        decoration: InputDecoration(
                           labelText: 'Geslo',
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(_showPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined),
+                            tooltip:
+                                _showPassword ? 'Skrij geslo' : 'Pokaži geslo',
+                            onPressed: () => setState(
+                                () => _showPassword = !_showPassword),
+                          ),
                         ),
                         validator: (v) => (v == null || v.isEmpty)
                             ? 'Vnesite geslo.'
@@ -315,12 +349,27 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: GasilColors.danger.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(
-                            _error!,
-                            style: const TextStyle(
-                              color: GasilColors.danger,
-                              fontSize: 13,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _error!,
+                                style: const TextStyle(
+                                  color: GasilColors.danger,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              // Neuspelo nalaganje seznama društev ima pot
+                              // do ponovnega poskusa brez ponovnega zagona.
+                              if (_orgsFailed)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _retryOrganizations,
+                                    child: const Text('Poskusi znova'),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],
