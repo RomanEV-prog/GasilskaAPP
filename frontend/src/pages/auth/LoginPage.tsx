@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { authApi } from '../../api/auth.api';
 import { errorMessage } from '../../api/client';
 import { IosInstallHint } from '../../components/IosInstallHint';
-import { Button, Input, Select } from '../../components/ui';
+import { Button, Input, PasswordInput, Select } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 
 const schema = z
@@ -159,9 +159,8 @@ export function LoginPage() {
             error={errors.username?.message}
             {...register('username')}
           />
-          <Input
+          <PasswordInput
             label="Geslo"
-            type="password"
             autoComplete="current-password"
             error={errors.password?.message}
             {...register('password')}

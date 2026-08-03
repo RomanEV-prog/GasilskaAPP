@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../../api/auth.api';
 import { errorMessage } from '../../api/client';
-import { Button, Input } from '../../components/ui';
+import { Button, PasswordInput } from '../../components/ui';
 
 /** Nastavitev novega gesla prek žetona iz e-poštne povezave (?token=...). */
 export function ResetPasswordPage() {
@@ -64,16 +64,14 @@ export function ResetPasswordPage() {
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
-            <Input
+            <PasswordInput
               label="Novo geslo"
-              type="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <Input
+            <PasswordInput
               label="Ponovi novo geslo"
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

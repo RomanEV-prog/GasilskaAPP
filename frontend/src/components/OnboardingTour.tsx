@@ -41,9 +41,15 @@ const STEPS: Step[] = [
   {
     icon: '🚒',
     title: 'Vozila in oprema',
-    kaj: 'Evidenca vozil in opreme društva. Oprema samodejno dobi QR kodo za hitro identifikacijo na terenu.',
-    kako: 'Vnesite vozila pod “Vozila” in opremo pod “Oprema”. QR kodo opreme lahko natisnete in jo skenirate z mobilno aplikacijo.',
+    kaj: 'Evidenca vozil in opreme društva z zadolžitvami, zgodovino in opomniki na roke pregledov. Kos opreme označite s QR kodo ali NFC nalepko.',
+    kako: 'Vnesite vozila pod “Vozila” in opremo pod “Oprema”. Z mobilno aplikacijo admin ali strojnik nalepko NFC prisloni, nanjo zapiše podatke kosa (vrsto, zadolžitev, roke) in jo poveže z evidenco — nov kos lahko vnese kar prek še prazne nalepke.',
     leadershipOnly: true,
+  },
+  {
+    icon: '📲',
+    title: 'Skeniranje opreme',
+    kaj: 'Vsak član v mobilni aplikaciji najde podatke kosa opreme tako, da prisloni telefon na NFC nalepko ali skenira QR kodo — vidi naziv, zadolžitev in roke pregledov. Svojo zadolženo opremo ima vedno pri roki pod “Moja oprema”.',
+    kako: 'V mobilni aplikaciji tapnite ikono skeniranja zgoraj desno in izberite NFC ali QR. Ob poteku pregleda ali veljavnosti vaše zadolžene opreme dobite osebno obvestilo.',
   },
   {
     icon: '🎓',

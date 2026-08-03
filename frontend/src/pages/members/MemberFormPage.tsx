@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { errorMessage } from '../../api/client';
 import { usersApi } from '../../api/users.api';
-import { Button, Card, Input, Select, Spinner } from '../../components/ui';
+import { Button, Card, Input, PasswordInput, Select, Spinner } from '../../components/ui';
 import {
   MEMBERSHIP_LABELS,
   ROLE_LABELS,
@@ -175,9 +175,8 @@ export function MemberFormPage() {
               error={errors.email?.message}
               {...register('email')}
             />
-            <Input
+            <PasswordInput
               label={isEdit ? 'Novo geslo (pusti prazno)' : 'Geslo *'}
-              type="password"
               autoComplete="new-password"
               error={errors.password?.message}
               {...register('password')}

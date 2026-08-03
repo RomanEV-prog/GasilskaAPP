@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -51,6 +52,46 @@ export const Input = forwardRef<
         } ${className}`}
         {...props}
       />
+      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+    </label>
+  );
+});
+
+// ─── PasswordInput ───────────────────────────────────────
+// Polje za geslo z gumbom za prikaz vnesenega (👁) — pri vpisovanju dolgih
+// gesel na roko je tipkarska napaka sicer nevidna.
+export const PasswordInput = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }
+>(function PasswordInput({ label, error, className = '', ...props }, ref) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <label className="block">
+      {label && (
+        <span className="mb-1 block text-sm font-medium text-gray-700">
+          {label}
+        </span>
+      )}
+      <div className="relative">
+        <input
+          ref={ref}
+          type={visible ? 'text' : 'password'}
+          className={`w-full rounded-lg border px-3 py-2 pr-10 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary ${
+            error ? 'border-red-400' : 'border-gray-300'
+          } ${className}`}
+          {...props}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Skrij geslo' : 'Pokaži geslo'}
+          title={visible ? 'Skrij geslo' : 'Pokaži geslo'}
+          className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600"
+        >
+          {visible ? '🙈' : '👁'}
+        </button>
+      </div>
       {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
     </label>
   );

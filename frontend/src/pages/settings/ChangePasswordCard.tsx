@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { authApi } from '../../api/auth.api';
 import { errorMessage } from '../../api/client';
-import { Button, Card, Input } from '../../components/ui';
+import { Button, Card, PasswordInput } from '../../components/ui';
 
 /** Prijavljeni uporabnik si spremeni geslo (zahteva trenutno geslo). */
 export function ChangePasswordCard() {
@@ -41,23 +41,20 @@ export function ChangePasswordCard() {
   return (
     <Card title="Sprememba gesla">
       <form onSubmit={submit} className="max-w-sm space-y-4">
-        <Input
+        <PasswordInput
           label="Trenutno geslo"
-          type="password"
           autoComplete="current-password"
           value={current}
           onChange={(e) => setCurrent(e.target.value)}
         />
-        <Input
+        <PasswordInput
           label="Novo geslo"
-          type="password"
           autoComplete="new-password"
           value={next}
           onChange={(e) => setNext(e.target.value)}
         />
-        <Input
+        <PasswordInput
           label="Ponovi novo geslo"
-          type="password"
           autoComplete="new-password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}

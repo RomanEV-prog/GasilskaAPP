@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { errorMessage } from '../../api/client';
-import { Button, Input } from '../../components/ui';
+import { Button, Input, PasswordInput } from '../../components/ui';
 import { useAuth } from '../../stores/auth.store';
 import { SUPPORT_EMAIL } from '../../types';
 
@@ -144,9 +144,8 @@ export function RegisterPage() {
             error={errors.email?.message}
             {...register('email')}
           />
-          <Input
+          <PasswordInput
             label="Geslo"
-            type="password"
             autoComplete="new-password"
             error={errors.password?.message}
             {...register('password')}
