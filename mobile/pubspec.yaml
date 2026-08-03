@@ -40,7 +40,7 @@ dependencies:
   dio: ^5.7.0                     # HTTP client
   flutter_secure_storage: ^9.2.2  # varno shranjevanje JWT
   provider: ^6.1.2                # state management
-  go_router: ^14.2.7             # navigacija
+  go_router: ^17.3.0             # navigacija
   intl: ^0.20.2                  # formatiranje datumov (sl_SI); usklajeno s flutter_localizations
   firebase_core: ^3.6.0          # push obvestila (FCM)
   firebase_messaging: ^15.1.3
