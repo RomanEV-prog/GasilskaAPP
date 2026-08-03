@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nfc_manager/ndef_record.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
@@ -47,8 +48,28 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
     }
   }
 
-  /// Prislon oznake → shrani njen UID na ta kos opreme.
-  Future<void> _linkNfcTag() async {
+  /// Besedilo, ki se zapiše na oznako — posnetek stanja ob zapisu.
+  /// Vrstice brez podatka izpustimo, da ne trošimo prostora na oznaki.
+  String _tagText() {
+    final e = _equipment;
+    final df = DateFormat('d. M. yyyy', 'sl');
+    final lines = <String>[
+      'Plamen — ${e.name}',
+      if (e.category?.isNotEmpty == true) 'Vrsta: ${e.category}',
+      if (e.inventoryNumber?.isNotEmpty == true)
+        'Inv. št.: ${e.inventoryNumber}',
+      'Zadolženo: ${e.currentHolderName ?? 'Prosto'}',
+      if (e.nextInspection != null)
+        'Pregled do: ${df.format(e.nextInspection!)}',
+      if (e.expiryDate != null) 'Velja do: ${df.format(e.expiryDate!)}',
+    ];
+    return lines.join('\n');
+  }
+
+  /// Prislon oznake → nanjo zapiše vsebino IN shrani njen UID na ta kos
+  /// opreme. Če oznaka zapisa ne podpira (ali je zaklenjena), se poveže samo
+  /// UID — evidenca v bazi je vir resnice, vsebina na oznaki je bonus.
+  Future<void> _writeNfcTag() async {
     final messenger = ScaffoldMessenger.of(context);
     var done = false;
 
@@ -66,6 +87,13 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
               'Prisloni telefon na NFC nalepko …',
               style: TextStyle(fontSize: 16),
             ),
+            SizedBox(height: 8),
+            Text(
+              'Na oznako se zapišejo vrsta, zadolžitev in roki; '
+              'oznaka se poveže s tem kosom opreme.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
           ],
         ),
       ),
@@ -73,22 +101,49 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
       if (!done) NfcService.stop();
     });
 
-    await NfcService.start((uid) async {
+    final message = NdefMessage(records: [NfcService.textRecord(_tagText())]);
+
+    await NfcService.startWrite(message, (result) async {
       if (done) return;
       done = true;
       await NfcService.stop();
+
+      final uid = result.uid;
+      if (uid == null) {
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Oznake ni bilo mogoče prebrati.')),
+        );
+        return;
+      }
+
+      const writeNote = {
+        NfcWriteStatus.ok: 'NFC oznaka je zapisana in povezana.',
+        NfcWriteStatus.notNdef:
+            'Oznaka je povezana; zapis vsebine na to oznako ni podprt.',
+        NfcWriteStatus.readOnly:
+            'Oznaka je povezana; oznaka je zaklenjena za pisanje.',
+        NfcWriteStatus.tooLarge:
+            'Oznaka je povezana; vsebina presega kapaciteto oznake.',
+      };
+
       try {
         final updated = await _api.linkNfc(_equipment.id, uid);
         if (!mounted) return;
         setState(() => _equipment = updated);
         Navigator.of(context).pop(); // zapri listič
         messenger.showSnackBar(
-          const SnackBar(content: Text('NFC oznaka je povezana.')),
+          SnackBar(content: Text(writeNote[result.status]!)),
         );
       } on ApiException catch (err) {
         if (!mounted) return;
         Navigator.of(context).pop();
-        messenger.showSnackBar(SnackBar(content: Text(err.message)));
+        // Zapis na oznako je morda uspel, povezava v bazo pa ne — povej oboje.
+        final prefix = result.status == NfcWriteStatus.ok
+            ? 'Vsebina je zapisana, povezava v bazo pa ni uspela: '
+            : '';
+        messenger.showSnackBar(SnackBar(content: Text('$prefix${err.message}')));
       }
     });
   }
@@ -198,10 +253,10 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
               icon: const Icon(Icons.nfc),
               label: Text(
                 e.nfcUid == null
-                    ? 'Poveži NFC oznako'
-                    : 'Zamenjaj NFC oznako',
+                    ? 'Zapiši in poveži NFC oznako'
+                    : 'Znova zapiši NFC oznako',
               ),
-              onPressed: _linkNfcTag,
+              onPressed: _writeNfcTag,
             ),
           ],
 
