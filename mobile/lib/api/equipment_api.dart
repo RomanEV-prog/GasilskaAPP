@@ -24,6 +24,29 @@ class EquipmentApi {
     return Equipment.fromJson(data as Map<String, dynamic>);
   }
 
+  /// En kos opreme — za osvežitev po urejanju/zadolžitvi.
+  Future<Equipment> getById(String id) async {
+    final data = await _client.get('/equipment/$id');
+    return Equipment.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Uredi podatke opreme (samo upravljavci opreme). Brisljiva polja
+  /// pošlji kot `null`, ne izpuščaj jih — izpuščeno polje ostane nespremenjeno.
+  Future<Equipment> update(String id, Map<String, dynamic> fields) async {
+    final data = await _client.patch('/equipment/$id', data: fields);
+    return Equipment.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Zadolži opremo članu (samo upravljavci opreme).
+  Future<void> issue(String id, String userId) async {
+    await _client.post('/equipment/$id/assignments', data: {'userId': userId});
+  }
+
+  /// Vrne trenutno odprto zadolžitev (samo upravljavci opreme).
+  Future<void> returnItem(String id) async {
+    await _client.post('/equipment/$id/assignments/return', data: {});
+  }
+
   /// Moja trenutno zadolžena oprema.
   Future<List<MyEquipmentAssignment>> myAssignments() async {
     final data = await _client.get('/equipment/my-assignments') as List<dynamic>;

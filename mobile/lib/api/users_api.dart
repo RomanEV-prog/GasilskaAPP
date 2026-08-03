@@ -1,8 +1,29 @@
 import '../models/notification.dart';
 import 'api_client.dart';
 
+/// Ozka projekcija člana za izbirnike (zadolžitev opreme ipd.).
+class MemberRef {
+  final String id;
+  final String fullName;
+
+  const MemberRef({required this.id, required this.fullName});
+
+  factory MemberRef.fromJson(Map<String, dynamic> json) => MemberRef(
+        id: json['id'] as String,
+        fullName: '${json['lastName'] ?? ''} ${json['firstName'] ?? ''}'.trim(),
+      );
+}
+
 class UsersApi {
   final _client = ApiClient.instance;
+
+  /// Seznam članov društva (ozka projekcija; urejeno po priimku).
+  Future<List<MemberRef>> members() async {
+    final data = await _client.get('/users') as List<dynamic>;
+    return data
+        .map((e) => MemberRef.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   /// Posodobi lastno razpoložljivost.
   Future<void> updateAvailability(String availability) async {

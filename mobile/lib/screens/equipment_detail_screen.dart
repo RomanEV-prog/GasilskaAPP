@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/equipment_api.dart';
+import '../api/users_api.dart';
 import '../models/equipment.dart';
 import '../providers/auth_provider.dart';
 import '../services/nfc_service.dart';
@@ -45,6 +46,224 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
         return Colors.orange;
       default:
         return Colors.red;
+    }
+  }
+
+  /// Po spremembi podatkov spomni, da je vsebina na oznaki zdaj zastarela.
+  void _savedSnack(ScaffoldMessengerState messenger) {
+    messenger.showSnackBar(SnackBar(
+      content: Text(_equipment.nfcUid == null
+          ? 'Podatki so shranjeni.'
+          : 'Podatki so shranjeni — znova zapiši NFC oznako, da bo ažurna.'),
+    ));
+  }
+
+  Future<void> _refresh() async {
+    final fresh = await _api.getById(_equipment.id);
+    if (mounted) setState(() => _equipment = fresh);
+  }
+
+  /// Urejanje podatkov, ki so tudi na NFC oznaki (in stanja/lokacije).
+  Future<void> _editDetails() async {
+    final e = _equipment;
+    final messenger = ScaffoldMessenger.of(context);
+    final df = DateFormat('d. M. yyyy', 'sl');
+    final name = TextEditingController(text: e.name);
+    final category = TextEditingController(text: e.category ?? '');
+    final invNo = TextEditingController(text: e.inventoryNumber ?? '');
+    final location = TextEditingController(text: e.location ?? '');
+    var condition = e.condition;
+    DateTime? nextInspection = e.nextInspection;
+    DateTime? expiryDate = e.expiryDate;
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Widget dateRow(
+            String label,
+            DateTime? value,
+            void Function(DateTime?) set,
+          ) {
+            return Row(
+              children: [
+                Expanded(
+                  child: Text('$label: ${value == null ? '—' : df.format(value)}'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: value ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) setSheet(() => set(picked));
+                  },
+                  child: const Text('Izberi'),
+                ),
+                if (value != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    tooltip: 'Počisti',
+                    onPressed: () => setSheet(() => set(null)),
+                  ),
+              ],
+            );
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Uredi opremo',
+                    style: Theme.of(ctx).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: name,
+                    decoration: const InputDecoration(labelText: 'Naziv'),
+                  ),
+                  TextField(
+                    controller: category,
+                    decoration:
+                        const InputDecoration(labelText: 'Vrsta / kategorija'),
+                  ),
+                  TextField(
+                    controller: invNo,
+                    decoration:
+                        const InputDecoration(labelText: 'Inventarna št.'),
+                  ),
+                  TextField(
+                    controller: location,
+                    decoration: const InputDecoration(labelText: 'Lokacija'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: condition,
+                    decoration: const InputDecoration(labelText: 'Stanje'),
+                    items: equipmentConditionLabels.entries
+                        .map((c) => DropdownMenuItem(
+                            value: c.key, child: Text(c.value)))
+                        .toList(),
+                    onChanged: (v) => condition = v ?? condition,
+                  ),
+                  const SizedBox(height: 12),
+                  dateRow('Naslednji pregled', nextInspection,
+                      (v) => nextInspection = v),
+                  dateRow('Rok veljave', expiryDate, (v) => expiryDate = v),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Shrani'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (saved != true) return;
+
+    String? iso(DateTime? d) =>
+        d == null ? null : DateFormat('yyyy-MM-dd').format(d);
+    String? blankToNull(String s) => s.trim().isEmpty ? null : s.trim();
+
+    try {
+      // Brisljiva polja pošljemo kot null (izpuščeno polje se ne bi počistilo).
+      final updated = await _api.update(_equipment.id, {
+        if (name.text.trim().isNotEmpty) 'name': name.text.trim(),
+        'category': blankToNull(category.text),
+        'inventoryNumber': blankToNull(invNo.text),
+        'location': blankToNull(location.text),
+        'condition': condition,
+        'nextInspection': iso(nextInspection),
+        'expiryDate': iso(expiryDate),
+      });
+      if (!mounted) return;
+      setState(() => _equipment = updated);
+      _savedSnack(messenger);
+    } on ApiException catch (err) {
+      messenger.showSnackBar(SnackBar(content: Text(err.message)));
+    }
+  }
+
+  /// Zadolžitev prostega kosa članu — izbirnik s seznamom članov.
+  Future<void> _assign() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final List<MemberRef> members;
+    try {
+      members = await UsersApi().members();
+    } on ApiException catch (err) {
+      messenger.showSnackBar(SnackBar(content: Text(err.message)));
+      return;
+    }
+    if (!mounted) return;
+
+    final picked = await showDialog<MemberRef>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Zadolži članu'),
+        children: members
+            .map((m) => SimpleDialogOption(
+                  onPressed: () => Navigator.pop(ctx, m),
+                  child: Text(m.fullName),
+                ))
+            .toList(),
+      ),
+    );
+    if (picked == null) return;
+
+    try {
+      await _api.issue(_equipment.id, picked.id);
+      await _refresh();
+      _savedSnack(messenger);
+    } on ApiException catch (err) {
+      messenger.showSnackBar(SnackBar(content: Text(err.message)));
+    }
+  }
+
+  /// Vračilo trenutno odprte zadolžitve.
+  Future<void> _return() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Vrni opremo'),
+        content: Text(
+          'Zaključim zadolžitev (${_equipment.currentHolderName})?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Vrni'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _api.returnItem(_equipment.id);
+      await _refresh();
+      _savedSnack(messenger);
+    } on ApiException catch (err) {
+      messenger.showSnackBar(SnackBar(content: Text(err.message)));
     }
   }
 
@@ -247,17 +466,37 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
           _row(context, Icons.qr_code, 'QR koda', e.qrCode),
           _row(context, Icons.nfc, 'NFC oznaka', e.nfcUid),
 
-          if (canManage && _nfcAvailable) ...[
+          if (canManage) ...[
             const SizedBox(height: 16),
             OutlinedButton.icon(
-              icon: const Icon(Icons.nfc),
-              label: Text(
-                e.nfcUid == null
-                    ? 'Zapiši in poveži NFC oznako'
-                    : 'Znova zapiši NFC oznako',
-              ),
-              onPressed: _writeNfcTag,
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Uredi podatke'),
+              onPressed: _editDetails,
             ),
+            const SizedBox(height: 8),
+            e.currentHolderName == null
+                ? OutlinedButton.icon(
+                    icon: const Icon(Icons.person_add_alt_outlined),
+                    label: const Text('Zadolži članu'),
+                    onPressed: _assign,
+                  )
+                : OutlinedButton.icon(
+                    icon: const Icon(Icons.person_remove_outlined),
+                    label: const Text('Vrni opremo'),
+                    onPressed: _return,
+                  ),
+            if (_nfcAvailable) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.nfc),
+                label: Text(
+                  e.nfcUid == null
+                      ? 'Zapiši in poveži NFC oznako'
+                      : 'Znova zapiši NFC oznako',
+                ),
+                onPressed: _writeNfcTag,
+              ),
+            ],
           ],
 
           if (e.notes != null && e.notes!.isNotEmpty) ...[
