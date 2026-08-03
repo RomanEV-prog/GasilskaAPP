@@ -53,6 +53,15 @@ class EquipmentApi {
     await _client.post('/equipment/$id/assignments/return', data: {});
   }
 
+  /// Zgodovina zadolžitev kosa, najnovejša prva (samo upravljavci opreme).
+  Future<List<AssignmentHistoryEntry>> history(String id) async {
+    final data =
+        await _client.get('/equipment/$id/assignments') as List<dynamic>;
+    return data
+        .map((e) => AssignmentHistoryEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Moja trenutno zadolžena oprema.
   Future<List<MyEquipmentAssignment>> myAssignments() async {
     final data = await _client.get('/equipment/my-assignments') as List<dynamic>;

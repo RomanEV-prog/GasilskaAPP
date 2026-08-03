@@ -7,6 +7,7 @@ import '../api/api_client.dart';
 import '../api/equipment_api.dart';
 import '../api/users_api.dart';
 import '../models/equipment.dart';
+import '../models/equipment_assignment.dart';
 import '../providers/auth_provider.dart';
 import '../services/nfc_service.dart';
 
@@ -22,6 +23,19 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
   final _api = EquipmentApi();
   late Equipment _equipment = widget.equipment;
   bool _nfcAvailable = false;
+  List<AssignmentHistoryEntry>? _history;
+
+  Future<void> _loadHistory() async {
+    try {
+      final rows = await _api.history(_equipment.id);
+      if (mounted) setState(() => _history = rows);
+    } on ApiException catch (err) {
+      if (!mounted) return;
+      setState(() => _history = []);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(err.message)));
+    }
+  }
 
   @override
   void initState() {
@@ -60,7 +74,13 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
 
   Future<void> _refresh() async {
     final fresh = await _api.getById(_equipment.id);
-    if (mounted) setState(() => _equipment = fresh);
+    if (!mounted) return;
+    setState(() {
+      _equipment = fresh;
+      // Zadolžitev/vračilo spremeni zgodovino — ob naslednjem razprtju
+      // se naloži znova.
+      _history = null;
+    });
   }
 
   /// Urejanje podatkov, ki so tudi na NFC oznaki (in stanja/lokacije).
@@ -211,17 +231,59 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
     }
     if (!mounted) return;
 
+    // Z iskalnikom — pri več sto članih je listanje neuporabno.
     final picked = await showDialog<MemberRef>(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Zadolži članu'),
-        children: members
-            .map((m) => SimpleDialogOption(
-                  onPressed: () => Navigator.pop(ctx, m),
-                  child: Text(m.fullName),
-                ))
-            .toList(),
-      ),
+      builder: (ctx) {
+        var query = '';
+        return StatefulBuilder(
+          builder: (ctx, setDialog) {
+            final filtered = query.isEmpty
+                ? members
+                : members
+                    .where((m) =>
+                        m.fullName.toLowerCase().contains(query.toLowerCase()))
+                    .toList();
+            return AlertDialog(
+              title: const Text('Zadolži članu'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 400,
+                child: Column(
+                  children: [
+                    TextField(
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Išči po imenu …',
+                      ),
+                      onChanged: (v) => setDialog(() => query = v),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(child: Text('Ni zadetkov.'))
+                          : ListView.builder(
+                              itemCount: filtered.length,
+                              itemBuilder: (_, i) => ListTile(
+                                title: Text(filtered[i].fullName),
+                                onTap: () => Navigator.pop(ctx, filtered[i]),
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Prekliči'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
     if (picked == null) return;
 
@@ -504,6 +566,54 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
             Text('Opombe', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(e.notes!),
+          ],
+
+          if (canManage) ...[
+            const Divider(height: 32),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: const Text('Zgodovina zadolžitev'),
+              // Naloži šele ob razprtju — večina obiskov zgodovine ne rabi.
+              onExpansionChanged: (open) {
+                if (open && _history == null) _loadHistory();
+              },
+              children: [
+                if (_history == null)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  )
+                else if (_history!.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Ta kos še ni bil nikoli zadolžen.'),
+                  )
+                else
+                  ..._history!.map((h) {
+                    final od =
+                        h.issuedAt != null ? df.format(h.issuedAt!) : '?';
+                    final doDate = h.returnedAt != null
+                        ? df.format(h.returnedAt!)
+                        : 'še zadolženo';
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        h.returnedAt == null
+                            ? Icons.person_outline
+                            : Icons.history,
+                        size: 20,
+                      ),
+                      title: Text(h.memberName ?? '—'),
+                      subtitle: Text([
+                        '$od – $doDate',
+                        if (h.returnNotes?.isNotEmpty == true)
+                          'Ob vračilu: ${h.returnNotes}',
+                      ].join('\n')),
+                    );
+                  }),
+              ],
+            ),
           ],
         ],
       ),

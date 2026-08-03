@@ -11,22 +11,27 @@ import '../models/equipment.dart';
 import '../providers/auth_provider.dart';
 import '../services/nfc_service.dart';
 
-/// Skeniranje opreme — QR koda ali NFC oznaka, oboje na istem zaslonu.
+/// Način skeniranja — ločena zaslona, da kamera ne zmede pri NFC prislonu.
+enum ScanMode { qr, nfc }
+
+/// Skeniranje opreme — QR koda (kamera) ali NFC oznaka (brez kamere).
 ///
-/// Na Androidu teče NFC seja vzporedno s kamero (bralnik je od nje ločen).
-/// Na iOS CoreNFC odpre sistemsko modalno okno, ki kamero prekrije, zato se
-/// tam seja sproži šele na pritisk gumba.
+/// Način izbere klicatelj (home_shell ponudi izbiro). Na iOS CoreNFC odpre
+/// sistemsko modalno okno, zato se tam NFC seja sproži na pritisk gumba.
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({super.key});
+  final ScanMode mode;
+
+  const ScanScreen({this.mode = ScanMode.qr, super.key});
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  final _controller = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
-  );
+  // Kamero ustvarimo samo v QR načinu — v NFC načinu ne sme niti zasvetiti.
+  late final MobileScannerController? _controller = widget.mode == ScanMode.qr
+      ? MobileScannerController(detectionSpeed: DetectionSpeed.noDuplicates)
+      : null;
   final _api = EquipmentApi();
   bool _handling = false;
   bool _nfcAvailable = false;
@@ -34,14 +39,13 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   void initState() {
     super.initState();
-    _initNfc();
+    if (widget.mode == ScanMode.nfc) _initNfc();
   }
 
   Future<void> _initNfc() async {
     final available = await NfcService.isAvailable();
     if (!mounted) return;
     setState(() => _nfcAvailable = available);
-    // Na napravah brez NFC ostane QR edina pot — brez opozorilnih pasic.
     if (available && Platform.isAndroid) await _startNfc();
   }
 
@@ -77,7 +81,7 @@ class _ScanScreenState extends State<ScanScreen> {
   }) async {
     if (_handling) return;
     setState(() => _handling = true);
-    await _controller.stop();
+    await _controller?.stop();
     await NfcService.stop();
 
     try {
@@ -123,8 +127,12 @@ class _ScanScreenState extends State<ScanScreen> {
           context.pushReplacement('/equipment-new', extra: nfcUid);
         case 'retry':
           setState(() => _handling = false);
-          await _controller.start();
-          if (_nfcAvailable && Platform.isAndroid) await _startNfc();
+          await _controller?.start();
+          if (widget.mode == ScanMode.nfc &&
+              _nfcAvailable &&
+              Platform.isAndroid) {
+            await _startNfc();
+          }
         default:
           if (mounted) context.pop();
       }
@@ -134,41 +142,72 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   void dispose() {
     NfcService.stop();
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
-  }
-
-  String get _hint {
-    if (_handling) return 'Iščem opremo ...';
-    return _nfcAvailable && Platform.isAndroid
-        ? 'Usmeri kamero v QR kodo ali prisloni telefon na NFC oznako'
-        : 'Usmeri kamero v QR kodo';
   }
 
   @override
   Widget build(BuildContext context) {
+    return widget.mode == ScanMode.nfc ? _buildNfc(context) : _buildQr(context);
+  }
+
+  /// NFC način: brez kamere — samo poziv za prislon (iOS z gumbom).
+  Widget _buildNfc(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Prisloni NFC oznako')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_handling)
+              const CircularProgressIndicator()
+            else ...[
+              Icon(
+                Icons.nfc,
+                size: 96,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 48),
+                child: Text(
+                  'Prisloni telefon na NFC oznako opreme.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+              if (Platform.isIOS) ...[
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  icon: const Icon(Icons.nfc),
+                  label: const Text('Začni branje'),
+                  onPressed: _startNfc,
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// QR način: kamera z okvirjem — brez NFC seje.
+  Widget _buildQr(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Skeniraj opremo'),
+        title: const Text('Skeniraj QR kodo'),
         actions: [
-          // Na iOS je NFC ročen — sistemsko okno prekrije kamero.
-          if (_nfcAvailable && Platform.isIOS)
-            IconButton(
-              icon: const Icon(Icons.nfc),
-              tooltip: 'Skeniraj NFC oznako',
-              onPressed: _startNfc,
-            ),
           IconButton(
             icon: const Icon(Icons.flash_on),
             tooltip: 'Bliskavica',
-            onPressed: () => _controller.toggleTorch(),
+            onPressed: () => _controller?.toggleTorch(),
           ),
         ],
       ),
       body: Stack(
         alignment: Alignment.center,
         children: [
-          MobileScanner(controller: _controller, onDetect: _onDetect),
+          MobileScanner(controller: _controller!, onDetect: _onDetect),
           // Okvir za usmeritev
           Container(
             width: 240,
@@ -188,7 +227,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                _hint,
+                _handling ? 'Iščem opremo ...' : 'Usmeri kamero v QR kodo',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white),
               ),

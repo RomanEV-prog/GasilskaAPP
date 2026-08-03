@@ -106,7 +106,8 @@ class _PlamenAppState extends State<PlamenApp> {
         ),
         GoRoute(
           path: '/scan',
-          builder: (_, __) => const ScanScreen(),
+          builder: (context, state) =>
+              ScanScreen(mode: state.extra as ScanMode? ?? ScanMode.qr),
         ),
         GoRoute(
           path: '/equipment/:id',

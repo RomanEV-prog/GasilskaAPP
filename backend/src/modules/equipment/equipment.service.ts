@@ -58,6 +58,18 @@ export class EquipmentService {
     });
   }
 
+  /**
+   * Trenutni imetniki za opomnike: equipmentId → userId zadolženega člana.
+   * En poizvedbeni klic za cel seznam, da dnevni cron ne strelja po kosih.
+   */
+  async currentHolderIds(equipmentIds: string[]): Promise<Map<string, string>> {
+    if (equipmentIds.length === 0) return new Map();
+    const open = await this.assignmentsRepo.find({
+      where: { equipmentId: In(equipmentIds), returnedAt: IsNull() },
+    });
+    return new Map(open.map((a) => [a.equipmentId, a.userId]));
+  }
+
   private holderOf(assignment: EquipmentAssignment | null): HolderProjection {
     if (!assignment?.user) return null;
     const { id, firstName, lastName } = assignment.user;

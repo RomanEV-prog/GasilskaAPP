@@ -217,9 +217,40 @@ export class RemindersService {
   }
 
   /**
+   * Zadolženim članom pošlje osebni opomnik za njihove kose — upravljavci
+   * dobijo zbirni seznam prek vlog, član pa točno svoje kose (predlog
+   * Roman, 3. 8. 2026: nosilec IDA mora sam vedeti, da mu pregled poteče).
+   */
+  private async remindHolders(
+    organizationId: string,
+    due: { id: string; name: string }[],
+    title: string,
+  ): Promise<void> {
+    const holders = await this.equipmentService.currentHolderIds(
+      due.map((e) => e.id),
+    );
+    const byHolder = new Map<string, string[]>();
+    for (const e of due) {
+      const userId = holders.get(e.id);
+      if (!userId) continue;
+      byHolder.set(userId, [...(byHolder.get(userId) ?? []), e.name]);
+    }
+    for (const [userId, names] of byHolder) {
+      await this.notificationsService.create(organizationId, null, {
+        title,
+        body: names.join('\n'),
+        type: 'equipment_reminder',
+        target: NotificationTarget.SPECIFIC,
+        targetUserIds: [userId],
+      });
+    }
+  }
+
+  /**
    * Pregledi opreme (IDA, vrvna tehnika, gasilni aparati ...): opomnik na
    * točno 7 in 3 dni pred rokom → administratorji, glavni strojnik, orodjar,
-   * pomočnik za zaščito dihal.
+   * pomočnik za zaščito dihal; zadolženi člani pa dobijo osebni opomnik za
+   * svoje kose.
    */
   private async checkEquipment(organizationId: string): Promise<void> {
     const maxDays = Math.max(...DEADLINE_REMINDER_DAYS);
@@ -250,6 +281,11 @@ export class RemindersService {
           body: lines.join('\n'),
           type: 'equipment_reminder',
         },
+      );
+      await this.remindHolders(
+        organizationId,
+        due,
+        `🧰 Pregled tvoje zadolžene opreme čez ${days} dni`,
       );
     }
   }
@@ -287,6 +323,11 @@ export class RemindersService {
           body: lines.join('\n'),
           type: 'equipment_reminder',
         },
+      );
+      await this.remindHolders(
+        organizationId,
+        due,
+        `⏳ Rok veljave tvoje zadolžene opreme poteče čez ${days} dni`,
       );
     }
   }

@@ -8,7 +8,9 @@ import '../api/users_api.dart';
 import '../providers/app_nav.dart';
 import '../providers/auth_provider.dart';
 import '../services/fcm_service.dart';
+import '../services/nfc_service.dart';
 import '../widgets/change_password_dialog.dart';
+import 'scan_screen.dart' show ScanMode;
 import 'calendar_screen.dart';
 import 'dashboard_screen.dart';
 import 'events_screen.dart';
@@ -115,6 +117,7 @@ Future<void> _showSpinSettingsDialog(BuildContext context) async {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+  bool _nfcAvailable = false;
 
   @override
   void initState() {
@@ -126,6 +129,44 @@ class _HomeShellState extends State<HomeShell> {
     // preverimo tudi takoj.
     requestedHomeTab.addListener(_applyRequestedTab);
     _applyRequestedTab(initial: true);
+    NfcService.isAvailable().then((v) {
+      if (mounted) setState(() => _nfcAvailable = v);
+    });
+  }
+
+  /// NFC in QR sta ločena zaslona (kamera pri NFC prislonu zmede) — ob tapu
+  /// ponudimo izbiro; naprave brez NFC gredo naravnost na QR.
+  void _openScan() {
+    if (!_nfcAvailable) {
+      context.push('/scan', extra: ScanMode.qr);
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.nfc),
+              title: const Text('Prisloni NFC oznako'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.push('/scan', extra: ScanMode.nfc);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.qr_code_scanner),
+              title: const Text('Skeniraj QR kodo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.push('/scan', extra: ScanMode.qr);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -165,7 +206,7 @@ class _HomeShellState extends State<HomeShell> {
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: 'Skeniraj opremo',
-            onPressed: () => context.push('/scan'),
+            onPressed: _openScan,
           ),
           PopupMenuButton<String>(
             tooltip: 'Račun',
