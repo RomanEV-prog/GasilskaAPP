@@ -108,11 +108,16 @@ private_ranges }`. Sprememba Caddyfile = rebuild `web` vsebnika.
   `hank/sasha.ns.cloudflare.com` (registrar Domenca). **Oranžen oblaček imata
   SAMO apex in `www`** — mail/webmail/cpanel/autoconfig/autodiscover/ftp so
   sivi (DNS only) in MORAJO taki ostati, sicer pošta umre.
-- SSL »Full (strict)«; origin streže **Cloudflare Origin certifikat** (velja
-  do 2041, brez obnavljanja): `/opt/eversum/certs/plamenapp-origin.{pem,key}`
-  na gostitelju + kopija v volume `eversum-caddy-1:/data/` (Caddyfile:
-  `tls /data/plamenapp-origin.pem /data/plamenapp-origin.key`). Ob ponovnem
-  ustvarjanju caddy vsebnika volume `eversum_caddy_data` certifikat ohrani.
+- SSL »Full (strict)«; origin ZAČASNO streže Let's Encrypt (do 27. 10. 2026).
+  **Past (10. 8.):** takojšen preklop na CF Origin cert je zlomil mobilno
+  aplikacijo pri uporabnikih, katerih DNS je še vračal staro IP — telefon
+  zadene origin mimo CF in Android CF Origin certifikata ne prizna
+  (»Seznama društev ni bilo mogoče naložiti«). Zato Origin cert vklopi šele,
+  ko stari zapis povsod poteče (~po 15. 8.): v `/opt/eversum/Caddyfile`
+  odkomentiraj `tls /data/plamenapp-origin.pem /data/plamenapp-origin.key`
+  + cat-v-vsebnik + reload. Datoteke že čakajo:
+  `/opt/eversum/certs/plamenapp-origin.{pem,key,csr}` + kopija v volume
+  `eversum-caddy-1:/data/` (velja do 2041; volume preživi recreate).
 - Veriga IP-jev: CF → eversum-caddy (globalni `trusted_proxies static
   <CF obsegi>` v `/opt/eversum/Caddyfile`) → gasilapp-web → backend
   (`TRUST_PROXY_HOPS: "3"`). Ob spremembi CF obsegov
