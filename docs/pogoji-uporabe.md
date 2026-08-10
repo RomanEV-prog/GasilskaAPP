@@ -37,7 +37,7 @@ e-pošta podpora@plamenapp.si (v nadaljevanju **ponudnik**).
 
 ## 3. Cena in trajanje
 
-1. Višina in način obračuna nadomestila sta določena v veljavnem ceniku
+1. Višina in način obračuna nadomestila sta določena v veljavnem ceniku (plamenapp.si/cenik.html)
    oziroma dogovoru z naročnikom. Testna uporaba je lahko brezplačna.
 2. Pogodba je sklenjena za nedoločen čas. Naročnik lahko odstopi kadar koli
    z učinkom ob koncu obračunskega obdobja; ponudnik lahko odpove pogodbo z
