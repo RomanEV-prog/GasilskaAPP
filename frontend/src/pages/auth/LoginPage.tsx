@@ -211,6 +211,10 @@ export function LoginPage() {
           <a href="/zasebnost.html" className="hover:underline">
             Politika zasebnosti
           </a>
+          {' · '}
+          <a href="/pogoji.html" className="hover:underline">
+            Pogoji uporabe
+          </a>
         </p>
       </div>
     </div>

@@ -1,6 +1,6 @@
-# Pogoji uporabe storitve Plamen — OSNUTEK (v pregledu, NI objavljeno)
+# Pogoji uporabe storitve Plamen — (objavljeno 10. 8. 2026)
 
-> Status: osnutek, 10. 8. 2026. Pred objavo naj pregleda Roman (in po
+> Status: OBJAVLJENO 10. 8. 2026 kot frontend/public/pogoji.html (vir resnice je HTML). Pred objavo naj pregleda Roman (in po
 > presoji pravnik). Ob objavi: pretvoriti v `frontend/public/pogoji.html`,
 > povezati z registracije (kljukica »Sprejemam pogoje uporabe«) in
 > posodobiti datum. Zneskov/cen osnutek namenoma ne vsebuje.

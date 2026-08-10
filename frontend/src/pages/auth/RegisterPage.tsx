@@ -33,6 +33,9 @@ const schema = z.object({
   lastName: z.string().min(1, 'Vnesite priimek.'),
   email: z.string().email('Vnesite veljaven e-poštni naslov.'),
   password: z.string().min(8, 'Geslo mora imeti vsaj 8 znakov.'),
+  acceptTerms: z.boolean().refine((v) => v, {
+    message: 'Za registracijo morate sprejeti pogoje uporabe.',
+  }),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -53,7 +56,7 @@ export function RegisterPage() {
 
   const slug = watch('organizationSlug');
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async ({ acceptTerms: _, ...data }: FormData) => {
     setServerError('');
     try {
       await registerOrg(data);
@@ -157,6 +160,38 @@ export function RegisterPage() {
             </p>
           )}
 
+          <label className="flex items-start gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-[#CC2200]"
+              {...register('acceptTerms')}
+            />
+            <span>
+              Sprejemam{' '}
+              <a
+                href="/pogoji.html"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                pogoje uporabe
+              </a>{' '}
+              (vključno s pogodbo o obdelavi podatkov) in sem seznanjen s{' '}
+              <a
+                href="/zasebnost.html"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                politiko zasebnosti
+              </a>
+              .
+            </span>
+          </label>
+          {errors.acceptTerms && (
+            <p className="text-sm text-red-600">{errors.acceptTerms.message}</p>
+          )}
+
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? 'Ustvarjanje ...' : 'Ustvari društvo'}
           </Button>
@@ -169,13 +204,6 @@ export function RegisterPage() {
           </Link>
         </p>
 
-        <p className="mt-3 text-center text-xs text-gray-400">
-          Z registracijo potrjujete, da ste seznanjeni s{' '}
-          <a href="/zasebnost.html" className="hover:underline">
-            politiko zasebnosti
-          </a>
-          .
-        </p>
       </div>
     </div>
   );
