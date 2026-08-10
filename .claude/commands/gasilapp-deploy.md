@@ -102,6 +102,41 @@ prejeti `X-Forwarded-For` od eversuma ZAVRŽE, dokler nima v
 `frontend/Caddyfile` globalne opcije `servers { trusted_proxies static
 private_ranges }`. Sprememba Caddyfile = rebuild `web` vsebnika.
 
+## Cloudflare pred plamenapp.si (od 10. 8. 2026)
+
+- Cona `plamenapp.si` (id `0cc024fa9ce01d465b283a0bb19bae12`), NS
+  `hank/sasha.ns.cloudflare.com` (registrar Domenca). **Oranžen oblaček imata
+  SAMO apex in `www`** — mail/webmail/cpanel/autoconfig/autodiscover/ftp so
+  sivi (DNS only) in MORAJO taki ostati, sicer pošta umre.
+- SSL »Full (strict)«; origin streže **Cloudflare Origin certifikat** (velja
+  do 2041, brez obnavljanja): `/opt/eversum/certs/plamenapp-origin.{pem,key}`
+  na gostitelju + kopija v volume `eversum-caddy-1:/data/` (Caddyfile:
+  `tls /data/plamenapp-origin.pem /data/plamenapp-origin.key`). Ob ponovnem
+  ustvarjanju caddy vsebnika volume `eversum_caddy_data` certifikat ohrani.
+- Veriga IP-jev: CF → eversum-caddy (globalni `trusted_proxies static
+  <CF obsegi>` v `/opt/eversum/Caddyfile`) → gasilapp-web → backend
+  (`TRUST_PROXY_HOPS: "3"`). Ob spremembi CF obsegov
+  (https://www.cloudflare.com/ips/) posodobi Caddyfile.
+- Zaščite: WAF »Cloudflare Managed Free Ruleset« + DDoS L7 (samodejno),
+  Bot Fight Mode ON, rate-limit pravilo `/api/v1/auth/*` 15 zahtev/10 s na IP
+  (CF plast; backendov lastni limiter s `retry-after` udari prej — 429 z
+  JSON telesom je backendov, CF-jev ima glavo `cf-mitigated`).
+- **Backend NIKOLI ne `up -d` brez `--env-file .env.prod`** — compose
+  spremenljivke interpolira ob zagonu ukaza; brez tega backend pade z
+  `JWT_SECRET ni nastavljen` (udarilo 10. 8. ob bumpu TRUST_PROXY_HOPS).
+- Past pri testiranju po preklopu na oranžno: lokalni DNS ima lahko še stari
+  A zapis → curl zadene origin neposredno in pade s cert napako (exit 60).
+  Testiraj z `--resolve plamenapp.si:443:<CF-edge-IP>`.
+- Dash API triki (brez API žetona, prek prijavljene seje v brskalniku,
+  `fetch('/api/v4/...')` na dash.cloudflare.com): cona obtiči v
+  »initializing«, dokler nima naročnine → `POST /zones/:id/subscription
+  {rate_plan:{id:'free'}}` ali klik »Select plan« v UI; `activation_check`
+  je omejen na 1×/uro; Origin CA certifikatov dash proxy NE zna
+  (`/api/v4/certificates` → No route) → uporabi UI (SSL/TLS → Origin Server,
+  »Use my private key and CSR« — CSR generiraj na strežniku, ključ ostane tam).
+- `gasilapp.eu` ni v Cloudflru (LE certifikat prek Caddy kot doslej); domena
+  se opusti, ko Play statistika pokaže, da ni več različic < 1.0.17.
+
 ## Gotchas
 
 - **Beta stran gre v `/opt/gasilapp/downloads/index.html`**, ne v
