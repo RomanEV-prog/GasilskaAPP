@@ -206,6 +206,12 @@ export function LoginPage() {
           <span>Zaščiteno s</span>
           <img src="/cf-badge.svg" alt="Cloudflare" className="h-7" />
         </a>
+
+        <p className="mt-2 text-center text-xs text-gray-400">
+          <a href="/zasebnost.html" className="hover:underline">
+            Politika zasebnosti
+          </a>
+        </p>
       </div>
     </div>
   );

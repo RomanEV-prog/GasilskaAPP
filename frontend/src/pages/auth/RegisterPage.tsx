@@ -168,6 +168,14 @@ export function RegisterPage() {
             Prijava
           </Link>
         </p>
+
+        <p className="mt-3 text-center text-xs text-gray-400">
+          Z registracijo potrjujete, da ste seznanjeni s{' '}
+          <a href="/zasebnost.html" className="hover:underline">
+            politiko zasebnosti
+          </a>
+          .
+        </p>
       </div>
     </div>
   );
