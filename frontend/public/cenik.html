@@ -7,9 +7,13 @@
 <style>
   body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem; line-height: 1.6; color: #1a1a1a; }
   h1 { color: #CC2200; }
-  .cena { border: 2px solid #CC2200; border-radius: 12px; padding: 1.5rem; margin: 2rem 0; text-align: center; }
+  .cene { display: flex; gap: 1rem; margin: 2rem 0; flex-wrap: wrap; }
+  .cena { flex: 1 1 240px; border: 2px solid #ddd; border-radius: 12px; padding: 1.5rem; text-align: center; }
+  .cena.izpostavljena { border-color: #CC2200; }
+  .cena .naziv { font-weight: 600; margin-bottom: .25rem; }
   .cena .znesek { font-size: 2.25rem; font-weight: 700; color: #CC2200; }
   .cena .obdobje { color: #666; }
+  .cena .prihranek { margin-top: .5rem; font-size: .875rem; color: #CC2200; font-weight: 600; }
   ul { margin-top: .5rem; }
   footer { margin-top: 3rem; font-size: .875rem; color: #666; }
 </style>
@@ -18,10 +22,21 @@
 <h1>Cenik storitve Plamen</h1>
 <p>Velja od: 10. avgusta 2026</p>
 
-<div class="cena">
-  <div class="znesek">29,99 €</div>
-  <div class="obdobje">na mesec na društvo</div>
+<div class="cene">
+  <div class="cena">
+    <div class="naziv">Mesečna naročnina</div>
+    <div class="znesek">29,99 €</div>
+    <div class="obdobje">na mesec na društvo</div>
+  </div>
+  <div class="cena izpostavljena">
+    <div class="naziv">Letna naročnina</div>
+    <div class="znesek">299,90 €</div>
+    <div class="obdobje">na leto na društvo</div>
+    <div class="prihranek">2 meseca gratis (prihranek 59,98 €)</div>
+  </div>
 </div>
+<p>Obe možnosti vključujeta enak, poln obseg storitve — razlika je samo v
+obdobju obračuna.</p>
 
 <p>Enotna naročnina vključuje <strong>vse funkcije</strong> storitve za eno
 gasilsko društvo:</p>
