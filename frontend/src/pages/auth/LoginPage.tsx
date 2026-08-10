@@ -195,6 +195,17 @@ export function LoginPage() {
         </p>
 
         <IosInstallHint />
+
+        <a
+          href="https://www.cloudflare.com/"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-5 flex items-center justify-center gap-1.5 text-xs text-gray-400"
+          title="Stran ščiti Cloudflare"
+        >
+          <span>Zaščiteno s</span>
+          <img src="/cf-badge.svg" alt="Cloudflare" className="h-7" />
+        </a>
       </div>
     </div>
   );
