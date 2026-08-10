@@ -29,6 +29,10 @@ CREATE TABLE organizations (
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ime društva je unikatno (neodvisno od velikosti črk) — prijava brez
+-- izbire društva zahteva enolična imena.
+CREATE UNIQUE INDEX uq_organizations_name_lower ON organizations (LOWER(name));
+
 CREATE INDEX idx_organizations_subscription_expires
   ON organizations (subscription_expires_at);
 

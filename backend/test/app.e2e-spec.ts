@@ -22,7 +22,7 @@ describe('GasilApp E2E', () => {
   const stamp = Date.now();
   const pass = 'GasilApp123!';
   const orgA = {
-    organizationName: 'PGD E2E A',
+    organizationName: `PGD E2E A ${stamp}`,
     organizationSlug: `e2e-a-${stamp}`,
     firstName: 'Ana',
     lastName: 'Admin',
@@ -30,7 +30,7 @@ describe('GasilApp E2E', () => {
     password: pass,
   };
   const orgB = {
-    organizationName: 'PGD E2E B',
+    organizationName: `PGD E2E B ${stamp}`,
     organizationSlug: `e2e-b-${stamp}`,
     firstName: 'Bojan',
     lastName: 'Admin',
@@ -100,6 +100,49 @@ describe('GasilApp E2E', () => {
       tokenB = res.body.data.accessToken;
     });
 
+    it('zavrne podvojeno ime društva ob drugačni oznaki (409)', async () => {
+      await request(http)
+        .post('/api/v1/auth/register')
+        .send({
+          ...orgA,
+          organizationSlug: `e2e-a2-${stamp}`,
+          email: `admin2@e2e-a-${stamp}.si`,
+        })
+        .expect(409);
+    });
+
+    it('prijava z uporabniškim imenom BREZ izbire društva', async () => {
+      const res = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ username: 'ana.admin', password: pass })
+        .expect((r) => {
+          if (r.status !== 200 && r.status !== 201) {
+            throw new Error(`nepričakovan status ${r.status}`);
+          }
+        });
+      const d = res.body.data;
+      // ana.admin obstaja samo v društvu A tega zagona? Ne — vsak pretekli
+      // zagon jo je ustvaril tudi. Zato sta veljavna oba odgovora:
+      // neposredna prijava ALI izbira med društvi (in izbira mora uspeti).
+      if (d.needsOrganization) {
+        const target = d.organizations.find(
+          (o: { id: string }) => o.id === orgAId,
+        );
+        expect(target).toBeDefined();
+        const res2 = await request(http)
+          .post('/api/v1/auth/login')
+          .send({
+            username: 'ana.admin',
+            password: pass,
+            organizationId: target.id,
+          })
+          .expect(200);
+        expect(res2.body.data.user.organizationId).toBe(orgAId);
+      } else {
+        expect(d.accessToken).toBeDefined();
+      }
+    });
+
     it('zavrne podvojeno oznako (409)', async () => {
       await request(http)
         .post('/api/v1/auth/register')
@@ -111,7 +154,7 @@ describe('GasilApp E2E', () => {
       await request(http)
         .post("/api/v1/auth/register")
         .send({
-          organizationName: "PGD Brez Kode",
+          organizationName: `PGD Brez Kode ${stamp}`,
           organizationSlug: `e2e-nokod-${stamp}`,
           firstName: "X",
           lastName: "Y",
@@ -127,6 +170,7 @@ describe('GasilApp E2E', () => {
         .post("/api/v1/auth/register")
         .send({
           ...orgA,
+          organizationName: `PGD E2E Reuse ${stamp}`,
           organizationSlug: `e2e-reuse-${stamp}`,
           email: `reuse@e2e-${stamp}.si`,
         })
@@ -488,11 +532,19 @@ describe('GasilApp E2E', () => {
       expect(res.body.data.user.username).toBe("miha.clan");
     });
 
-    it("prijava z uporabniskim imenom brez drustva (400)", async () => {
-      await request(http)
+    it("prijava z uporabniskim imenom brez drustva uspe (ali ponudi izbiro)", async () => {
+      const res = await request(http)
         .post("/api/v1/auth/login")
         .send({ username: "miha.clan", password: pass })
-        .expect(400);
+        .expect(200);
+      const d = res.body.data;
+      if (d.needsOrganization) {
+        expect(
+          d.organizations.some((o: { id: string }) => o.id === orgAId),
+        ).toBe(true);
+      } else {
+        expect(d.user.username).toBe("miha.clan");
+      }
     });
 
     it("ustvari clana BREZ e-poste; username se generira", async () => {
@@ -1245,7 +1297,7 @@ describe('GasilApp E2E', () => {
     let renewCode = '';
 
     const orgC = {
-      organizationName: 'PGD E2E C',
+      organizationName: `PGD E2E C ${stamp}`,
       organizationSlug: `e2e-c-${stamp}`,
       firstName: 'Cvetka',
       lastName: 'Admin',
@@ -1292,7 +1344,7 @@ describe('GasilApp E2E', () => {
       const res = await request(http)
         .post('/api/v1/auth/register')
         .send({
-          organizationName: 'PGD E2E D',
+          organizationName: `PGD E2E D ${stamp}`,
           organizationSlug: `e2e-d-${stamp}`,
           firstName: 'Damjan',
           lastName: 'Admin',
@@ -1387,7 +1439,7 @@ describe('GasilApp E2E', () => {
       await request(http)
         .post('/api/v1/auth/register')
         .send({
-          organizationName: 'PGD E2E E',
+          organizationName: `PGD E2E E ${stamp}`,
           organizationSlug: `e2e-e-${stamp}`,
           firstName: 'Eva',
           lastName: 'Admin',
@@ -1469,7 +1521,7 @@ describe('GasilApp E2E', () => {
     let invoiceNumber = '';
 
     const orgF = {
-      organizationName: 'PGD E2E F',
+      organizationName: `PGD E2E F ${stamp}`,
       organizationSlug: `e2e-f-${stamp}`,
       firstName: 'Franc',
       lastName: 'Admin',

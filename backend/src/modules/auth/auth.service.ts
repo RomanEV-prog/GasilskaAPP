@@ -15,7 +15,7 @@ import {
   generateTotpSecret,
   verifyTotpCode,
 } from './totp.util';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { SystemRole } from '../../common/enums/roles.enum';
 import { usernameBase } from '../../common/utils/username.util';
 import { MailService } from '../notifications/mail.service';
@@ -174,8 +174,10 @@ export class AuthService {
   }
 
   /**
-   * Prijava — z uporabniškim imenom znotraj društva (username + organizationId)
-   * ali z e-pošto (vsebuje '@', globalno). Preveri geslo in vrne JWT.
+   * Prijava — z e-pošto ali uporabniškim imenom; društva ni treba izbrati,
+   * ugotovi se iz računa. `organizationId` je neobvezen filter (ostane
+   * zaradi združljivosti s starimi mobilnimi izdajami in za razdvoumljanje,
+   * kadar isti podatki veljajo v več društvih).
    */
   async login(dto: LoginDto) {
     const identifier = dto.username.toLowerCase().trim();
@@ -184,31 +186,47 @@ export class AuthService {
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
       .addSelect('user.totpSecret')
-      .leftJoinAndSelect('user.roles', 'role');
-
-    if (identifier.includes('@')) {
-      qb.where('user.email = :identifier', { identifier });
-    } else {
-      if (!dto.organizationId) {
-        throw new BadRequestException('Izberite svoje društvo.');
-      }
-      qb.where(
-        'user.username = :identifier AND user.organizationId = :orgId',
-        { identifier, orgId: dto.organizationId },
-      );
+      .leftJoinAndSelect('user.roles', 'role')
+      .where('(user.email = :identifier OR user.username = :identifier)', {
+        identifier,
+      });
+    if (dto.organizationId) {
+      qb.andWhere('user.organizationId = :orgId', {
+        orgId: dto.organizationId,
+      });
     }
-    const user = await qb.getOne();
+    const candidates = await qb.getMany();
 
-    if (!user) {
+    // Geslo preverimo pri VSEH kandidatih — isti identifikator lahko
+    // obstaja v več društvih (npr. oseba, včlanjena v dveh PGD).
+    const matches: typeof candidates = [];
+    for (const c of candidates) {
+      if (await bcrypt.compare(dto.password, c.passwordHash)) {
+        matches.push(c);
+      }
+    }
+
+    if (matches.length === 0) {
       throw new UnauthorizedException('Napačno uporabniško ime ali geslo.');
     }
+
+    if (matches.length > 1) {
+      // Šele PO pravilnem geslu razkrijemo, v katerih društvih račun obstaja.
+      const orgs = await this.orgsRepo.findBy({
+        id: In(matches.map((m) => m.organizationId)),
+      });
+      return {
+        needsOrganization: true as const,
+        organizations: matches.map((m) => ({
+          id: m.organizationId,
+          name: orgs.find((o) => o.id === m.organizationId)?.name ?? '',
+        })),
+      };
+    }
+
+    const user = matches[0];
     if (!user.isActive) {
       throw new UnauthorizedException('Vaš račun je deaktiviran.');
-    }
-
-    const valid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!valid) {
-      throw new UnauthorizedException('Napačno uporabniško ime ali geslo.');
     }
 
     // 2FA: geslo je pravilno, a polni žetoni se izdajo šele po TOTP kodi.
@@ -428,6 +446,16 @@ export class AuthService {
     const slugTaken = await this.orgsRepo.findOne({ where: { slug } });
     if (slugTaken) {
       throw new ConflictException('Društvo s to oznako že obstaja.');
+    }
+
+    const nameTaken = await this.orgsRepo
+      .createQueryBuilder('org')
+      .where('LOWER(org.name) = LOWER(:name)', { name: dto.organizationName })
+      .getOne();
+    if (nameTaken) {
+      throw new ConflictException(
+        'Društvo s tem imenom že obstaja. Če je to vaše društvo, se obrnite na podpora@plamenapp.si.',
+      );
     }
 
     const code = await this.codesRepo.findOne({

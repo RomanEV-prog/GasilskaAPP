@@ -1,25 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { authApi } from '../../api/auth.api';
 import { errorMessage } from '../../api/client';
 import { IosInstallHint } from '../../components/IosInstallHint';
 import { Button, Input, PasswordInput, Select } from '../../components/ui';
+import { isOrganizationChoice } from '../../types';
 import { useAuth } from '../../stores/auth.store';
 
-const schema = z
-  .object({
-    organizationId: z.string(),
-    username: z.string().min(1, 'Vnesite uporabniško ime.'),
-    password: z.string().min(1, 'Vnesite geslo.'),
-  })
-  .refine((d) => d.username.includes('@') || d.organizationId, {
-    path: ['organizationId'],
-    message: 'Izberite svoje društvo.',
-  });
+const schema = z.object({
+  username: z.string().min(1, 'Vnesite e-pošto ali uporabniško ime.'),
+  password: z.string().min(1, 'Vnesite geslo.'),
+});
 
 type FormData = z.infer<typeof schema>;
 
@@ -31,35 +24,28 @@ export function LoginPage() {
   const [pendingToken, setPendingToken] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [verifying, setVerifying] = useState(false);
-
-  // Javni seznam društev; zadnja izbira se zapomni za naslednjič.
-  const { data: organizations } = useQuery({
-    queryKey: ['public-organizations'],
-    queryFn: authApi.publicOrganizations,
-  });
+  // Redek primer: isti podatki veljajo v več društvih → uporabnik izbere.
+  const [orgChoices, setOrgChoices] = useState<
+    { id: string; name: string }[] | null
+  >(null);
+  const [chosenOrg, setChosenOrg] = useState('');
 
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      organizationId: localStorage.getItem('lastOrganizationId') ?? '',
-    },
-  });
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: FormData, organizationId?: string) => {
     setServerError('');
     try {
-      const challenge = await login(
-        data.username,
-        data.password,
-        data.organizationId || undefined,
-      );
-      if (data.organizationId) {
-        localStorage.setItem('lastOrganizationId', data.organizationId);
+      const challenge = await login(data.username, data.password, organizationId);
+      if (challenge && isOrganizationChoice(challenge)) {
+        setOrgChoices(challenge.organizations);
+        return;
       }
+      setOrgChoices(null);
       if (challenge) {
         setPendingToken(challenge.pendingToken);
         return;
@@ -139,23 +125,14 @@ export function LoginPage() {
             </button>
           </form>
         ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Select
-            label="Društvo"
-            error={errors.organizationId?.message}
-            {...register('organizationId')}
-          >
-            <option value="">— izberite društvo —</option>
-            {organizations?.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </Select>
+        <form
+          onSubmit={handleSubmit((d) => onSubmit(d))}
+          className="space-y-4"
+        >
           <Input
-            label="Uporabniško ime"
+            label="E-pošta ali uporabniško ime"
             autoComplete="username"
-            placeholder="ime.priimek"
+            placeholder="ime.priimek ali ime@drustvo.si"
             error={errors.username?.message}
             {...register('username')}
           />
@@ -166,15 +143,47 @@ export function LoginPage() {
             {...register('password')}
           />
 
+          {orgChoices && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                Vaš račun obstaja v več društvih — izberite, v katerega se
+                prijavljate.
+              </p>
+              <Select
+                label="Društvo"
+                value={chosenOrg}
+                onChange={(e) => setChosenOrg(e.target.value)}
+              >
+                <option value="">— izberite društvo —</option>
+                {orgChoices.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+
           {serverError && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {serverError}
             </p>
           )}
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? 'Prijavljanje ...' : 'Prijava'}
-          </Button>
+          {orgChoices ? (
+            <Button
+              type="button"
+              disabled={!chosenOrg || isSubmitting}
+              className="w-full"
+              onClick={() => onSubmit(getValues(), chosenOrg)}
+            >
+              {isSubmitting ? 'Prijavljanje ...' : 'Prijava v izbrano društvo'}
+            </Button>
+          ) : (
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? 'Prijavljanje ...' : 'Prijava'}
+            </Button>
+          )}
         </form>
         )}
 

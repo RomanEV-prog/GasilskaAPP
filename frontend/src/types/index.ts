@@ -72,12 +72,30 @@ export interface TwoFactorChallenge {
   pendingToken: string;
 }
 
-export type LoginResult = LoginResponse | TwoFactorChallenge;
+/**
+ * Odgovor na prijavo, ko isti podatki veljajo v več društvih —
+ * uporabnik izbere društvo in prijava se ponovi z organizationId.
+ */
+export interface OrganizationChoiceChallenge {
+  needsOrganization: true;
+  organizations: { id: string; name: string }[];
+}
+
+export type LoginResult =
+  | LoginResponse
+  | TwoFactorChallenge
+  | OrganizationChoiceChallenge;
 
 export function isTwoFactorChallenge(
   res: LoginResult,
 ): res is TwoFactorChallenge {
   return 'requires2fa' in res && res.requires2fa === true;
+}
+
+export function isOrganizationChoice(
+  res: LoginResult,
+): res is OrganizationChoiceChallenge {
+  return 'needsOrganization' in res && res.needsOrganization === true;
 }
 
 export interface TwoFactorStatus {

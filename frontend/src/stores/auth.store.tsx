@@ -8,10 +8,12 @@ import {
 } from 'react';
 import { authApi } from '../api/auth.api';
 import {
+  isOrganizationChoice,
   isTwoFactorChallenge,
   LEADERSHIP_ROLES,
   type AuthUser,
   type LoginResponse,
+  type OrganizationChoiceChallenge,
   type TwoFactorChallenge,
 } from '../types';
 
@@ -35,7 +37,7 @@ interface AuthContextValue {
     username: string,
     password: string,
     organizationId?: string,
-  ) => Promise<TwoFactorChallenge | undefined>;
+  ) => Promise<TwoFactorChallenge | OrganizationChoiceChallenge | undefined>;
   /** Drugi korak prijave: TOTP ali rezervna koda. */
   verify2fa: (pendingToken: string, code: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -68,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (username: string, password: string, organizationId?: string) => {
       const res = await authApi.login(username, password, organizationId);
-      if (isTwoFactorChallenge(res)) return res;
+      if (isTwoFactorChallenge(res) || isOrganizationChoice(res)) return res;
       persistSession(res);
       return undefined;
     },
